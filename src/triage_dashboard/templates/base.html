@@ -22,6 +22,10 @@
   }
   document.addEventListener('input', (e) => {
     if (e.target.classList.contains('card-comment')) autosize(e.target);
+    if (e.target.classList.contains('composer-input')) {
+      const send = e.target.closest('.composer-frame')?.querySelector('.composer-send');
+      if (send) send.disabled = !e.target.value.trim();
+    }
   });
   // Move active state instantly on tab click so the UI feels responsive
   // even before the htmx response arrives.

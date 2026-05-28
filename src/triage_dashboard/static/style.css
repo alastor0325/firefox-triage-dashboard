@@ -362,69 +362,89 @@ code, kbd {
   font-size: 0.92rem;
 }
 
-/* ───── FEEDBACK (AI revise) ───── */
-.feedback {
-  display: flex;
-  gap: 0.45rem;
-  margin: 0 0 0.5rem;
-  align-items: stretch;
-}
-.feedback-input {
-  flex: 1;
+/* ───── COMPOSER (AI revise feedback) ───── */
+.composer { margin: 0 0 0.55rem; }
+.composer-frame {
+  position: relative;
   border: 1px solid var(--border);
-  background: var(--surface-2);
-  border-radius: var(--radius-sm);
-  padding: 0.4rem 0.6rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.composer-frame:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(210, 65, 13, 0.10);
+}
+.composer-input {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.65rem 0.85rem 2.5rem;        /* bottom padding reserves room for the Send button */
   font-family: var(--font-sans);
-  font-size: 0.85rem;
-  line-height: 1.4;
+  font-size: 0.92rem;
+  line-height: 1.5;
   color: var(--ink);
   resize: vertical;
-  min-height: 1.85rem;
-  max-height: 6rem;
-  transition: background-color 0.12s, border-color 0.12s, box-shadow 0.12s;
+  min-height: 3.1rem;
+  max-height: 14rem;
 }
-.feedback-input::placeholder { color: var(--ink-4); }
-.feedback-input:focus {
-  outline: none;
-  background: var(--surface);
-  border-color: var(--ink-3);
-  box-shadow: 0 0 0 3px rgba(9, 9, 11, 0.05);
+.composer-input:focus { outline: none; }
+.composer-input::placeholder {
+  color: var(--ink-4);
+  font-style: italic;
 }
-.btn-feedback {
+.composer-send {
+  position: absolute;
+  right: 0.45rem;
+  bottom: 0.45rem;
   font-family: var(--font-sans);
   font-size: 0.78rem;
   font-weight: 600;
-  padding: 0.4rem 0.85rem;
+  letter-spacing: 0.005em;
+  padding: 0.4rem 0.95rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--accent);
+  color: #fff;
   cursor: pointer;
-  flex-shrink: 0;
-  transition: background-color 0.12s, color 0.12s, transform 0.06s;
+  transition: background-color 0.12s, transform 0.06s;
 }
-.btn-feedback:hover { background: var(--accent); color: #fff; }
-.btn-feedback:active { transform: translateY(1px); }
+.composer-send::after {
+  content: " →";
+  font-weight: 500;
+}
+.composer-send:hover { background: #b8390b; border-color: #b8390b; }
+.composer-send:active { transform: translateY(1px); }
+.composer-send:disabled {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--ink-4);
+  cursor: not-allowed;
+}
 
 .feedback-status:empty { display: none; }
 .feedback-status { margin: 0 0 0.55rem; }
 .feedback-queued {
   margin: 0;
-  padding: 0.4rem 0.65rem;
+  padding: 0.45rem 0.75rem;
   background: var(--accent-soft);
   color: var(--accent);
-  border-radius: var(--radius-sm);
-  font-size: 0.83rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.85rem;
   font-weight: 500;
-  display: flex; align-items: center; gap: 0.5rem;
+  display: flex; align-items: center; gap: 0.55rem;
+  line-height: 1.45;
 }
-.feedback-queued q { font-style: italic; font-weight: 400; }
+.feedback-queued q { font-style: italic; font-weight: 400; color: var(--ink-2); }
 .feedback-queued q::before { content: "“"; }
 .feedback-queued q::after { content: "”"; }
 .feedback-queued .spinner {
   display: inline-block;
+  flex-shrink: 0;
   animation: spin 1.4s linear infinite;
+  font-size: 1rem;
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
