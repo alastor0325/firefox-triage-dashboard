@@ -13,9 +13,35 @@
   {% else %}
     <div class="workspace">
       {% include "rail.html" %}
-      <div class="deck-stage">
-        {% set draft = active_draft %}
-        {% include "card.html" %}
+      <div>
+        {% if deck_nav.total > 1 %}
+        <nav class="deck-nav" aria-label="Bug navigation">
+          <button class="deck-nav-arrow deck-prev"
+                  {% if deck_nav.prev_bug_id %}
+                  hx-get="?tab={{ active_tab }}&bug={{ deck_nav.prev_bug_id }}"
+                  hx-target="#tab-content" hx-swap="innerHTML" hx-push-url="true"
+                  {% else %}disabled aria-disabled="true"{% endif %}>
+            ← prev
+          </button>
+          <span class="deck-pos">
+            bug <strong>{{ deck_nav.index }}</strong> of <strong>{{ deck_nav.total }}</strong>
+          </span>
+          <div class="deck-bar" aria-hidden="true">
+            <div class="deck-bar-fill" style="width: {{ (deck_nav.index * 100 / deck_nav.total) | round(0, 'floor') }}%"></div>
+          </div>
+          <button class="deck-nav-arrow deck-next"
+                  {% if deck_nav.next_bug_id %}
+                  hx-get="?tab={{ active_tab }}&bug={{ deck_nav.next_bug_id }}"
+                  hx-target="#tab-content" hx-swap="innerHTML" hx-push-url="true"
+                  {% else %}disabled aria-disabled="true"{% endif %}>
+            next →
+          </button>
+        </nav>
+        {% endif %}
+        <div class="deck-stage">
+          {% set draft = active_draft %}
+          {% include "card.html" %}
+        </div>
       </div>
     </div>
   {% endif %}

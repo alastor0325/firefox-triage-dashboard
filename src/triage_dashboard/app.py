@@ -60,6 +60,25 @@ def _resolve_active_draft(
     return bucket[0]
 
 
+def _deck_nav_info(
+    bucket: list[data.Draft], active: data.Draft | None
+) -> dict:
+    """Position, total, and prev/next bug_ids for the deck-nav strip."""
+    if not bucket or active is None:
+        return {
+            "index": 0, "total": 0,
+            "prev_bug_id": None, "next_bug_id": None,
+        }
+    total = len(bucket)
+    i = next((j for j, d in enumerate(bucket) if d.bug_id == active.bug_id), 0)
+    return {
+        "index": i + 1,    # 1-based for display
+        "total": total,
+        "prev_bug_id": bucket[i - 1].bug_id if i > 0 else None,
+        "next_bug_id": bucket[i + 1].bug_id if i < total - 1 else None,
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(
     request: Request, tab: str | None = None, bug: int | None = None
@@ -73,6 +92,7 @@ def index(
     active_marker = SLUG_TO_MARKER[active_tab]
     active_bucket = groups.get(active_marker, []) if active_marker else []
     active_draft = _resolve_active_draft(active_bucket, bug)
+    deck_nav = _deck_nav_info(active_bucket, active_draft)
     counts_by_slug = {
         slug: (
             len(groups.get(marker, [])) if marker
@@ -98,6 +118,7 @@ def index(
             "active_marker": active_marker,
             "active_bucket": active_bucket,
             "active_draft": active_draft,
+            "deck_nav": deck_nav,
             "counts_by_slug": counts_by_slug,
         },
     )

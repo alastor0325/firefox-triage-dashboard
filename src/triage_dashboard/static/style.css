@@ -442,6 +442,56 @@ code, kbd {
 }
 .rail-item.is-active .rail-title { color: var(--ink); font-weight: 500; }
 
+/* ── Deck nav (position + prev/next) ── */
+.deck-nav {
+  display: flex; align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.6rem;
+  padding: 0 0.6rem;
+}
+.deck-nav-arrow {
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+}
+.deck-nav-arrow:not(:disabled):hover {
+  border-color: var(--ink-3);
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.deck-nav-arrow:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.deck-pos {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+.deck-pos strong { color: var(--ink); font-weight: 700; }
+.deck-bar {
+  flex: 1;
+  max-width: 220px;
+  height: 3px;
+  background: var(--surface-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.deck-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.18s ease;
+}
+
 /* ── Deck stage (focused card + stack-paper depth hint) ── */
 .deck-stage {
   position: relative;

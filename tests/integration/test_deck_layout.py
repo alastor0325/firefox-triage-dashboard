@@ -112,3 +112,49 @@ def test_watching_tab_does_not_use_the_rail(
     # Both watched bugs are present (no single-item selection).
     assert "7777" in body
     assert "8888" in body
+
+
+# ─── deck-nav (position + prev/next) ────────────────────────────────
+
+def test_deck_nav_shows_position_of_active_bug(triage_dir: Path) -> None:
+    write_draft(triage_dir, 10, ni_targets=["x"])
+    write_draft(triage_dir, 20, ni_targets=["x"])
+    write_draft(triage_dir, 30, ni_targets=["x"])
+    body = client.get("/?tab=needs-info&bug=20").text
+    # Sorted bucket [10, 20, 30] — bug 20 is at position 2.
+    assert "2 of 3" in body or "2</strong> of <strong>3" in body
+
+
+def test_deck_nav_prev_disabled_on_first_bug(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    body = client.get("/?tab=needs-info&bug=1").text
+    # Prev should be present but disabled (so layout stays stable).
+    # We look for the prev button with a disabled attribute.
+    import re
+    assert re.search(r'class="[^"]*deck-prev[^"]*"[^>]*disabled', body)
+
+
+def test_deck_nav_next_disabled_on_last_bug(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    body = client.get("/?tab=needs-info&bug=2").text
+    import re
+    assert re.search(r'class="[^"]*deck-next[^"]*"[^>]*disabled', body)
+
+
+def test_deck_nav_middle_bug_links_to_both(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    write_draft(triage_dir, 3, ni_targets=["x"])
+    body = client.get("/?tab=needs-info&bug=2").text
+    # Prev should link to bug=1, next to bug=3.
+    assert "tab=needs-info&amp;bug=1" in body or "tab=needs-info&bug=1" in body
+    assert "tab=needs-info&amp;bug=3" in body or "tab=needs-info&bug=3" in body
+
+
+def test_deck_nav_hidden_when_bucket_is_single(triage_dir: Path) -> None:
+    """No point showing prev/next when there's only one bug — skip the whole nav."""
+    write_draft(triage_dir, 99, ni_targets=["x"])
+    body = client.get("/?tab=needs-info").text
+    assert "deck-nav" not in body
