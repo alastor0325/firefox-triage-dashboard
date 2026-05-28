@@ -1,0 +1,17 @@
+{# Watching list, rendered as the active tab content. Expects `watch`. #}
+{% if not watch %}
+  <p class="empty">No bugs being watched. Use <code>watch-add</code> to track replies on a needinfo.</p>
+{% else %}
+  <ol class="watch-list">
+    {% for w in watch %}
+      <li class="watch-item">
+        <div class="watch-head">
+          <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ w.bug_id }}" target="_blank" rel="noopener">{{ w.bug_id }}</a></span>
+          {% if w.added_at %}<span class="timeago">{{ w.added_at[:10] }}</span>{% endif %}
+          {% if w.ni_targets %}<span class="badge-ni">{{ w.ni_targets|join(', ') }}</span>{% endif %}
+        </div>
+        {% if w.title %}<h3 class="watch-title">{{ w.title }}</h3>{% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+{% endif %}

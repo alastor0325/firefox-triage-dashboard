@@ -60,11 +60,18 @@ drafts with real data from `~/firefox-triage/`.
 - [x] Data loaders (`data.py`): pending drafts, triage-log, ni-watch
 - [x] Section grouping logic (§1a / §1b / §1c) inferred from pending JSON fields
 - [x] Extract CSS from `mockup.html` → `static/style.css`
-- [x] Extract HTML from `mockup.html` → Jinja templates (base, index, card, sidebar)
+- [x] Extract HTML from `mockup.html` → Jinja templates
 - [ ] Bug detail enrichment: component/reporter via `bugzilla-cli get` with cache *(deferred — cards render fine without it; revisit if context feels sparse)*
 - [x] CLI entry (`__main__.py`) that runs uvicorn and opens browser
 - [x] Manual verification: real 15 drafts + 20 log entries render
 - [x] Commit + push
+
+#### Visual refinements (2026-05-28, follow-up)
+- [x] Tab navigation (§1b Triaged / §1a Needs Info / §1c Close) — server-rendered via `?tab=...`, defaults to first non-empty section
+- [x] Promoted **Watching** to its own tab
+- [x] Removed Recent panel + sidebar entirely (single-column layout, max-width 1080px)
+- [x] Auto-resizing comment textareas (inline JS — no wasted empty rows)
+- [x] Tightened spacing throughout (smaller paddings, lighter card title, tighter tab gap)
 
 **Run:** `~/projects/firefox-triage-dashboard/.venv/bin/triage-dashboard`
 (opens `http://127.0.0.1:8765/`)

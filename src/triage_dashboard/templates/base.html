@@ -11,5 +11,23 @@
 </head>
 <body>
 {% block body %}{% endblock %}
+<script>
+  // Auto-fit comment textareas to their content so there's no trailing empty space.
+  (function () {
+    function autosize(el) {
+      el.style.height = 'auto';
+      el.style.height = (el.scrollHeight + 2) + 'px';
+    }
+    const els = document.querySelectorAll('.card-comment');
+    els.forEach(el => {
+      autosize(el);
+      el.addEventListener('input', () => autosize(el));
+    });
+    // Re-run after fonts load so the height matches the final layout.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => els.forEach(autosize));
+    }
+  })();
+</script>
 </body>
 </html>
