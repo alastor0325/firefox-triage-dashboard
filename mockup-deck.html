@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Triage · Deck-view mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,600;9..144,700;9..144,800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:         #fafafa;
+      --surface:    #ffffff;
+      --surface-2:  #f4f4f5;
+      --border:     #e4e4e7;
+      --border-strong: #d4d4d8;
+      --ink:        #09090b;
+      --ink-2:      #27272a;
+      --ink-3:      #52525b;
+      --ink-4:      #71717a;
+      --ink-5:      #a1a1aa;
+      --accent:     #d2410d;
+      --accent-soft:#fff0e9;
+      --green:      #15803d;
+      --green-soft: #ecf7ef;
+      --amber:      #92400e;
+      --amber-soft: #fef3c7;
+      --blue:       #1d4ed8;
+      --blue-soft:  #eff6ff;
+      --red:        #b91c1c;
+      --font-display: "Fraunces", Georgia, serif;
+      --font-sans:    "Geist", system-ui, -apple-system, sans-serif;
+      --font-mono:    "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+      --radius: 6px;
+      --radius-sm: 4px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; text-underline-offset: 2px; }
+    code, kbd {
+      font-family: var(--font-mono);
+      font-size: 0.92em;
+      background: var(--surface-2);
+      padding: 0.05em 0.35em;
+      border-radius: var(--radius-sm);
+      color: var(--ink-2);
+    }
+    kbd {
+      border: 1px solid var(--border-strong);
+      box-shadow: 0 1px 0 var(--border-strong);
+      font-size: 0.78em;
+      padding: 0.1em 0.4em;
+    }
+
+    .topbar {
+      display: flex; align-items: center; gap: 1.4rem;
+      padding: 0.65rem 1.75rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .brand { display: flex; align-items: baseline; gap: 0.55rem; }
+    .brand-title {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-variation-settings: "opsz" 144, "SOFT" 30;
+      font-size: 1.3rem;
+      letter-spacing: -0.018em;
+      line-height: 1;
+      margin: 0;
+    }
+    .brand-sub { font-size: 0.86rem; color: var(--ink-2); }
+    .brand-sub strong { color: var(--ink); font-weight: 600; }
+    .stats {
+      display: flex; align-items: baseline; gap: 1.4rem;
+      margin-left: auto; font-size: 0.86rem;
+    }
+    .stats .stat { display: inline-flex; align-items: baseline; gap: 0.4rem; }
+    .stats .num { font-family: var(--font-mono); font-weight: 700; font-size: 1rem; color: var(--ink); }
+    .stats .stat--primary .num { color: var(--accent); }
+    .stats .lbl { color: var(--ink-3); }
+
+    .container { max-width: 1280px; margin: 0 auto; padding: 0.75rem 1.5rem 3rem; }
+
+    .tabs {
+      display: flex; gap: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+    .tab {
+      padding: 0.5rem 0 0.55rem;
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--ink-3);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      display: inline-flex; align-items: baseline; gap: 0.4rem;
+    }
+    .tab .marker { font-weight: 700; color: var(--ink-4); font-size: 0.85em; }
+    .tab .count { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-4); }
+    .tab--active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+    .tab--active .marker { color: var(--accent); }
+    .tab--active .count { color: var(--ink-2); font-weight: 600; }
+
+    /* ───── HYBRID LAYOUT (list + deck) ───── */
+    .workspace {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 1.25rem;
+      align-items: start;
+    }
+
+    /* ── Left rail (picker list) ── */
+    .rail {
+      position: sticky;
+      top: 88px;       /* under sticky topbar */
+      max-height: calc(100vh - 110px);
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+    .rail-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--ink-3);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 0.45rem;
+    }
+    .rail-head .count {
+      font-family: var(--font-mono);
+      color: var(--ink-4);
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    .rail-search {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: 0.4rem 0.65rem;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      color: var(--ink);
+      margin-bottom: 0.6rem;
+    }
+    .rail-search::placeholder { color: var(--ink-4); }
+    .rail-search:focus { outline: none; border-color: var(--ink-3); box-shadow: 0 0 0 3px rgba(9,9,11,0.05); }
+
+    .rail ol { list-style: none; padding: 0; margin: 0; }
+    .rail-item {
+      display: block;
+      padding: 0.55rem 0.65rem 0.55rem 0.85rem;
+      border-left: 3px solid transparent;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      cursor: pointer;
+      margin-bottom: 0.15rem;
+      transition: background-color 0.1s, border-color 0.1s;
+    }
+    .rail-item:hover { background: var(--surface-2); }
+    .rail-item.is-active {
+      background: var(--accent-soft);
+      border-left-color: var(--accent);
+    }
+    .rail-item-row1 {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 0.4rem;
+      margin-bottom: 0.15rem;
+    }
+    .rail-bug-id {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--ink);
+    }
+    .is-active .rail-bug-id { color: var(--accent); }
+    .rail-meta {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--ink-4);
+      letter-spacing: 0.02em;
+    }
+    .rail-meta .dot.warn { color: var(--amber); }
+    .rail-title {
+      font-size: 0.88rem;
+      color: var(--ink-2);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .is-active .rail-title { color: var(--ink); font-weight: 500; }
+
+    /* ── Deck nav (above the card) ── */
+    .deck-nav {
+      display: flex; align-items: center; gap: 1rem;
+      margin-bottom: 0.7rem;
+      padding: 0 0.4rem;
+    }
+    .deck-pos {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--ink-3);
+      letter-spacing: 0.02em;
+    }
+    .deck-pos strong { color: var(--ink); font-weight: 700; }
+    .deck-bar {
+      flex: 1;
+      height: 3px;
+      background: var(--surface-2);
+      border-radius: 2px;
+      overflow: hidden;
+      max-width: 260px;
+    }
+    .deck-bar-fill { width: 30%; height: 100%; background: var(--accent); }
+    .deck-hint { margin-left: auto; font-size: 0.78rem; color: var(--ink-4); }
+
+    /* ── Deck stage (focused card with stack hint) ── */
+    .deck-stage {
+      position: relative;
+      padding: 0 1.2rem;
+      min-height: 540px;
+    }
+    .deck-stage::before,
+    .deck-stage::after {
+      content: '';
+      position: absolute;
+      top: 14px; bottom: 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .deck-stage::before {
+      left: 0.7rem; right: 0.7rem;
+      transform: translateY(8px);
+      opacity: 0.7;
+    }
+    .deck-stage::after {
+      left: 0.2rem; right: 0.2rem;
+      transform: translateY(16px);
+      opacity: 0.4;
+    }
+
+    .deck-card {
+      position: relative;
+      z-index: 2;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.4rem 1.1rem;
+      box-shadow: 0 2px 8px rgba(9, 9, 11, 0.04);
+    }
+
+    .deck-head {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 0.85rem;
+      color: var(--ink-3);
+      flex-wrap: wrap;
+      margin-bottom: 0.3rem;
+    }
+    .deck-head .bug-id {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--ink);
+      font-size: 0.92rem;
+    }
+    .deck-head .sep { color: var(--ink-5); }
+    .deck-head .component { font-weight: 500; }
+    .deck-head .badge {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 0.74rem;
+      padding: 0.1rem 0.45rem;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.03em;
+    }
+    .badge-ps--pending { background: transparent; color: var(--ink-4); border: 1px dashed var(--border-strong); }
+    .badge-ni {
+      margin-left: auto;
+      color: var(--amber); background: var(--amber-soft);
+      padding: 0.1rem 0.5rem;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono); font-size: 0.74rem; font-weight: 600;
+    }
+    .badge-ni::before { content: 'NI'; margin-right: 0.45em; font-weight: 700; opacity: 0.85; }
+
+    .deck-title {
+      font-size: 1.28rem; font-weight: 700;
+      line-height: 1.25;
+      margin: 0 0 0.35rem;
+      color: var(--ink);
+      letter-spacing: -0.013em;
+    }
+    .deck-title a { color: inherit; }
+    .deck-title a:hover { color: var(--accent); text-decoration: none; }
+
+    .deck-by {
+      font-size: 0.9rem; color: var(--ink-2);
+      margin: 0 0 0.7rem; line-height: 1.45;
+    }
+    .deck-by strong { font-weight: 600; color: var(--ink); }
+    .deck-by .dot { color: var(--ink-5); margin: 0 0.45rem; }
+    .deck-by .stale { color: var(--amber); }
+
+    .inventory {
+      list-style: none; padding: 0; margin: 0 0 0.7rem;
+      display: flex; flex-wrap: wrap; gap: 0.3rem 0.85rem;
+      font-size: 0.88rem;
+    }
+    .inventory li { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--ink-2); }
+    .inventory li::before {
+      font-family: var(--font-mono); font-weight: 700; font-size: 0.92rem;
+      width: 0.85rem; text-align: center;
+    }
+    .inventory .present::before { content: '✓'; color: var(--green); }
+    .inventory .missing { color: var(--ink-4); }
+    .inventory .missing::before { content: '✗'; color: var(--red); opacity: 0.85; }
+
+    .see-also { display: flex; gap: 0.35rem; flex-wrap: wrap; margin: 0 0 0.75rem; font-size: 0.82rem; }
+    .see-also-pill {
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    .see-also-pill .lbl { color: var(--ink-3); font-weight: 500; margin-left: 0.35em; }
+
+    .more { border-top: 1px solid var(--border); margin: 0.4rem 0 0.75rem; padding-top: 0.55rem; }
+    .more details { margin-bottom: 0.25rem; }
+    .more summary {
+      cursor: pointer; font-size: 0.86rem;
+      color: var(--ink-3); list-style: none;
+      padding: 0.2rem 0; font-weight: 500;
+    }
+    .more summary::before {
+      content: '▸'; display: inline-block; margin-right: 0.45em;
+      transition: transform 0.12s; color: var(--ink-4); font-size: 0.7em;
+    }
+    .more details[open] > summary::before { transform: rotate(90deg); }
+    .more summary:hover { color: var(--ink); }
+    .more summary::-webkit-details-marker { display: none; }
+    .more .body {
+      padding: 0.4rem 0.85rem 0.4rem 1.1rem;
+      color: var(--ink-2); font-size: 0.9rem; line-height: 1.55;
+      border-left: 2px solid var(--surface-2);
+      margin-top: 0.3rem;
+    }
+    .more .comment {
+      padding: 0.4rem 0.7rem; border-radius: var(--radius-sm);
+      background: var(--surface-2); margin-bottom: 0.3rem;
+      font-size: 0.88rem;
+    }
+    .more .comment .author { font-family: var(--font-mono); font-weight: 600; color: var(--ink); font-size: 0.78rem; }
+    .more .comment .ts { font-family: var(--font-mono); color: var(--ink-4); font-size: 0.72rem; margin-left: 0.4rem; }
+    .more .comment p { margin: 0.2rem 0 0; color: var(--ink-2); }
+
+    .deck-draft {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      padding: 0.7rem 0.85rem;
+      font-family: var(--font-sans);
+      font-size: 0.94rem; line-height: 1.55;
+      color: var(--ink);
+      resize: vertical; min-height: 6rem;
+      display: block; margin-bottom: 0.65rem;
+    }
+
+    .composer-frame {
+      position: relative;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: var(--radius);
+      margin-bottom: 0.75rem;
+    }
+    .composer-frame:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(210, 65, 13, 0.10);
+    }
+    .composer-input {
+      display: block; width: 100%;
+      border: none; background: transparent;
+      padding: 0.6rem 0.85rem 2.4rem;
+      font-family: var(--font-sans); font-size: 0.92rem;
+      line-height: 1.5; color: var(--ink);
+      resize: vertical; min-height: 3rem;
+    }
+    .composer-input::placeholder { color: var(--ink-4); font-style: italic; }
+    .composer-input:focus { outline: none; }
+    .composer-send {
+      position: absolute; right: 0.45rem; bottom: 0.45rem;
+      font-family: var(--font-sans);
+      font-size: 0.78rem; font-weight: 600;
+      padding: 0.4rem 0.95rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+    .composer-send::after { content: " →"; }
+
+    .diff {
+      font-size: 0.85rem; color: var(--ink-2);
+      padding: 0.5rem 0;
+      border-top: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; align-items: center;
+      gap: 0.2rem 0.6rem;
+    }
+    .diff::before {
+      content: 'Will apply';
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--ink-3); margin-right: 0.45rem; font-weight: 600;
+    }
+    .diff .sep { color: var(--ink-5); }
+    .diff .plus { color: var(--green); font-weight: 700; margin-right: 0.1em; }
+
+    .deck-actions {
+      display: flex; align-items: center; gap: 0.5rem; margin-top: 0.8rem;
+    }
+    .nav-btn {
+      font-family: var(--font-sans); font-size: 0.85rem; font-weight: 500;
+      padding: 0.55rem 0.9rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--surface); color: var(--ink-2);
+      cursor: pointer;
+    }
+    .nav-btn:hover { border-color: var(--ink-3); color: var(--ink); }
+    .deck-actions .spacer { flex: 1; }
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 0.92rem; font-weight: 600;
+      padding: 0.6rem 1.4rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--ink-3);
+      background: var(--surface); color: var(--ink-2);
+      cursor: pointer;
+    }
+    .btn-skip { color: var(--ink-3); border-color: transparent; background: transparent; }
+    .btn-skip:hover { background: var(--surface-2); color: var(--red); }
+    .btn-primary {
+      background: var(--green); color: #fff; border-color: var(--green);
+    }
+    .btn-primary:hover { background: #126b34; border-color: #126b34; }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <h1 class="brand-title">Triage</h1>
+      <span class="brand-sub"><strong>Audio/Video</strong> · Thursday, May 28</span>
+    </div>
+    <div class="stats">
+      <span class="stat stat--primary"><span class="num">15</span><span class="lbl">pending</span></span>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <nav class="tabs">
+      <a class="tab" href="#"><span class="marker">§1b</span><span>Triaged</span><span class="count">3</span></a>
+      <a class="tab tab--active" href="#"><span class="marker">§1a</span><span>Needs Info</span><span class="count">10</span></a>
+      <a class="tab" href="#"><span class="marker">§1c</span><span>Close</span><span class="count">2</span></a>
+      <a class="tab" href="#"><span>Watching</span><span class="count">12</span></a>
+    </nav>
+
+    <div class="workspace">
+
+      <!-- ── Left rail: picker list ── -->
+      <aside class="rail">
+        <div class="rail-head">
+          <span>Needs Info</span>
+          <span class="count">10 bugs</span>
+        </div>
+        <input type="search" class="rail-search" placeholder="Filter by title or bug id…">
+        <ol>
+          <li class="rail-item">
+            <div class="rail-item-row1">
+              <span class="rail-bug-id">2039425</span>
+              <span class="rail-meta">2d ago</span>
+            </div>
+            <div class="rail-title">Intermittent MOZ_DIAGNOSTIC_ASSERT(mResponseTarget→IsOnCurrentThread)</div>
+          </li>
+          <li class="rail-item is-active">
+            <div class="rail-item-row1">
+              <span class="rail-bug-id">2039853</span>
+              <span class="rail-meta"><span class="dot warn">●</span> 6d</span>
+            </div>
+            <div class="rail-title">HEVC DASH-LL playback via MSE resulting in video stuttering</div>
+          </li>
+          <li class="rail-item">
+            <div class="rail-item-row1">
+              <span class="rail-bug-id">2040167</span>
+              <span class="rail-meta">5d</span>
+            </div>
+            <div class="rail-title">Twitch player shows rapid play/pause until clicked</div>
+          </li>
+          <li class="rail-item">
+            <div class="rail-item-row1">
+              <span class="rail-bug-id">2040169</span>
+              <span class="rail-meta">5d</span>
+            </div>
+            <div class="rail-title">Continuous memory growth on Twitch when autoplay is blocked</div>
+          </li>
+          <li class="rail-item">
+            <div class="rail-item-row1">
+              <span class="rail-bug-id">2040219</span>
+              <span class="rail-meta">5d</span>
+            </div>
+            <div class="rail-title">Does not play some amazon.fr product page videos</div>
+          </li>
+          <li class="rail-item">
+            <div class="rail-item-row1">
+              <span class="rail-bug-id">2041202</span>
+              <span class="rail-meta">4d</span>
+            </div>
+            <div class="rail-title">USB audio engine left buzzing after playback stop — macOS Tahoe</div>
+          </li>
+          <li class="rail-item">
+            <div class="rail-item-row1">
+              <span class="rail-bug-id">2041545</span>
+              <span class="rail-meta">4d</span>
+            </div>
+            <div class="rail-title">"AudioContext was prevented from starting automatically" misfire</div>
+          </li>
+          <li class="rail-item">
+            <div class="rail-item-row1">
+              <span class="rail-bug-id">2041883</span>
+              <span class="rail-meta">3d</span>
+            </div>
+            <div class="rail-title">On startup, Firefox creates 50+ dav1d-worker threads</div>
+          </li>
+          <li class="rail-item">
+            <div class="rail-item-row1">
+              <span class="rail-bug-id">2042323</span>
+              <span class="rail-meta">1d</span>
+            </div>
+            <div class="rail-title">Total audio loss on video streams with file:/// security error</div>
+          </li>
+          <li class="rail-item">
+            <div class="rail-item-row1">
+              <span class="rail-bug-id">2042812</span>
+              <span class="rail-meta">1d</span>
+            </div>
+            <div class="rail-title">Video corruption on YouTube — cross-platform, FF 151 &amp; 153a1</div>
+          </li>
+        </ol>
+      </aside>
+
+      <!-- ── Right side: the focused deck ── -->
+      <div>
+
+        <div class="deck-nav">
+          <span class="deck-pos">bug <strong>2</strong> of <strong>10</strong></span>
+          <div class="deck-bar"><div class="deck-bar-fill"></div></div>
+          <span class="deck-hint">use <kbd>↑</kbd> <kbd>↓</kbd> to move · <kbd>a</kbd> apply · <kbd>s</kbd> skip</span>
+        </div>
+
+        <div class="deck-stage">
+          <article class="deck-card">
+
+            <div class="deck-head">
+              <span class="bug-id">№ 2039853</span>
+              <span class="sep">·</span>
+              <span class="component">Audio/Video: Playback</span>
+              <span class="sep">·</span>
+              <span class="badge badge-ps--pending">no S/P</span>
+              <span class="badge-ni">ryan.mccartney@bbc.co.uk</span>
+            </div>
+
+            <h2 class="deck-title">
+              <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2039853">HEVC DASH‑LL playback via MSE resulting in video stuttering</a>
+            </h2>
+
+            <p class="deck-by">
+              Reported by <strong>Ryan McCartney</strong> (BBC R&amp;D) <span class="dot">·</span>
+              <strong>Windows 10 x64</strong> <span class="dot">·</span>
+              Firefox <strong>150.0</strong> <span class="dot">·</span>
+              filed May 22 <span class="dot">·</span>
+              <span class="stale">last activity 6d ago</span>
+            </p>
+
+            <ul class="inventory">
+              <li class="present">platform / version</li>
+              <li class="present">three test URLs</li>
+              <li class="present">bisected regressor</li>
+              <li class="missing">about:support</li>
+              <li class="missing">media log</li>
+            </ul>
+
+            <div class="see-also">
+              <span class="see-also-pill">bug 1981503 <span class="lbl">regressor</span></span>
+              <span class="see-also-pill">bug 2012108 <span class="lbl">follow-up fix</span></span>
+            </div>
+
+            <div class="more">
+              <details>
+                <summary>Bug description (excerpt)</summary>
+                <div class="body">
+                  When playing HEVC content via DASH low-latency, video stutters approximately every
+                  3.8 seconds. Three public BBC R&amp;D test streams reproduce reliably; LL AVC works fine,
+                  non-LL HEVC works fine — only LL HEVC fails. Regression bisected to
+                  <code>bug 1981503</code> (HEVC out-of-band config-change detection, landed in 147.0b6).
+                  Follow-up <code>bug 2012108</code> "avoid unnecessary decoder recreation" landed and
+                  was uplifted to 147.0.3 / 148 / 149, so it should be active in 150.0…
+                </div>
+              </details>
+
+              <details>
+                <summary>3 recent comments</summary>
+                <div class="body">
+                  <div class="comment">
+                    <span class="author">jya@mozilla.com</span>
+                    <span class="ts">2026‑05‑22 14:08</span>
+                    <p>Thanks for the detailed bisect — looking at the HEVCChangeMonitor path; the chunk-rate pattern is interesting.</p>
+                  </div>
+                  <div class="comment">
+                    <span class="author">ryan.mccartney@bbc.co.uk</span>
+                    <span class="ts">2026‑05‑22 09:30</span>
+                    <p>Confirmed all three test URLs reproduce on a clean Firefox 150 profile. Attaching profile from the failing stream now.</p>
+                  </div>
+                </div>
+              </details>
+
+              <details>
+                <summary>Attachments (1)</summary>
+                <div class="body">
+                  <a href="#"><code>profile-2039853.json</code></a> · uploaded 2026‑05‑22 · 412 KB
+                </div>
+              </details>
+            </div>
+
+            <textarea class="deck-draft" readonly>Thanks for the detailed report and bisecting to bug 1981503. The follow-up bug 2012108 was uplifted to 147.0.3 / 148 / 149, so it should be active in your 150.0 build. The 1-in-4 chunks decoded pattern matches the 4 chunks per 3.84 s segment — suggests per-chunk decoder reinit is still happening on some HEVCChangeMonitor branch.
+
+Could you provide:
+- Fresh `about:support` from the affected profile
+- A media log captured with `about:logging` "media" preset — reproduce one failing stream, attach the log.</textarea>
+
+            <form class="composer">
+              <div class="composer-frame">
+                <textarea class="composer-input" rows="2" placeholder="What should change about this draft? e.g. drop the about:support ask, make the tone more direct…"></textarea>
+                <button type="submit" class="composer-send">Revise draft</button>
+              </div>
+            </form>
+
+            <div class="diff">
+              <span><span class="plus">+</span>ni ryan.mccartney</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>cc alwu</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>watch</span>
+            </div>
+
+            <div class="deck-actions">
+              <button class="nav-btn">↑ prev</button>
+              <span class="spacer"></span>
+              <button class="btn btn-skip">Skip</button>
+              <button class="btn btn-primary">Apply</button>
+              <span class="spacer"></span>
+              <button class="nav-btn">next ↓</button>
+            </div>
+          </article>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

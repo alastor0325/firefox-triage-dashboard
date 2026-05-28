@@ -76,6 +76,45 @@ drafts with real data from `~/firefox-triage/`.
 **Run:** `~/projects/firefox-triage-dashboard/.venv/bin/triage-dashboard`
 (opens `http://127.0.0.1:8765/`)
 
+### Phase 1.5 — Deck view + bug context  ← NEXT
+
+Major UX shift for the draft tabs (§1a / §1b / §1c): instead of a long
+scroll of cards, the dashboard shows **one focused rich card at a time**
+with a **left rail** to scan all bugs in the current tab and jump to any
+of them. The focused card grows in content so the user can act without
+bouncing to Bugzilla — reporter, platform, version, inventory, see-also,
+description excerpt, recent comments, attachments.
+
+**Watching** stays as a multi-item list (it's monitoring, not action).
+
+**Layout** (mockup: `mockup-deck.html`):
+```
+┌──────────────────────────────────────────────────────┐
+│ topbar · tabs                                         │
+├────────┬─────────────────────────────────────────────┤
+│ rail   │ deck-nav: pos · prev/next · keyboard hints  │
+│ 220px  │ ┌────── focused card ──────────────────┐   │
+│  bug-1 │ │ header · title · reporter line       │   │
+│  bug-2◀│ │ inventory · see-also                 │   │
+│  bug-3 │ │ ▸ description / ▸ comments / ▸ attach│   │
+│  …     │ │ draft textarea + composer            │   │
+│  bug-10│ │ Will apply · [Skip][Apply][copy]     │   │
+│        │ └──────────────────────────────────────┘   │
+└────────┴─────────────────────────────────────────────┘
+```
+
+**Sub-steps:**
+- [ ] Layout split: rail (left) + deck stage (right). Watching tab unaffected.
+- [ ] `?bug=<id>` query param selects the active card; defaults to first in bucket.
+- [ ] Rail item click navigates to that bug (htmx swap).
+- [ ] Deck-nav: position counter + progress bar + prev/next buttons.
+- [ ] Keyboard: `↑/↓` prev/next, `a` apply, `s` skip, `/` focus search.
+- [ ] Rail filter input (title + bug id substring).
+- [ ] Extend `Draft` schema with optional `bug_context` fields (`description_excerpt`, `platform`, `firefox_version`, `reporter_name`, `last_activity`, `inventory_present`, `inventory_missing`, `see_also`, `recent_comments`, `attachments`, `ai_reasoning`).
+- [ ] Render `bug_context` in the focused card (gracefully absent when not in JSON).
+- [ ] Tests for active-card selection, rail rendering, bug_context rendering.
+- [ ] Skill side, separate session: `/triage` writes `bug_context` at draft time.
+
 ### Phase 2 — Live updates  ← PENDING
 
 Page auto-refreshes when terminal `/triage` writes new pending drafts.
