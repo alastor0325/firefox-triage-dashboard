@@ -26,6 +26,15 @@
       const send = e.target.closest('.composer-frame')?.querySelector('.composer-send');
       if (send) send.disabled = !e.target.value.trim();
     }
+    if (e.target.classList.contains('rail-search')) {
+      const q = e.target.value.trim().toLowerCase();
+      document.querySelectorAll('.rail-item').forEach(el => {
+        const bugId = (el.dataset.bugId || '').toLowerCase();
+        const title = (el.querySelector('.rail-title')?.textContent || '').toLowerCase();
+        const match = !q || bugId.includes(q) || title.includes(q);
+        el.parentElement.style.display = match ? '' : 'none';
+      });
+    }
   });
   // Keyboard shortcuts for power users.
   // Ignored when any input/textarea is focused so typing isn't hijacked.

@@ -395,6 +395,24 @@ code, kbd {
   text-transform: none;
   font-weight: 500;
 }
+.rail-search {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.65rem;
+  font-family: var(--font-sans);
+  font-size: 0.83rem;
+  color: var(--ink);
+  margin-bottom: 0.55rem;
+}
+.rail-search::placeholder { color: var(--ink-4); }
+.rail-search:focus {
+  outline: none;
+  border-color: var(--ink-3);
+  box-shadow: 0 0 0 3px rgba(9, 9, 11, 0.05);
+}
+
 .rail ol { list-style: none; padding: 0; margin: 0; }
 .rail-item {
   display: block;

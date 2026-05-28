@@ -158,3 +158,19 @@ def test_deck_nav_hidden_when_bucket_is_single(triage_dir: Path) -> None:
     write_draft(triage_dir, 99, ni_targets=["x"])
     body = client.get("/?tab=needs-info").text
     assert "deck-nav" not in body
+
+
+# ─── rail filter input ──────────────────────────────────────────────
+
+def test_rail_filter_input_present_with_multiple_bugs(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    body = client.get("/?tab=needs-info").text
+    assert 'class="rail-search"' in body
+
+
+def test_rail_filter_input_hidden_with_single_bug(triage_dir: Path) -> None:
+    """No point filtering a single-item list."""
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    body = client.get("/?tab=needs-info").text
+    assert 'class="rail-search"' not in body

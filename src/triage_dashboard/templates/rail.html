@@ -5,6 +5,11 @@
     <span>{{ {'triaged': 'Triaged', 'needs-info': 'Needs Info', 'close': 'Close'}.get(active_tab, '') }}</span>
     <span class="count">{{ active_bucket|length }} bugs</span>
   </div>
+  {% if active_bucket|length > 1 %}
+  <input type="search" class="rail-search"
+         placeholder="Filter by title or bug id…"
+         aria-label="Filter bugs in this tab">
+  {% endif %}
   <ol>
     {% for d in active_bucket %}
       <li>
