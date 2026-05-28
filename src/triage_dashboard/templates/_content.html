@@ -2,8 +2,7 @@
 {% if active_tab == 'watching' %}
   {% include "watching.html" %}
 {% else %}
-  {% set bucket = groups.get(active_marker, []) %}
-  {% if not bucket %}
+  {% if not active_bucket %}
     <p class="empty">
       {% if stats.pending_total == 0 %}
         No pending drafts. Run <code>/triage</code> in a Claude session to generate some.
@@ -12,8 +11,12 @@
       {% endif %}
     </p>
   {% else %}
-    {% for draft in bucket %}
-      {% include "card.html" %}
-    {% endfor %}
+    <div class="workspace">
+      {% include "rail.html" %}
+      <div class="deck-stage">
+        {% set draft = active_draft %}
+        {% include "card.html" %}
+      </div>
+    </div>
   {% endif %}
 {% endif %}

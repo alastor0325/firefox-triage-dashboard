@@ -46,8 +46,24 @@ def _resolve_active_tab(
     return "triaged"
 
 
+def _resolve_active_draft(
+    bucket: list[data.Draft], requested: int | None
+) -> data.Draft | None:
+    """Pick the focused card: ?bug=<id> if it's in the current bucket,
+    else the first item, else None."""
+    if not bucket:
+        return None
+    if requested is not None:
+        match = next((d for d in bucket if d.bug_id == requested), None)
+        if match is not None:
+            return match
+    return bucket[0]
+
+
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request, tab: str | None = None) -> HTMLResponse:
+def index(
+    request: Request, tab: str | None = None, bug: int | None = None
+) -> HTMLResponse:
     triage_dir = data.triage_dir_from_env()
     drafts = data.load_drafts(triage_dir)
     groups = data.group_by_section(drafts)
@@ -55,6 +71,8 @@ def index(request: Request, tab: str | None = None) -> HTMLResponse:
     stats = data.compute_stats(drafts, watch)
     active_tab = _resolve_active_tab(tab, groups)
     active_marker = SLUG_TO_MARKER[active_tab]
+    active_bucket = groups.get(active_marker, []) if active_marker else []
+    active_draft = _resolve_active_draft(active_bucket, bug)
     counts_by_slug = {
         slug: (
             len(groups.get(marker, [])) if marker
@@ -78,6 +96,8 @@ def index(request: Request, tab: str | None = None) -> HTMLResponse:
             "tabs": TABS,
             "active_tab": active_tab,
             "active_marker": active_marker,
+            "active_bucket": active_bucket,
+            "active_draft": active_draft,
             "counts_by_slug": counts_by_slug,
         },
     )
