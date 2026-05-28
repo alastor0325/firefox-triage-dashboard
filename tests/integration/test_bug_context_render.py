@@ -1,0 +1,165 @@
+"""Integration tests for bug_context rendering on the focused card."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from fastapi.testclient import TestClient
+
+from tests.conftest import write_draft
+from triage_dashboard.app import app
+
+
+client = TestClient(app)
+
+
+# ─── byline (reporter / platform / version / last activity) ──────────
+
+def test_byline_renders_reporter_platform_version(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "reporter_name": "Ryan McCartney",
+            "platform": "Windows 10 x64",
+            "firefox_version": "150.0",
+        },
+    )
+    body = client.get("/").text
+    assert "Ryan McCartney" in body
+    assert "Windows 10 x64" in body
+    assert "150.0" in body
+
+
+def test_byline_falls_back_to_email_when_no_name(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={"reporter_email": "user@example.com"},
+    )
+    body = client.get("/").text
+    assert "user@example.com" in body
+
+
+def test_byline_renders_last_activity_date(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={"last_activity": "2026-05-22T14:08:00Z"},
+    )
+    body = client.get("/").text
+    # The date portion is enough — we don't need to show the time.
+    assert "2026-05-22" in body
+
+
+# ─── inventory chips ─────────────────────────────────────────────────
+
+def test_inventory_chips_rendered_when_present(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "inventory_present": ["platform / version", "test URLs"],
+            "inventory_missing": ["about:support", "media log"],
+        },
+    )
+    body = client.get("/").text
+    assert 'class="inventory"' in body
+    assert "platform / version" in body
+    assert "test URLs" in body
+    assert "about:support" in body
+    assert "media log" in body
+
+
+def test_inventory_chips_absent_when_inventory_empty(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "platform": "Linux",
+            "inventory_present": [],
+            "inventory_missing": [],
+        },
+    )
+    body = client.get("/").text
+    assert 'class="inventory"' not in body
+
+
+# ─── see-also pills ─────────────────────────────────────────────────
+
+def test_see_also_pills_link_to_bugs(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "see_also": [
+                {"bug_id": 1981503, "label": "regressor"},
+                {"bug_id": 2012108, "label": "follow-up fix"},
+            ],
+        },
+    )
+    body = client.get("/").text
+    assert "see-also-pill" in body
+    assert "1981503" in body
+    assert "regressor" in body
+    assert "2012108" in body
+    assert "follow-up fix" in body
+
+
+# ─── expandable sections ────────────────────────────────────────────
+
+def test_description_excerpt_in_expandable(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={"description_excerpt": "When playing HEVC content via DASH..."},
+    )
+    body = client.get("/").text
+    assert "Bug description" in body
+    assert "When playing HEVC content" in body
+
+
+def test_recent_comments_in_expandable(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "recent_comments": [
+                {"author": "jya@mozilla.com", "ts": "2026-05-22T14:08:00Z",
+                 "text": "Looking at the HEVCChangeMonitor path."},
+            ],
+        },
+    )
+    body = client.get("/").text
+    assert "recent comment" in body.lower()
+    assert "jya@mozilla.com" in body
+    assert "Looking at the HEVCChangeMonitor path" in body
+
+
+def test_attachments_in_expandable(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "attachments": [{"name": "profile.json", "url": "https://example/p"}],
+        },
+    )
+    body = client.get("/").text
+    assert "Attachments" in body
+    assert "profile.json" in body
+
+
+def test_ai_reasoning_only_for_b1(triage_dir: Path) -> None:
+    """AI reasoning expandable shows up only on §1b cards (root cause analysis)."""
+    write_draft(
+        triage_dir, 1, severity="S3", priority="P3",
+        bug_context={"ai_reasoning": "Source: dom/media/...; line: 281."},
+    )
+    body = client.get("/").text
+    assert "AI reasoning" in body
+    assert "dom/media/" in body
+
+
+# ─── graceful absence ───────────────────────────────────────────────
+
+def test_card_without_bug_context_has_no_byline_or_more_sections(
+    triage_dir: Path,
+) -> None:
+    """Drafts without bug_context render as plain — none of the new sections appear."""
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    body = client.get("/").text
+    assert "card-byline" not in body
+    assert "see-also-pill" not in body
+    assert "Bug description" not in body
+    assert "Attachments" not in body

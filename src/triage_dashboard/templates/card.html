@@ -22,6 +22,87 @@
     <a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ draft.bug_id }}" target="_blank" rel="noopener">{{ draft.title }}</a>
   </h3>
 
+  {% if draft.bug_context %}
+    {% set ctx = draft.bug_context %}
+    {% set _by_parts = [] %}
+    {% if ctx.reporter_name or ctx.reporter_email %}
+      {% set _ = _by_parts.append('reporter') %}
+    {% endif %}
+    {% if ctx.platform or ctx.firefox_version or ctx.last_activity %}
+      {% set _ = _by_parts.append('env') %}
+    {% endif %}
+    {% if _by_parts %}
+    <p class="card-byline">
+      {% if ctx.reporter_name or ctx.reporter_email %}
+        Reported by <strong>{{ ctx.reporter_name or ctx.reporter_email }}</strong>
+      {% endif %}
+      {% if ctx.platform %} <span class="dot">·</span> <strong>{{ ctx.platform }}</strong>{% endif %}
+      {% if ctx.firefox_version %} <span class="dot">·</span> Firefox <strong>{{ ctx.firefox_version }}</strong>{% endif %}
+      {% if ctx.last_activity %} <span class="dot">·</span> last activity {{ ctx.last_activity[:10] }}{% endif %}
+    </p>
+    {% endif %}
+
+    {% if ctx.inventory_present or ctx.inventory_missing %}
+    <ul class="inventory">
+      {% for it in ctx.inventory_present %}<li class="present">{{ it }}</li>{% endfor %}
+      {% for it in ctx.inventory_missing %}<li class="missing">{{ it }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if ctx.see_also %}
+    <div class="see-also">
+      {% for s in ctx.see_also %}
+        <a class="see-also-pill"
+           href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ s.bug_id }}"
+           target="_blank" rel="noopener">
+          bug {{ s.bug_id }}{% if s.label %}<span class="lbl">{{ s.label }}</span>{% endif %}
+        </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if ctx.description_excerpt or ctx.recent_comments or ctx.attachments or ctx.ai_reasoning %}
+    <div class="more">
+      {% if ctx.description_excerpt %}
+      <details>
+        <summary>Bug description (excerpt)</summary>
+        <div class="body">{{ ctx.description_excerpt }}</div>
+      </details>
+      {% endif %}
+      {% if ctx.recent_comments %}
+      <details>
+        <summary>{{ ctx.recent_comments|length }} recent comment{% if ctx.recent_comments|length != 1 %}s{% endif %}</summary>
+        <div class="body">
+          {% for c in ctx.recent_comments %}
+          <div class="comment-snippet">
+            <span class="author">{{ c.author }}</span>
+            <span class="ts">{{ c.ts[:16].replace('T', ' ') if c.ts else '' }}</span>
+            <p>{{ c.text }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
+      {% if ctx.attachments %}
+      <details>
+        <summary>Attachments ({{ ctx.attachments|length }})</summary>
+        <div class="body">
+          {% for a in ctx.attachments %}
+            <div><a href="{{ a.url }}" target="_blank" rel="noopener"><code>{{ a.name }}</code></a></div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
+      {% if ctx.ai_reasoning %}
+      <details>
+        <summary>AI reasoning</summary>
+        <div class="body">{{ ctx.ai_reasoning }}</div>
+      </details>
+      {% endif %}
+    </div>
+    {% endif %}
+  {% endif %}
+
   <textarea class="card-comment" name="comment" readonly>{{ draft.comment }}</textarea>
 
   <form class="composer"

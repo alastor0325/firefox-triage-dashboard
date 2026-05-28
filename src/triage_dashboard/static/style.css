@@ -235,6 +235,89 @@ code, kbd {
 }
 .card-sub strong { color: var(--ink); font-weight: 600; }
 
+.card-byline {
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  margin: 0 0 0.6rem;
+  line-height: 1.45;
+}
+.card-byline strong { font-weight: 600; color: var(--ink); }
+.card-byline .dot { color: var(--ink-5); margin: 0 0.1rem; }
+
+.see-also {
+  display: flex; gap: 0.35rem; flex-wrap: wrap;
+  margin: 0 0 0.7rem;
+  font-size: 0.82rem;
+}
+.see-also-pill {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.12s, color 0.12s;
+}
+.see-also-pill:hover { background: var(--blue); color: #fff; text-decoration: none; }
+.see-also-pill .lbl { color: var(--ink-3); font-weight: 500; margin-left: 0.4em; }
+.see-also-pill:hover .lbl { color: rgba(255, 255, 255, 0.85); }
+
+.more {
+  border-top: 1px solid var(--border);
+  margin: 0.35rem 0 0.7rem;
+  padding-top: 0.55rem;
+}
+.more details { margin-bottom: 0.25rem; }
+.more summary {
+  cursor: pointer;
+  font-size: 0.86rem;
+  color: var(--ink-3);
+  list-style: none;
+  padding: 0.2rem 0;
+  font-weight: 500;
+  user-select: none;
+}
+.more summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 0.45em;
+  transition: transform 0.12s;
+  color: var(--ink-4);
+  font-size: 0.7em;
+}
+.more details[open] > summary::before { transform: rotate(90deg); }
+.more summary:hover { color: var(--ink); }
+.more summary::-webkit-details-marker { display: none; }
+.more .body {
+  padding: 0.4rem 0.85rem 0.4rem 1.1rem;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  border-left: 2px solid var(--surface-2);
+  margin-top: 0.3rem;
+}
+.more .comment-snippet {
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  margin-bottom: 0.3rem;
+  font-size: 0.88rem;
+}
+.more .comment-snippet .author {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 0.78rem;
+}
+.more .comment-snippet .ts {
+  font-family: var(--font-mono);
+  color: var(--ink-4);
+  font-size: 0.72rem;
+  margin-left: 0.4rem;
+}
+.more .comment-snippet p { margin: 0.2rem 0 0; color: var(--ink-2); }
+
 .inventory {
   list-style: none; padding: 0; margin: 0 0 0.7rem;
   display: flex; flex-wrap: wrap;
