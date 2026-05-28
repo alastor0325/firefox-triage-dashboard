@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import data
+from . import claude_queue, data
 
 PKG_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = PKG_DIR / "templates"
@@ -85,3 +85,26 @@ def index(request: Request, tab: str | None = None) -> HTMLResponse:
 @app.get("/healthz")
 def healthz() -> dict:
     return {"ok": True}
+
+
+@app.post("/draft/{bug_id}/refine")
+def refine_draft(bug_id: int, feedback: str = Form(default="")) -> JSONResponse:
+    """Queue a refine request for the AI to revise this draft.
+
+    The draft itself isn't touched here; we just append to claude-queue.jsonl.
+    The /process-queue skill is what eventually consumes the queue and
+    rewrites the pending JSON with a revised draft.
+
+    `feedback` is taken as a form field with a default of "" so we can
+    return a 400 (rather than FastAPI's automatic 422) for empty input.
+    """
+    triage_dir = data.triage_dir_from_env()
+    if not (triage_dir / "pending" / f"bug-{bug_id}.json").is_file():
+        raise HTTPException(status_code=404, detail="no pending draft for that bug")
+    try:
+        entry = claude_queue.append_refine(
+            triage_dir, bug_id=bug_id, feedback=feedback
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return JSONResponse({"ok": True, "queued_at": entry["ts"]})
