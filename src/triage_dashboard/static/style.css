@@ -491,6 +491,21 @@ code, kbd {
   border-radius: 2px;
   transition: width 0.18s ease;
 }
+.deck-hint {
+  display: inline-flex; gap: 0.15rem;
+  font-size: 0.72rem;
+  color: var(--ink-4);
+  cursor: help;
+}
+.deck-hint kbd {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 0.05rem 0.32rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+}
 
 /* ── Deck stage (focused card + stack-paper depth hint) ── */
 .deck-stage {

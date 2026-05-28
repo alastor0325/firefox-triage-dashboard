@@ -27,6 +27,44 @@
       if (send) send.disabled = !e.target.value.trim();
     }
   });
+  // Keyboard shortcuts for power users.
+  // Ignored when any input/textarea is focused so typing isn't hijacked.
+  document.addEventListener('keydown', (e) => {
+    const tag = (document.activeElement?.tagName || '').toLowerCase();
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (['input', 'textarea', 'select'].includes(tag) && e.key !== 'Escape') return;
+    const clickIfActive = sel => {
+      const btn = document.querySelector(sel);
+      if (btn && !btn.disabled) { btn.click(); e.preventDefault(); }
+    };
+    switch (e.key) {
+      case 'ArrowDown':
+      case 'j':
+        clickIfActive('.deck-next');
+        break;
+      case 'ArrowUp':
+      case 'k':
+        clickIfActive('.deck-prev');
+        break;
+      case '/':
+        {
+          const search = document.querySelector('.rail-search');
+          if (search) { search.focus(); search.select(); e.preventDefault(); }
+        }
+        break;
+      case 'a':
+        clickIfActive('.deck-stage .btn-primary, .deck-stage .btn-reassign');
+        break;
+      case 's':
+        clickIfActive('.deck-stage .btn-ghost');
+        break;
+      case 'Escape':
+        if (document.activeElement && 'blur' in document.activeElement) {
+          document.activeElement.blur();
+        }
+        break;
+    }
+  });
   // Move active state instantly on tab click so the UI feels responsive
   // even before the htmx response arrives.
   document.addEventListener('click', (e) => {
