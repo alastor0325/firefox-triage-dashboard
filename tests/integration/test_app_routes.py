@@ -137,3 +137,23 @@ def test_c1_apply_close_button_when_resolving(triage_dir: Path) -> None:
     write_draft(triage_dir, 555, resolution="INCOMPLETE")
     body = client.get("/?tab=close").text
     assert "Apply &amp; close" in body or "Apply &amp; Close" in body
+
+
+# ─── feedback (AI revise) UI ────────────────────────────────────────
+
+def test_card_has_feedback_form(triage_dir: Path) -> None:
+    """Every card must expose the feedback-and-revise form."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    body = client.get("/").text
+    assert 'hx-post="/draft/5551/refine"' in body
+    assert 'name="feedback"' in body
+    # The Revise button submits the form.
+    assert "Revise" in body
+
+
+def test_card_feedback_form_targets_per_card_status(triage_dir: Path) -> None:
+    """Each card has its own status div so submissions don't bleed across cards."""
+    write_draft(triage_dir, 1, severity="S3", priority="P3")
+    body = client.get("/").text
+    assert 'id="fbstatus-1"' in body
+    assert 'hx-target="#fbstatus-1"' in body

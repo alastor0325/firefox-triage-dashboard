@@ -24,6 +24,18 @@
 
   <textarea class="card-comment" name="comment" readonly>{{ draft.comment }}</textarea>
 
+  <form class="feedback"
+        hx-post="/draft/{{ draft.bug_id }}/refine"
+        hx-target="#fbstatus-{{ draft.bug_id }}"
+        hx-swap="innerHTML"
+        hx-on::after-request="if(event.detail.successful) this.reset()">
+    <textarea name="feedback" class="feedback-input" rows="1"
+              aria-label="Feedback for the AI"
+              placeholder="Tell the AI what to change… then Revise"></textarea>
+    <button type="submit" class="btn-feedback">Revise</button>
+  </form>
+  <div id="fbstatus-{{ draft.bug_id }}" class="feedback-status" aria-live="polite"></div>
+
   <div class="card-foot">
     <div class="diff">
       {% if draft.severity %}<span class="pill pill-sev">{{ draft.severity }}</span>{% endif %}

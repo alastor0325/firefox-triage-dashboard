@@ -362,6 +362,74 @@ code, kbd {
   font-size: 0.92rem;
 }
 
+/* ───── FEEDBACK (AI revise) ───── */
+.feedback {
+  display: flex;
+  gap: 0.45rem;
+  margin: 0 0 0.5rem;
+  align-items: stretch;
+}
+.feedback-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--ink);
+  resize: vertical;
+  min-height: 1.85rem;
+  max-height: 6rem;
+  transition: background-color 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+.feedback-input::placeholder { color: var(--ink-4); }
+.feedback-input:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--ink-3);
+  box-shadow: 0 0 0 3px rgba(9, 9, 11, 0.05);
+}
+.btn-feedback {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.12s, color 0.12s, transform 0.06s;
+}
+.btn-feedback:hover { background: var(--accent); color: #fff; }
+.btn-feedback:active { transform: translateY(1px); }
+
+.feedback-status:empty { display: none; }
+.feedback-status { margin: 0 0 0.55rem; }
+.feedback-queued {
+  margin: 0;
+  padding: 0.4rem 0.65rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 0.83rem;
+  font-weight: 500;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.feedback-queued q { font-style: italic; font-weight: 400; }
+.feedback-queued q::before { content: "“"; }
+.feedback-queued q::after { content: "”"; }
+.feedback-queued .spinner {
+  display: inline-block;
+  animation: spin 1.4s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ───── WATCHING TAB CONTENT ───── */
 .watch-list { list-style: none; padding: 0; margin: 0; }
 .watch-item {
