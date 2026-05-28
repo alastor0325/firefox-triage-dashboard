@@ -86,35 +86,71 @@ Page auto-refreshes when terminal `/triage` writes new pending drafts.
 - [ ] htmx listener on the page that re-fetches affected cards
 - [ ] Commit + push
 
-### Phase 3 — Apply / Skip / Edit  ← PENDING
+### Phase 3 — Feedback loop with the AI  ← NEXT
+
+The core review-and-revise workflow. You read the AI's draft, write
+feedback in your own words ("don't ask about extensions, focus on
+codec"), submit. The AI re-drafts using your feedback as context.
+Repeat until you're happy, then move on. The textarea stays
+read-mostly — direct edits are an escape hatch, not the main path.
+
+**What gets built:**
+- [ ] Feedback textarea + "Revise" button on each card
+- [ ] `POST /draft/{id}/refine` writes a queue entry to `~/firefox-triage/claude-queue.jsonl`
+- [ ] Card shows "⟳ revising…" state with Apply disabled while feedback is pending
+- [ ] Revision history per card (collapsed by default), pulled from `~/firefox-triage/revisions/bug-<id>.jsonl`
+- [ ] Version badge on the current draft (v1, v2, …)
+- [ ] `/process-queue` skill: drains the queue, re-runs `/triage <id>` with feedback + prior draft as context, writes new pending JSON + appends to revision log
+- [ ] Tests (queue writer, refine endpoint, revising-state rendering, history rendering)
+- [ ] Commit + push
+
+**Storage layout:**
+```
+~/firefox-triage/
+├── pending/bug-<id>.json          ← current draft only
+├── claude-queue.jsonl             ← feedback queue (in/out: dashboard writes, /process-queue consumes)
+└── revisions/
+    └── bug-<id>.jsonl             ← one line per revision: feedback + new draft snapshot
+```
+
+**Design decisions (locked):**
+- Feedback can change fields (P/S, blocks, NI), not just text — AI revises whatever's appropriate
+- Latest feedback wins on contradiction; full history retained as context
+- Direct comment edits still allowed (textarea is read-mostly, not read-only) as a tiny escape hatch
+- Bug context cached in pending JSON at draft time so /process-queue doesn't need to re-fetch Bugzilla
+
+**Open**: per-paragraph feedback (vs whole-draft) — deferred, only build whole-draft for now.
+
+### Phase 4 — Apply / Skip  ← PENDING
 
 Buttons in the UI actually execute against Bugzilla.
 
 - [ ] `POST /draft/{id}/apply` → subprocess `bugzilla-cli apply {id}`, stream output
 - [ ] `POST /draft/{id}/skip` → delete pending file, append `skipped` to triage-log
-- [ ] `PUT /draft/{id}` → save edits to pending JSON (comment text)
 - [ ] Toast / output pane for apply-result streaming
 - [ ] Card fade-out + remove on success
 - [ ] Commit + push
 
-### Phase 4 — /bug-start handoff  ← PENDING
+### Phase 5 — /bug-start handoff  ← PENDING
 
-§1b cards have a "copy /bug-start {id}" button + write action to queue file.
+§1b cards have a "copy /bug-start {id}" button (already wired up in Phase 1).
+This phase adds the queue-based handoff for full automation.
 
-- [ ] Clipboard JS for copy button
-- [ ] `~/firefox-triage/claude-queue.jsonl` writer on apply for §1b cards
+- [x] Clipboard JS for copy button *(done in Phase 1)*
+- [ ] On apply for §1b cards, also write a `/bug-start` action to `~/firefox-triage/claude-queue.jsonl`
+- [ ] `/process-queue` skill picks it up and runs `/bug-start <id>` (extends Phase 3's skill)
 - [ ] Commit + push
 
-### Phase 5 — Claude orchestration  ← PENDING (scope TBD)
+### Phase 6 — Claude orchestration  ← PENDING (scope TBD)
 
-Dashboard kicks off `/triage` and `/bug-start` from the UI; investigation
-results stream back.
+Dashboard kicks off `/triage`, `/process-queue`, and `/bug-start` from
+the UI without requiring a separate Claude terminal session.
 
-**Open decision**: subprocess `claude -p`, queue file + `/process-queue`
-skill, or Claude Agent SDK embedded in the server. Pick when we get there.
+**Open decision**: subprocess `claude -p`, persistent daemon, or Claude
+Agent SDK embedded in the server. Pick when we get there.
 
 - [ ] "Run /triage now" button
-- [ ] Auto-trigger `/bug-start` after §1b apply
+- [ ] Auto-drain claude-queue.jsonl when items appear (no manual `claude` invocation)
 - [ ] Investigation result display
 - [ ] Commit + push
 
