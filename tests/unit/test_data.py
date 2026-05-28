@@ -221,3 +221,73 @@ def test_triage_dir_from_env_falls_back_to_default(
 ) -> None:
     monkeypatch.delenv("TRIAGE_DIR", raising=False)
     assert data.triage_dir_from_env() == data.DEFAULT_TRIAGE_DIR
+
+
+# ─── bug_context (optional rich context block) ─────────────────────
+
+def test_draft_without_bug_context_loads(triage_dir: Path) -> None:
+    """Drafts written before bug_context was a thing still load cleanly."""
+    write_draft(triage_dir, 1)
+    drafts = data.load_drafts(triage_dir)
+    assert drafts[0].bug_context is None
+
+
+def test_draft_with_full_bug_context(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 2039853,
+        bug_context={
+            "description_excerpt": "When playing HEVC content via DASH-LL...",
+            "platform": "Windows 10 x64",
+            "firefox_version": "150.0",
+            "reporter_email": "ryan.mccartney@bbc.co.uk",
+            "reporter_name": "Ryan McCartney",
+            "last_activity": "2026-05-22T14:08:00Z",
+            "inventory_present": ["platform / version", "three test URLs"],
+            "inventory_missing": ["about:support", "media log"],
+            "see_also": [
+                {"bug_id": 1981503, "label": "regressor"},
+                {"bug_id": 2012108, "label": "follow-up fix"},
+            ],
+            "recent_comments": [
+                {"author": "jya@mozilla.com", "ts": "2026-05-22T14:08:00Z",
+                 "text": "Looking at HEVCChangeMonitor path."},
+            ],
+            "attachments": [
+                {"name": "profile.json", "url": "https://...", "size": 412000},
+            ],
+            "ai_reasoning": "",
+        },
+    )
+    ctx = data.load_drafts(triage_dir)[0].bug_context
+    assert ctx is not None
+    assert ctx.platform == "Windows 10 x64"
+    assert ctx.firefox_version == "150.0"
+    assert ctx.reporter_name == "Ryan McCartney"
+    assert ctx.inventory_present == ["platform / version", "three test URLs"]
+    assert ctx.inventory_missing == ["about:support", "media log"]
+    assert ctx.see_also == [
+        {"bug_id": 1981503, "label": "regressor"},
+        {"bug_id": 2012108, "label": "follow-up fix"},
+    ]
+    assert len(ctx.recent_comments) == 1
+    assert ctx.attachments[0]["name"] == "profile.json"
+
+
+def test_bug_context_partial_fields_default_empty(triage_dir: Path) -> None:
+    """An incomplete bug_context shouldn't crash — missing fields default empty."""
+    write_draft(
+        triage_dir, 1,
+        bug_context={"platform": "Linux", "firefox_version": "151.0"},
+    )
+    ctx = data.load_drafts(triage_dir)[0].bug_context
+    assert ctx is not None
+    assert ctx.platform == "Linux"
+    assert ctx.reporter_name == ""
+    assert ctx.inventory_present == []
+    assert ctx.see_also == []
+
+
+def test_bug_context_malformed_falls_back_to_none(triage_dir: Path) -> None:
+    """If bug_context isn't a dict, load it as None rather than crashing."""
+    write_draft(triage_dir, 1, bug_context="not a dict")
+    assert data.load_drafts(triage_dir)[0].bug_context is None

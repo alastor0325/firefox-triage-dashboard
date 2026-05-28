@@ -7,11 +7,52 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, Literal
+from typing import Any, Iterable, Literal
 
 DEFAULT_TRIAGE_DIR = Path.home() / "firefox-triage"
 
 Section = Literal["§1b", "§1a", "§1c"]
+
+
+@dataclass
+class BugContext:
+    """Rich context snapshot of the bug at /triage draft time.
+
+    Optional — older pending JSON files were written without this block.
+    All fields default to empty so partial contexts render gracefully.
+    """
+
+    description_excerpt: str = ""
+    platform: str = ""
+    firefox_version: str = ""
+    reporter_email: str = ""
+    reporter_name: str = ""
+    last_activity: str = ""
+    inventory_present: list[str] = field(default_factory=list)
+    inventory_missing: list[str] = field(default_factory=list)
+    see_also: list[dict] = field(default_factory=list)
+    recent_comments: list[dict] = field(default_factory=list)
+    attachments: list[dict] = field(default_factory=list)
+    ai_reasoning: str = ""
+
+
+def _parse_bug_context(raw: Any) -> BugContext | None:
+    if not isinstance(raw, dict):
+        return None
+    return BugContext(
+        description_excerpt=str(raw.get("description_excerpt") or ""),
+        platform=str(raw.get("platform") or ""),
+        firefox_version=str(raw.get("firefox_version") or ""),
+        reporter_email=str(raw.get("reporter_email") or ""),
+        reporter_name=str(raw.get("reporter_name") or ""),
+        last_activity=str(raw.get("last_activity") or ""),
+        inventory_present=list(raw.get("inventory_present") or []),
+        inventory_missing=list(raw.get("inventory_missing") or []),
+        see_also=[e for e in (raw.get("see_also") or []) if isinstance(e, dict)],
+        recent_comments=[e for e in (raw.get("recent_comments") or []) if isinstance(e, dict)],
+        attachments=[e for e in (raw.get("attachments") or []) if isinstance(e, dict)],
+        ai_reasoning=str(raw.get("ai_reasoning") or ""),
+    )
 
 
 @dataclass
@@ -32,7 +73,8 @@ class Draft:
     component: str | None
     created_at: str
     section: Section
-    # Enriched fields (populated lazily; None until set)
+    bug_context: BugContext | None = None
+    # Legacy enrichment fields (kept for backward-compat with prior code paths)
     bug_component: str | None = None
     bug_reporter: str | None = None
 
@@ -81,6 +123,7 @@ def load_drafts(triage_dir: Path = DEFAULT_TRIAGE_DIR) -> list[Draft]:
                 component=data.get("component"),
                 created_at=data.get("created_at") or "",
                 section=classify_section(data),
+                bug_context=_parse_bug_context(data.get("bug_context")),
             )
         )
     return drafts
