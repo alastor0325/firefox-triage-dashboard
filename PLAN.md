@@ -107,18 +107,18 @@ description excerpt, recent comments, attachments.
 - [x] Layout split: rail (left) + deck stage (right). Watching tab unaffected.
 - [x] `?bug=<id>` query param selects the active card; defaults to first in bucket.
 - [x] Rail item click navigates to that bug (htmx swap).
-- [ ] Deck-nav: position counter + progress bar + prev/next buttons.
-- [ ] Keyboard: `↑/↓` prev/next, `a` apply, `s` skip, `/` focus search.
-- [ ] Rail filter input (title + bug id substring).
+- [x] Deck-nav: position counter + progress bar + prev/next buttons.
+- [x] Keyboard: `↑/↓` (also `j/k`) prev/next, `a` apply, `s` skip, `/` focus search, `Esc` unfocus.
+- [x] Rail filter input (substring filter over bug id + title; client-side).
 - [ ] **Skill update** (separate session, `~/.claude/skills/triage/SKILL.md`):
   - Teach `/triage` to write a `bug_context` object into pending JSON at draft time.
   - Fields: `description_excerpt`, `platform`, `firefox_version`, `reporter_name`,
     `last_activity`, `inventory_present`, `inventory_missing`, `see_also`,
     `recent_comments`, `attachments`, `ai_reasoning` (§1b only).
 - [ ] **Re-run `/triage`** to regenerate the existing pending JSON files with the new richer schema (so the dashboard has real data to render).
-- [ ] Extend `Draft` dataclass with optional `bug_context` fields.
-- [ ] Render `bug_context` in the focused card (gracefully absent when missing).
-- [ ] Tests for active-card selection (done), rail rendering (done), bug_context rendering.
+- [x] Extend `Draft` dataclass with optional `BugContext` fields.
+- [x] Render `bug_context` in the focused card (byline / inventory / see-also / expandables — gracefully absent when missing).
+- [x] Tests for active-card selection, rail rendering, bug_context rendering, schema parsing (90 tests passing).
 
 ### Phase 2 — Live updates  ← PENDING
 
