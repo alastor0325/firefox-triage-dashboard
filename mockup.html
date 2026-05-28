@@ -1,0 +1,1093 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Triage · A/V</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,600;9..144,700;9..144,800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:         #fafafa;
+      --surface:    #ffffff;
+      --surface-2:  #f4f4f5;
+      --border:     #e4e4e7;
+      --border-strong: #d4d4d8;
+      --ink:        #09090b;        /* zinc-950 — primary, max contrast on white */
+      --ink-2:      #27272a;        /* zinc-800 */
+      --ink-3:      #52525b;        /* zinc-600 — passes AAA on white (8.6:1) */
+      --ink-4:      #71717a;        /* zinc-500 — passes AA on white (5.5:1) */
+      --ink-5:      #a1a1aa;        /* zinc-400 — non-text only */
+      --accent:     #d2410d;        /* Firefox warm orange-red */
+      --accent-soft:#fff0e9;
+      --green:      #15803d;
+      --green-soft: #ecf7ef;
+      --amber:      #92400e;        /* darker amber — passes AAA */
+      --amber-soft: #fef3c7;
+      --blue:       #1d4ed8;        /* darker blue — passes AAA */
+      --blue-soft:  #eff6ff;
+      --red:        #b91c1c;
+
+      --font-display: "Fraunces", Georgia, serif;
+      --font-sans:    "Geist", system-ui, -apple-system, sans-serif;
+      --font-mono:    "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+      --radius: 6px;
+      --radius-sm: 4px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+    code, kbd {
+      font-family: var(--font-mono);
+      font-size: 0.92em;
+      background: var(--surface-2);
+      padding: 0.05em 0.35em;
+      border-radius: var(--radius-sm);
+      color: var(--ink-2);
+    }
+
+    /* ───── TOP BAR ───── */
+    .topbar {
+      display: flex; align-items: center; gap: 2rem;
+      padding: 1.1rem 1.75rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .brand {
+      display: flex; align-items: baseline; gap: 0.7rem;
+    }
+    .brand-title {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-variation-settings: "opsz" 144, "SOFT" 30;
+      font-size: 1.55rem;
+      letter-spacing: -0.018em;
+      line-height: 1;
+      margin: 0;
+      color: var(--ink);
+    }
+    .brand-sub {
+      font-size: 0.86rem;
+      color: var(--ink-2);
+      letter-spacing: 0.005em;
+    }
+    .brand-sub strong { color: var(--ink); font-weight: 600; }
+
+    .stats {
+      display: flex; align-items: baseline;
+      gap: 1.4rem;
+      margin-left: auto;
+      font-size: 0.86rem;
+      color: var(--ink-2);
+    }
+    .stats .stat {
+      display: inline-flex; align-items: baseline; gap: 0.4rem;
+    }
+    .stats .num {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--ink);
+      font-feature-settings: "tnum" 1;
+    }
+    .stats .stat--primary .num { color: var(--accent); font-weight: 700; }
+    .stats .lbl { color: var(--ink-3); font-weight: 500; }
+    .stats .sep { color: var(--ink-5); padding: 0 0.1rem; }
+
+    /* ───── LAYOUT ───── */
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      max-width: 1380px;
+      margin: 0 auto;
+    }
+    .layout > main {
+      padding: 1.4rem 1.75rem 3rem;
+      min-width: 0;
+    }
+    .layout > aside {
+      padding: 1.4rem 1.4rem 3rem;
+      border-left: 1px solid var(--border);
+    }
+
+    /* ───── SECTION ───── */
+    .section { margin-bottom: 2rem; }
+    .section:last-child { margin-bottom: 0; }
+    .section-header {
+      display: flex; align-items: baseline; gap: 0.7rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.45rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--ink);
+      letter-spacing: -0.011em;
+    }
+    .section-title .marker {
+      color: var(--accent);
+      margin-right: 0.4em;
+      font-weight: 700;
+    }
+    .section-count {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--ink-3);
+      font-feature-settings: "tnum" 1;
+      letter-spacing: 0.02em;
+      font-weight: 500;
+    }
+
+    /* ───── CARD ───── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem 0.75rem;
+      margin-bottom: 0.55rem;
+      transition: border-color 0.12s, box-shadow 0.12s;
+    }
+    .card:hover {
+      border-color: var(--border-strong);
+    }
+    .card:focus-within {
+      border-color: var(--ink-3);
+      box-shadow: 0 0 0 3px rgba(22, 19, 16, 0.06);
+    }
+
+    .card-head {
+      display: flex; align-items: center; gap: 0.6rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.82rem;
+      color: var(--ink-3);
+      flex-wrap: wrap;
+    }
+    .card-head .bug-id {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: 0.01em;
+      font-size: 0.82rem;
+    }
+    .card-head .bug-id a { color: inherit; }
+    .card-head .bug-id a:hover { color: var(--accent); text-decoration: none; }
+    .card-head .component {
+      color: var(--ink-3);
+      font-weight: 500;
+    }
+    .card-head .sep {
+      color: var(--ink-5);
+    }
+    .card-head .badge {
+      display: inline-flex; align-items: center;
+      padding: 0.1rem 0.45rem;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 0.74rem;
+      letter-spacing: 0.03em;
+    }
+    .badge-ps {
+      background: var(--surface-2);
+      color: var(--ink);
+    }
+    .badge-ps--pending {
+      background: transparent;
+      color: var(--ink-4);
+      border: 1px dashed var(--border-strong);
+    }
+    .badge-ni {
+      margin-left: auto;
+      color: var(--amber);
+      background: var(--amber-soft);
+      padding: 0.1rem 0.5rem;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+    }
+    .badge-ni::before {
+      content: 'NI';
+      margin-right: 0.45em;
+      font-weight: 700;
+      opacity: 0.85;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      line-height: 1.32;
+      margin: 0 0 0.25rem;
+      color: var(--ink);
+      letter-spacing: -0.011em;
+    }
+    .card-title a { color: inherit; }
+    .card-title a:hover { color: var(--accent); text-decoration: none; }
+    .card-title code {
+      font-size: 0.88em;
+      background: var(--surface-2);
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .card-sub {
+      font-size: 0.92rem;
+      color: var(--ink-2);
+      margin: 0 0 0.65rem;
+      line-height: 1.5;
+    }
+    .card-sub strong { color: var(--ink); font-weight: 600; }
+
+    /* inventory */
+    .inventory {
+      list-style: none; padding: 0; margin: 0 0 0.7rem;
+      display: flex; flex-wrap: wrap;
+      gap: 0.2rem 0.85rem;
+      font-size: 0.85rem;
+    }
+    .inventory li {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      color: var(--ink-2);
+    }
+    .inventory li::before {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.9rem;
+      width: 0.75rem; text-align: center;
+      line-height: 1;
+    }
+    .inventory .present::before { content: '✓'; color: var(--green); }
+    .inventory .missing { color: var(--ink-4); }
+    .inventory .missing::before { content: '✗'; color: var(--red); opacity: 0.85; }
+
+    /* comment textarea */
+    .card-comment {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 0.9rem;
+      font-family: var(--font-sans);
+      font-size: 0.97rem;
+      line-height: 1.6;
+      color: var(--ink);
+      resize: vertical;
+      min-height: 6rem;
+      display: block;
+      margin-bottom: 0.7rem;
+      transition: border-color 0.12s, background-color 0.12s, box-shadow 0.12s;
+    }
+    .card-comment:focus {
+      outline: none;
+      border-color: var(--ink-2);
+      box-shadow: 0 0 0 3px rgba(9, 9, 11, 0.07);
+    }
+
+    /* card footer */
+    .card-foot {
+      display: flex; align-items: center;
+      gap: 0.8rem;
+      flex-wrap: wrap-reverse;
+      padding-top: 0.6rem;
+      border-top: 1px solid var(--border);
+    }
+    .diff {
+      flex: 1; min-width: 12rem;
+      font-size: 0.85rem;
+      color: var(--ink-2);
+      display: flex; flex-wrap: wrap; align-items: center;
+      gap: 0.2rem 0.6rem;
+      line-height: 1.6;
+      font-feature-settings: "tnum" 1;
+    }
+    .diff::before {
+      content: 'Will apply';
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-3);
+      margin-right: 0.45rem;
+      font-weight: 600;
+    }
+    .diff .sep { color: var(--ink-5); }
+    .diff .pill {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.06rem 0.4rem;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.02em;
+    }
+    .pill-sev { background: var(--amber-soft); color: var(--amber); }
+    .pill-pri { background: var(--surface-2); color: var(--ink); }
+    .pill-resolve { background: var(--red); color: var(--surface); padding: 0.1rem 0.5rem; font-weight: 700; }
+    .pill-reassign { background: var(--blue-soft); color: var(--blue); font-weight: 600; }
+    .diff .meta {
+      color: var(--blue);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .diff .plus { color: var(--green); font-weight: 700; margin-right: 0.1em; }
+
+    /* actions */
+    .actions {
+      display: flex; gap: 0.4rem;
+      flex-shrink: 0;
+    }
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.45rem 0.95rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--ink-2);
+      cursor: pointer;
+      letter-spacing: 0.005em;
+      transition: background-color 0.12s, color 0.12s, border-color 0.12s, transform 0.06s;
+    }
+    .btn:hover { border-color: var(--ink-3); color: var(--ink); }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary {
+      background: var(--green);
+      color: #fff;
+      border-color: var(--green);
+      font-weight: 600;
+    }
+    .btn-primary:hover {
+      background: #126b34;
+      border-color: #126b34;
+      color: #fff;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink-3);
+      border-color: transparent;
+    }
+    .btn-ghost:hover {
+      background: var(--surface-2);
+      color: var(--red);
+      border-color: transparent;
+    }
+    .btn-copy {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent);
+      border-color: var(--accent-soft);
+      background: var(--accent-soft);
+    }
+    .btn-copy::before {
+      content: '⎘';
+      margin-right: 0.45em;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+    }
+    .btn-copy:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .btn-reassign {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+    }
+    .btn-reassign:hover { background: #1f3f8e; border-color: #1f3f8e; }
+
+    /* ───── SIDEBAR ───── */
+    aside .panel { margin-bottom: 1.5rem; }
+    aside .panel h2 {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink);
+      margin: 0 0 0.65rem;
+      padding-bottom: 0.45rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: baseline; justify-content: space-between;
+    }
+    aside .panel h2 .count {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--ink-3);
+      letter-spacing: 0.03em;
+      text-transform: none;
+      font-weight: 500;
+    }
+
+    aside ol { list-style: none; padding: 0; margin: 0; }
+    aside .item {
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+    aside .item:last-child { border-bottom: none; }
+    aside .item-row1 {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 0.4rem;
+      margin-bottom: 0.15rem;
+    }
+    aside .item .bug-id {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 0.82rem;
+      color: var(--ink);
+    }
+    aside .item .bug-id a { color: inherit; }
+    aside .item .bug-id a:hover { color: var(--accent); text-decoration: none; }
+    aside .item .timeago {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--ink-3);
+      font-weight: 500;
+    }
+    aside .item .text {
+      color: var(--ink-2);
+      font-size: 0.88rem;
+    }
+    aside .item .text strong { font-weight: 600; color: var(--ink); }
+    aside .item .ni {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--ink-3);
+      margin-top: 0.15rem;
+    }
+    aside .item .ni::before {
+      content: 'NI ';
+      color: var(--amber); font-weight: 700;
+    }
+
+    aside .tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      padding: 0.08rem 0.4rem;
+      border-radius: var(--radius-sm);
+      margin-top: 0.25rem;
+    }
+    .tag-ni        { background: var(--amber-soft); color: var(--amber); }
+    .tag-triaged   { background: var(--green-soft); color: var(--green); }
+    .tag-duplicate { background: #fde8e8;           color: var(--red); }
+    .tag-incomplete{ background: #fde8e8;           color: var(--red); }
+    .tag-wrong     { background: var(--blue-soft);  color: var(--blue); }
+    .tag-skipped   { background: var(--surface-2);  color: var(--ink-3); }
+
+    /* ───── RESPONSIVE ───── */
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns: 1fr; }
+      .layout > aside { border-left: none; border-top: 1px solid var(--border); }
+      .topbar { gap: 1rem; flex-wrap: wrap; padding: 0.9rem 1rem; }
+      .stats { margin-left: 0; gap: 1rem; flex-wrap: wrap; }
+    }
+    @media (max-width: 640px) {
+      .layout > main, .layout > aside { padding: 1rem 1rem 2rem; }
+      .card-head { gap: 0.4rem; }
+      .badge-ni { margin-left: 0; }
+      .card-foot { flex-direction: column-reverse; align-items: stretch; }
+      .actions { justify-content: flex-end; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <h1 class="brand-title">Triage</h1>
+      <span class="brand-sub"><strong>Audio/Video</strong> · Thursday, May 28</span>
+    </div>
+    <div class="stats">
+      <span class="stat stat--primary"><span class="num">15</span><span class="lbl">pending</span></span>
+      <span class="sep">·</span>
+      <span class="stat"><span class="num">3</span><span class="lbl">triaged</span></span>
+      <span class="stat"><span class="num">10</span><span class="lbl">needs info</span></span>
+      <span class="stat"><span class="num">2</span><span class="lbl">close</span></span>
+      <span class="sep">·</span>
+      <span class="stat"><span class="num">12</span><span class="lbl">watching</span></span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main>
+
+      <!-- ───── TRIAGED ───── -->
+      <section class="section">
+        <header class="section-header">
+          <h2 class="section-title"><span class="marker">§1b</span>Triaged</h2>
+          <span class="section-count">3 pending</span>
+        </header>
+
+        <!-- 2039425 -->
+        <article class="card">
+          <div class="card-head">
+            <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2039425">2039425</a></span>
+            <span class="sep">·</span>
+            <span class="component">Audio/Video: Playback</span>
+            <span class="sep">·</span>
+            <span class="badge badge-ps">S3 · P3</span>
+            <span class="badge-ni">alwu@mozilla.com</span>
+          </div>
+          <h3 class="card-title">
+            <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2039425">Intermittent <code>MOZ_DIAGNOSTIC_ASSERT(mResponseTarget→IsOnCurrentThread)</code></a>
+          </h3>
+          <p class="card-sub">WebCodecs VideoEncoder reconfigure crash. 6 hits over 2 weeks, filed by intermittent-bug-filer.</p>
+          <ul class="inventory">
+            <li class="present">crash signature</li>
+            <li class="present">stack trace</li>
+            <li class="present">test file</li>
+            <li class="present">frequency data</li>
+            <li class="missing">reduced repro</li>
+          </ul>
+          <textarea class="card-comment">Thanks for the report. The stack shows a `MozPromise&lt;bool, nsresult&gt;` resolved with the wrong `mResponseTarget` — the resolve runnable runs on a DOM Worker thread while the promise was created with a different target.
+
+The trigger is the rapid VideoEncoder reconfigure + flush sequence in `dom/media/test/crashtests/2016504.html`, which lives on the `RemoteEncoder` IPC promise chain. Marking S3/P3 (low-volume intermittent, narrow trigger) and starting investigation via /bug-start.</textarea>
+          <div class="card-foot">
+            <div class="diff">
+              <span class="pill pill-sev">S3</span>
+              <span class="pill pill-pri">P3</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>blocks <span class="meta">1746557</span></span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>ni alwu</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>cc alwu</span>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost">Skip</button>
+              <button class="btn btn-primary">Apply</button>
+              <button class="btn btn-copy">/bug-start 2039425</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2042320 -->
+        <article class="card">
+          <div class="card-head">
+            <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2042320">2042320</a></span>
+            <span class="sep">·</span>
+            <span class="component">Audio/Video: Playback</span>
+            <span class="sep">·</span>
+            <span class="badge badge-ps">S3 · P3</span>
+            <span class="badge-ni">alwu@mozilla.com</span>
+          </div>
+          <h3 class="card-title">
+            <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2042320">10-bit H.264 fails to play on Windows</a>
+          </h3>
+          <p class="card-sub">H.264 Hi10P (profile_idc 110) reaches the WMF MFT, which doesn't decode 10-bit. Mac and Edge work. <strong>padenot</strong> acknowledged the gap.</p>
+          <ul class="inventory">
+            <li class="present">repro URL</li>
+            <li class="present">codec profile</li>
+            <li class="present">cross-platform compare</li>
+            <li class="present">dev confirmation</li>
+          </ul>
+          <textarea class="card-comment">Thanks for the cross-platform comparison. This is the H.264 High 10 profile (`profile_idc=110`), which the Windows Media Foundation H.264 MFT does not actually support — Mac works because VideoToolbox handles it, and Edge has a different decode path.
+
+`dom/media/platforms/PDMFactory.cpp:262-272` rejects YUV444 / `profile_idc=244` on Windows but not Hi10P, so the stream reaches WMF and fails. Likely fix: reject Hi10P in `WMFDecoderModule::Supports()` so the ffvpx software fallback picks it up. Marking S3/P3 and starting investigation via /bug-start.</textarea>
+          <div class="card-foot">
+            <div class="diff">
+              <span class="pill pill-sev">S3</span>
+              <span class="pill pill-pri">P3</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>blocks <span class="meta">1752052</span></span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>ni alwu</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>cc alwu</span>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost">Skip</button>
+              <button class="btn btn-primary">Apply</button>
+              <button class="btn btn-copy">/bug-start 2042320</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2042862 -->
+        <article class="card">
+          <div class="card-head">
+            <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2042862">2042862</a></span>
+            <span class="sep">·</span>
+            <span class="component">Audio/Video: Playback</span>
+            <span class="sep">·</span>
+            <span class="badge badge-ps">S3 · P3</span>
+            <span class="badge-ni">alwu@mozilla.com</span>
+          </div>
+          <h3 class="card-title">
+            <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2042862">Autoplay policy ineffective when not <code>sPOLICY_STICKY_ACTIVATION</code></a>
+          </h3>
+          <p class="card-sub">AutoplayPolicy.cpp asymmetry: AudioContext path early-returns true for blocking_policy 1/2, HTMLMediaElement path handles all three. Root cause located.</p>
+          <ul class="inventory">
+            <li class="present">root cause located</li>
+            <li class="present">source file confirmed</li>
+            <li class="present">scope known</li>
+          </ul>
+          <textarea class="card-comment">Thanks for the careful analysis. Confirmed in `dom/media/autoplay/AutoplayPolicy.cpp`: `IsEnableBlockingWebAudioByUserGesturePolicy()` (lines 158-161) returns true only for `sPOLICY_STICKY_ACTIVATION` (policy=0), causing `IsAllowedToPlay(AudioContext&)` to early-return true for policy=1/2. The HTMLMediaElement path (`IsAllowedToPlayByBlockingModel`) handles all three values correctly — the asymmetry is the bug.
+
+Default of `media.autoplay.blocking_policy` is 0, so only users who explicitly changed the pref are affected. Marking S3/P3 and starting investigation via /bug-start.</textarea>
+          <div class="card-foot">
+            <div class="diff">
+              <span class="pill pill-sev">S3</span>
+              <span class="pill pill-pri">P3</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>blocks <span class="meta">2023365</span></span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>ni alwu</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>cc alwu</span>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost">Skip</button>
+              <button class="btn btn-primary">Apply</button>
+              <button class="btn btn-copy">/bug-start 2042862</button>
+            </div>
+          </div>
+        </article>
+
+      </section>
+
+      <!-- ───── NEEDS INFO ───── -->
+      <section class="section">
+        <header class="section-header">
+          <h2 class="section-title"><span class="marker">§1a</span>Needs Info</h2>
+          <span class="section-count">10 pending</span>
+        </header>
+
+        <!-- 2039853 -->
+        <article class="card">
+          <div class="card-head">
+            <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2039853">2039853</a></span>
+            <span class="sep">·</span>
+            <span class="component">Audio/Video: Playback</span>
+            <span class="sep">·</span>
+            <span class="badge badge-ps badge-ps--pending">no S/P</span>
+            <span class="badge-ni">ryan.mccartney@bbc.co.uk</span>
+          </div>
+          <h3 class="card-title">
+            <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2039853">HEVC DASH-LL playback via MSE resulting in video stuttering</a>
+          </h3>
+          <p class="card-sub">BBC R&amp;D. Reporter bisected to bug 1981503; 1-in-4 chunks decoded matches the segment structure (4 chunks / 3.84 s).</p>
+          <ul class="inventory">
+            <li class="present">platform / version</li>
+            <li class="present">three test URLs</li>
+            <li class="present">bisected regressor</li>
+            <li class="missing">about:support</li>
+            <li class="missing">media log</li>
+          </ul>
+          <textarea class="card-comment">Thanks for the detailed report and bisecting to bug 1981503. The follow-up bug 2012108 was uplifted to 147.0.3 / 148 / 149, so it should be active in your 150.0 build. The 1-in-4 chunks decoded pattern matches the 4 chunks per 3.84 s segment — suggests per-chunk decoder reinit is still happening on some HEVCChangeMonitor branch.
+
+Could you provide:
+- Fresh `about:support` from the affected profile
+- A media log captured with `about:logging` "media" preset: [instruction video](https://www.loom.com/share/24ea3a8e3a054c478de94643a0ea8620) — reproduce one failing stream, attach the log. Email to alwu@mozilla.com if privacy is a concern.</textarea>
+          <div class="card-foot">
+            <div class="diff">
+              <span><span class="plus">+</span>ni ryan.mccartney</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>cc alwu</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>watch</span>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost">Skip</button>
+              <button class="btn btn-primary">Apply</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2041883 -->
+        <article class="card">
+          <div class="card-head">
+            <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2041883">2041883</a></span>
+            <span class="sep">·</span>
+            <span class="component">Audio/Video</span>
+            <span class="sep">·</span>
+            <span class="badge badge-ps badge-ps--pending">no S/P</span>
+            <span class="badge-ni">mayankleoboy1@gmail.com</span>
+          </div>
+          <h3 class="card-title">
+            <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2041883">On startup, Firefox creates 50+ <code>dav1d-worker</code> threads</a>
+          </h3>
+          <p class="card-sub"><strong>aosmond</strong>: cap is 8 threads/decoder, so 50+ means ≥ 7 concurrent. Profile shows GC + display-list churn, no decode markers.</p>
+          <ul class="inventory">
+            <li class="present">profiler link</li>
+            <li class="present">aosmond comment</li>
+            <li class="missing">STR (cold vs restore)</li>
+            <li class="missing">about:support</li>
+          </ul>
+          <textarea class="card-comment">Thanks for the profile. The dav1d worker pool defaults to 8 threads per decoder (`media.av1.new-thread-count-strategy=false`), so 50+ threads means roughly 7+ concurrent decoder instances. The profile shows heavy GC pressure and display-list rebuilds, but no actual decode markers in the capture.
+
+Could you help narrow this down: what does your startup look like — cold start with no tabs, or session restore with many AV1-playing pages? Does the thread count drop after a few minutes once decoders should have torn down, or stay flat? An `about:support` would also help.</textarea>
+          <div class="card-foot">
+            <div class="diff">
+              <span><span class="plus">+</span>blocks <span class="meta">1452683</span></span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>ni reporter</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>cc alwu</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>watch</span>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost">Skip</button>
+              <button class="btn btn-primary">Apply</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2040167 -->
+        <article class="card">
+          <div class="card-head">
+            <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2040167">2040167</a></span>
+            <span class="sep">·</span>
+            <span class="component">Audio/Video: Playback</span>
+            <span class="sep">·</span>
+            <span class="badge badge-ps badge-ps--pending">no S/P</span>
+            <span class="badge-ni">jonfr3200@jonfr.com</span>
+          </div>
+          <h3 class="card-title">
+            <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2040167">Twitch player shows rapid play/pause until clicked — regression in 150.0.3</a>
+          </h3>
+          <p class="card-sub">Confirmed Win 10 and Linux x64. Reproduces in Troubleshoot Mode. Narrow regression range: 150.0 to 150.0.3.</p>
+          <ul class="inventory">
+            <li class="present">cross-platform confirm</li>
+            <li class="present">regression window</li>
+            <li class="missing">about:support</li>
+            <li class="missing">mozregression range</li>
+            <li class="missing">media log</li>
+          </ul>
+          <textarea class="card-comment">Thanks for the report — confirmed by another user on Linux. To narrow this down:
+
+- `about:support` from each affected platform (Graphics + Media sections)
+- Does it happen on any specific public Twitch URL we can use to reproduce?
+- A `mozregression` range between 150.0 and 150.0.3 would help pinpoint the regressor
+- If it still persists: media log with `about:logging` "media" preset ([instructions](https://www.loom.com/share/24ea3a8e3a054c478de94643a0ea8620))</textarea>
+          <div class="card-foot">
+            <div class="diff">
+              <span><span class="plus">+</span>blocks <span class="meta">1954546</span></span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>ni reporter</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>cc alwu</span>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost">Skip</button>
+              <button class="btn btn-primary">Apply</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2040169 -->
+        <article class="card">
+          <div class="card-head">
+            <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2040169">2040169</a></span>
+            <span class="sep">·</span>
+            <span class="component">Audio/Video: Playback</span>
+            <span class="sep">·</span>
+            <span class="badge badge-ps badge-ps--pending">no S/P</span>
+            <span class="badge-ni">alamalo.exe@gmail.com</span>
+          </div>
+          <h3 class="card-title">
+            <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2040169">Continuous memory growth on Twitch when autoplay is blocked</a>
+          </h3>
+          <p class="card-sub">Profile attached. Paused tab shows display-list churn and image animations, no media-decode activity. Needs before/after about:memory.</p>
+          <textarea class="card-comment">Thanks for the report and memory snapshot. The profile shows the content process busy with display-list rebuilds and image animations on the paused Twitch tab, but doesn't pinpoint where the memory is accumulating.
+
+- `about:support` (Help → More troubleshooting information → Copy text)
+- Does it reproduce in Troubleshoot Mode? (rules out extensions)
+- Specific VOD only, or any Twitch page? Live channels too?
+- After letting it grow for a few minutes, capture a second `about:memory` and attach alongside the first so we can diff which bucket grows.</textarea>
+          <div class="card-foot">
+            <div class="diff">
+              <span><span class="plus">+</span>blocks <span class="meta">1954546, 2023365</span></span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>ni reporter</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>cc alwu</span>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost">Skip</button>
+              <button class="btn btn-primary">Apply</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2041202 -->
+        <article class="card">
+          <div class="card-head">
+            <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2041202">2041202</a></span>
+            <span class="sep">·</span>
+            <span class="component">Audio/Video: Playback</span>
+            <span class="sep">·</span>
+            <span class="badge badge-ps badge-ps--pending">no S/P</span>
+            <span class="badge-ni">ari.ruokamo@gmail.com</span>
+          </div>
+          <h3 class="card-title">
+            <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2041202">USB audio engine left buzzing/beeping after playback stop — macOS Tahoe</a>
+          </h3>
+          <p class="card-sub">Reporter hypothesis: Core Audio teardown change in macOS Tahoe. Audacity reproduces; Chrome/Safari/Apple Music don't. Likely cubeb territory.</p>
+          <textarea class="card-comment">Thanks for the report and the cross-app comparison. To confirm this is in cubeb's macOS path vs a system-level Core Audio change:
+
+- `about:support` from the affected profile
+- Your USB audio interface make/model (and sample rate/buffer size if known)
+- Does it still happen if you unplug the USB device and use the built-in speakers?
+- Does it reproduce in a fresh profile (rules out extensions)?
+
+If it still persists, please attach a media log via `about:logging` "media" preset ([instructions](https://www.loom.com/share/24ea3a8e3a054c478de94643a0ea8620)).</textarea>
+          <div class="card-foot">
+            <div class="diff">
+              <span><span class="plus">+</span>ni reporter</span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>cc alwu</span>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost">Skip</button>
+              <button class="btn btn-primary">Apply</button>
+            </div>
+          </div>
+        </article>
+
+      </section>
+
+      <!-- ───── CLOSE / REASSIGN ───── -->
+      <section class="section">
+        <header class="section-header">
+          <h2 class="section-title"><span class="marker">§1c</span>Close or Reassign</h2>
+          <span class="section-count">2 pending</span>
+        </header>
+
+        <!-- 2033152 — INCOMPLETE -->
+        <article class="card">
+          <div class="card-head">
+            <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2033152">2033152</a></span>
+            <span class="sep">·</span>
+            <span class="component">Audio/Video: Playback</span>
+            <span class="sep">·</span>
+            <span class="badge badge-ps badge-ps--pending">no S/P</span>
+            <span class="badge-ni">stale 5+ weeks</span>
+          </div>
+          <h3 class="card-title">
+            <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2033152">Airplay breaks 3rd-party video players when pausing or scrubbing</a>
+          </h3>
+          <p class="card-sub">Karl requested a profile + media log on April 20. No reply in 5+ weeks. BugBot redirected the NI to jmathies on May 18, but that's mechanical and adds no diagnostic data.</p>
+          <textarea class="card-comment">Thanks for the report. Karl requested a profile with media logging on 2026-04-20, but we have not received a response in over a month. The needinfo was automatically redirected by BugBot to the triage owner, but without the diagnostic data we cannot make any progress on this.
+
+Marking this INCOMPLETE for now. awesomeap05, if you are still hitting this, please reopen the bug and attach:
+- A Firefox profile with media logging (instructions: bug 1935757 comment 2)
+- Your about:support output
+- The Firefox version where the issue first appeared
+
+See also bug 1770604 (Firefox audio + Airplay output in cubeb).</textarea>
+          <div class="card-foot">
+            <div class="diff">
+              <span>resolve <span class="pill pill-resolve">INCOMPLETE</span></span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>cc alwu</span>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost">Skip</button>
+              <button class="btn btn-primary">Apply &amp; close</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 2033161 — REASSIGN -->
+        <article class="card">
+          <div class="card-head">
+            <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2033161">2033161</a></span>
+            <span class="sep">·</span>
+            <span class="component">was A/V: Playback</span>
+            <span class="sep">·</span>
+            <span class="badge badge-ps">P2 · S3</span>
+            <span class="badge-ni">moving to Widget: Gtk</span>
+          </div>
+          <h3 class="card-title">
+            <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2033161">[Ubuntu][NVIDIA] Horizontal tearing on video playback after 149.0.2</a>
+          </h3>
+          <p class="card-sub">Reporter bisected to bug 2001628 (Widget:Gtk, async rendering). <strong>stransky</strong> confirmed: known NVIDIA driver issue.</p>
+          <textarea class="card-comment">Thanks for running the bisect and capturing everything — that's exactly what we needed.
+
+The regression points at bug 2001628 ([Linux] Remove compositor pause/resume), and Martin (the patch author, who works on Linux/Gtk widget) confirmed in comment 10 that this is a known issue with NVIDIA drivers.
+
+The horizontal tearing is a compositor/rendering artifact rather than a media-playback issue, so this bug belongs in Core :: Widget: Gtk where the regressor lives and where Martin can drive any Firefox-side workaround. Moving it there now — repro, bisect, and logs all preserved.</textarea>
+          <div class="card-foot">
+            <div class="diff">
+              <span>move to <span class="pill pill-reassign">Core :: Widget: Gtk</span></span>
+              <span class="sep">·</span>
+              <span><span class="plus">+</span>cc alwu</span>
+            </div>
+            <div class="actions">
+              <button class="btn btn-ghost">Skip</button>
+              <button class="btn btn-reassign">Reassign</button>
+            </div>
+          </div>
+        </article>
+
+      </section>
+
+    </main>
+
+    <!-- ───── SIDEBAR ───── -->
+    <aside>
+
+      <section class="panel">
+        <h2>Watching <span class="count">12 · polled 14:01</span></h2>
+        <ol>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2039425">2039425</a></span>
+              <span class="timeago">May 21</span>
+            </div>
+            <div class="text">WebCodecs intermittent crash</div>
+            <div class="ni">alwu@mozilla.com</div>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2039853">2039853</a></span>
+              <span class="timeago">May 22</span>
+            </div>
+            <div class="text">HEVC DASH-LL stuttering · BBC R&amp;D</div>
+            <div class="ni">ryan.mccartney@bbc.co.uk</div>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2040167">2040167</a></span>
+              <span class="timeago">May 23</span>
+            </div>
+            <div class="text">Twitch play/pause loop</div>
+            <div class="ni">jonfr3200@jonfr.com</div>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2040169">2040169</a></span>
+              <span class="timeago">May 23</span>
+            </div>
+            <div class="text">Twitch memory growth</div>
+            <div class="ni">alamalo.exe@gmail.com</div>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2041202">2041202</a></span>
+              <span class="timeago">May 24</span>
+            </div>
+            <div class="text">USB audio buzz · macOS Tahoe</div>
+            <div class="ni">ari.ruokamo@gmail.com</div>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2041883">2041883</a></span>
+              <span class="timeago">May 25</span>
+            </div>
+            <div class="text">50+ dav1d threads on startup</div>
+            <div class="ni">mayankleoboy1@gmail.com</div>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2042320">2042320</a></span>
+              <span class="timeago">May 27</span>
+            </div>
+            <div class="text">10-bit H.264 on Windows</div>
+            <div class="ni">alwu@mozilla.com</div>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2042812">2042812</a></span>
+              <span class="timeago">May 27</span>
+            </div>
+            <div class="text">YouTube video corruption</div>
+            <div class="ni">asmodai@in-nomine.org</div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="panel">
+        <h2>Recent <span class="count">this session</span></h2>
+        <ol>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2027557">2027557</a></span>
+              <span class="timeago">today</span>
+            </div>
+            <div class="text">Moved to <strong>Core :: Graphics</strong></div>
+            <span class="tag tag-wrong">wrong_component</span>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2031609">2031609</a></span>
+              <span class="timeago">today</span>
+            </div>
+            <div class="text">No-op; already triaged P2/S3</div>
+            <span class="tag tag-triaged">triaged</span>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2027038">2027038</a></span>
+              <span class="timeago">today</span>
+            </div>
+            <div class="text">Resolved DUPLICATE upstream</div>
+            <span class="tag tag-duplicate">duplicate</span>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2041818">2041818</a></span>
+              <span class="timeago">today</span>
+            </div>
+            <div class="text">Filed by Mozilla dev · auto-skip</div>
+            <span class="tag tag-skipped">skipped</span>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2026773">2026773</a></span>
+              <span class="timeago">yest.</span>
+            </div>
+            <div class="text">NI sent for audio output device</div>
+            <span class="tag tag-ni">ni_sent</span>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2025219">2025219</a></span>
+              <span class="timeago">yest.</span>
+            </div>
+            <div class="text">S2/P2 · blocks 1904915</div>
+            <span class="tag tag-triaged">triaged</span>
+          </li>
+          <li class="item">
+            <div class="item-row1">
+              <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2024041">2024041</a></span>
+              <span class="timeago">2 d</span>
+            </div>
+            <div class="text">Closed INCOMPLETE · stale 14 d</div>
+            <span class="tag tag-incomplete">incomplete</span>
+          </li>
+        </ol>
+      </section>
+
+    </aside>
+  </div>
+
+</body>
+</html>
