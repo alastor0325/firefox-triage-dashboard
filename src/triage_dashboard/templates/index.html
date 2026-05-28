@@ -20,7 +20,11 @@
         <a class="tab {% if slug == active_tab %}tab--active{% endif %} {% if count == 0 %}tab--empty{% endif %}"
            href="?tab={{ slug }}"
            role="tab"
-           aria-selected="{{ 'true' if slug == active_tab else 'false' }}">
+           aria-selected="{{ 'true' if slug == active_tab else 'false' }}"
+           hx-get="?tab={{ slug }}"
+           hx-target="#tab-content"
+           hx-swap="innerHTML"
+           hx-push-url="true">
           {% if marker %}<span class="marker">{{ marker }}</span>{% endif %}
           <span class="label">{{ label }}</span>
           <span class="count">{{ count }}</span>
@@ -28,24 +32,9 @@
       {% endfor %}
     </nav>
 
-    {% if active_tab == 'watching' %}
-      {% include "watching.html" %}
-    {% else %}
-      {% set bucket = groups.get(active_marker, []) %}
-      {% if not bucket %}
-        <p class="empty">
-          {% if stats.pending_total == 0 %}
-            No pending drafts. Run <code>/triage</code> in a Claude session to generate some.
-          {% else %}
-            No items in this section.
-          {% endif %}
-        </p>
-      {% else %}
-        {% for draft in bucket %}
-          {% include "card.html" %}
-        {% endfor %}
-      {% endif %}
-    {% endif %}
+    <div id="tab-content">
+      {% include "_content.html" %}
+    </div>
   </main>
 </div>
 

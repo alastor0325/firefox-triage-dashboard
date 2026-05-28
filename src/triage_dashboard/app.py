@@ -61,9 +61,13 @@ def index(request: Request, tab: str | None = None) -> HTMLResponse:
         )
         for slug, marker, _ in TABS
     }
+    # htmx tab clicks request just the content body, not the whole page,
+    # so the topbar/tabs/scroll position stay stable.
+    is_htmx = request.headers.get("HX-Request") == "true"
+    template_name = "_content.html" if is_htmx else "index.html"
     return templates.TemplateResponse(
         request=request,
-        name="index.html",
+        name=template_name,
         context={
             "drafts": drafts,
             "groups": groups,

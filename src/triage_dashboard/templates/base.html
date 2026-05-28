@@ -8,26 +8,38 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,600;9..144,700;9..144,800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
 {% block body %}{% endblock %}
 <script>
-  // Auto-fit comment textareas to their content so there's no trailing empty space.
-  (function () {
-    function autosize(el) {
-      el.style.height = 'auto';
-      el.style.height = (el.scrollHeight + 2) + 'px';
-    }
-    const els = document.querySelectorAll('.card-comment');
-    els.forEach(el => {
-      autosize(el);
-      el.addEventListener('input', () => autosize(el));
+  function autosize(el) {
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight + 2) + 'px';
+  }
+  function autosizeAll() {
+    document.querySelectorAll('.card-comment').forEach(autosize);
+  }
+  document.addEventListener('input', (e) => {
+    if (e.target.classList.contains('card-comment')) autosize(e.target);
+  });
+  // Move active state instantly on tab click so the UI feels responsive
+  // even before the htmx response arrives.
+  document.addEventListener('click', (e) => {
+    const tab = e.target.closest('.tab');
+    if (!tab) return;
+    document.querySelectorAll('.tab').forEach(t => {
+      t.classList.remove('tab--active');
+      t.setAttribute('aria-selected', 'false');
     });
-    // Re-run after fonts load so the height matches the final layout.
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(() => els.forEach(autosize));
-    }
-  })();
+    tab.classList.add('tab--active');
+    tab.setAttribute('aria-selected', 'true');
+  });
+  autosizeAll();
+  document.addEventListener('htmx:afterSettle', autosizeAll);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(autosizeAll);
+  }
 </script>
 </body>
 </html>
