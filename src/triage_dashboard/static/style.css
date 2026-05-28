@@ -297,6 +297,37 @@ code, kbd {
   border-left: 2px solid var(--surface-2);
   margin-top: 0.3rem;
 }
+.more .body p { margin: 0 0 0.45rem; }
+.more .body p:last-child { margin-bottom: 0; }
+.description-body .desc-section {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+.description-body .desc-section:last-child { margin-bottom: 0; }
+.description-body .desc-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  padding-top: 0.15rem;
+}
+.description-body .desc-content {
+  color: var(--ink);
+}
+.description-body a {
+  word-break: break-all;
+  color: var(--accent);
+}
+@media (max-width: 700px) {
+  .description-body .desc-section {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}
 .more .comment-snippet {
   padding: 0.4rem 0.7rem;
   border-radius: var(--radius-sm);

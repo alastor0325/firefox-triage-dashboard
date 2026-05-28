@@ -10,13 +10,15 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import claude_queue, data
+from . import claude_queue, data, descriptions
 
 PKG_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = PKG_DIR / "templates"
 STATIC_DIR = PKG_DIR / "static"
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates.env.filters["parse_description"] = descriptions.parse_description
+templates.env.filters["linkify"] = descriptions.linkify
 
 app = FastAPI(title="Triage Dashboard")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

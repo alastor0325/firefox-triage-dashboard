@@ -64,9 +64,35 @@
     {% if ctx.description_excerpt or ctx.recent_comments or ctx.attachments or ctx.ai_reasoning %}
     <div class="more">
       {% if ctx.description_excerpt %}
+      {% set parsed = ctx.description_excerpt | parse_description %}
       <details>
         <summary>Bug description (excerpt)</summary>
-        <div class="body">{{ ctx.description_excerpt }}</div>
+        <div class="body description-body">
+          {% if parsed.intro %}
+            <p>{{ parsed.intro | linkify }}</p>
+          {% endif %}
+          {% if parsed.steps %}
+            <div class="desc-section">
+              <span class="desc-label">Steps to reproduce</span>
+              <div class="desc-content">{{ parsed.steps | linkify }}</div>
+            </div>
+          {% endif %}
+          {% if parsed.actual %}
+            <div class="desc-section">
+              <span class="desc-label">Actual</span>
+              <div class="desc-content">{{ parsed.actual | linkify }}</div>
+            </div>
+          {% endif %}
+          {% if parsed.expected %}
+            <div class="desc-section">
+              <span class="desc-label">Expected</span>
+              <div class="desc-content">{{ parsed.expected | linkify }}</div>
+            </div>
+          {% endif %}
+          {% if parsed.notes %}
+            <p>{{ parsed.notes | linkify }}</p>
+          {% endif %}
+        </div>
       </details>
       {% endif %}
       {% if ctx.recent_comments %}
