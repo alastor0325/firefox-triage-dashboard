@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html as _html
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
@@ -88,15 +89,18 @@ def healthz() -> dict:
 
 
 @app.post("/draft/{bug_id}/refine")
-def refine_draft(bug_id: int, feedback: str = Form(default="")) -> JSONResponse:
+def refine_draft(
+    request: Request, bug_id: int, feedback: str = Form(default="")
+):
     """Queue a refine request for the AI to revise this draft.
 
     The draft itself isn't touched here; we just append to claude-queue.jsonl.
     The /process-queue skill is what eventually consumes the queue and
     rewrites the pending JSON with a revised draft.
 
-    `feedback` is taken as a form field with a default of "" so we can
-    return a 400 (rather than FastAPI's automatic 422) for empty input.
+    htmx clients (form submissions on the dashboard) get back a small HTML
+    fragment they can swap into a status div. Everything else (curl, scripts,
+    tests) gets JSON.
     """
     triage_dir = data.triage_dir_from_env()
     if not (triage_dir / "pending" / f"bug-{bug_id}.json").is_file():
@@ -107,4 +111,13 @@ def refine_draft(bug_id: int, feedback: str = Form(default="")) -> JSONResponse:
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    if request.headers.get("HX-Request") == "true":
+        safe_feedback = _html.escape(entry["feedback"])
+        return HTMLResponse(
+            f'<p class="feedback-queued">'
+            f'<span class="spinner" aria-hidden="true">⟳</span> '
+            f'Revising — feedback queued: <q>{safe_feedback}</q>'
+            f'</p>'
+        )
     return JSONResponse({"ok": True, "queued_at": entry["ts"]})
