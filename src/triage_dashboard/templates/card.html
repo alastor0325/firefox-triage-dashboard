@@ -1,0 +1,69 @@
+{# Single dispatch card. Expects `draft` (Draft) in context. #}
+<article class="card" id="card-{{ draft.bug_id }}">
+  <div class="card-head">
+    <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ draft.bug_id }}" target="_blank" rel="noopener">{{ draft.bug_id }}</a></span>
+    {% if draft.bug_component %}
+    <span class="sep">·</span>
+    <span class="component">{{ draft.bug_component }}</span>
+    {% endif %}
+    {% if draft.severity or draft.priority %}
+    <span class="sep">·</span>
+    <span class="badge badge-ps">{{ draft.severity or '—' }} · {{ draft.priority or '—' }}</span>
+    {% else %}
+    <span class="sep">·</span>
+    <span class="badge badge-ps badge-ps--pending">no S/P</span>
+    {% endif %}
+    {% if draft.ni_targets %}
+    <span class="badge-ni">{{ draft.ni_targets[0] }}{% if draft.ni_targets|length > 1 %} +{{ draft.ni_targets|length - 1 }}{% endif %}</span>
+    {% endif %}
+  </div>
+
+  <h3 class="card-title">
+    <a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ draft.bug_id }}" target="_blank" rel="noopener">{{ draft.title }}</a>
+  </h3>
+
+  <textarea class="card-comment" name="comment" readonly>{{ draft.comment }}</textarea>
+
+  <div class="card-foot">
+    <div class="diff">
+      {% if draft.severity %}<span class="pill pill-sev">{{ draft.severity }}</span>{% endif %}
+      {% if draft.priority %}<span class="pill pill-pri">{{ draft.priority }}</span>{% endif %}
+      {% if draft.resolution %}<span>resolve <span class="pill pill-resolve">{{ draft.resolution }}</span></span>{% endif %}
+      {% if draft.product or draft.component %}
+        <span>move to <span class="pill pill-reassign">{{ draft.product or 'Core' }} :: {{ draft.component or '?' }}</span></span>
+      {% endif %}
+      {% if draft.blocks_add %}
+        <span class="sep">·</span>
+        <span><span class="plus">+</span>blocks
+          {% for b in draft.blocks_add %}<span class="meta">{{ b }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
+        </span>
+      {% endif %}
+      {% if draft.ni_targets %}
+        <span class="sep">·</span>
+        <span><span class="plus">+</span>ni {{ draft.ni_targets|join(', ') }}</span>
+      {% endif %}
+      {% if draft.cc_add %}
+        <span class="sep">·</span>
+        <span><span class="plus">+</span>cc {{ draft.cc_add|join(', ') }}</span>
+      {% endif %}
+      {% if draft.keywords_add %}
+        <span class="sep">·</span>
+        <span><span class="plus">+</span>keyword {{ draft.keywords_add|join(', ') }}</span>
+      {% endif %}
+    </div>
+    <div class="actions">
+      <button class="btn btn-ghost" disabled title="Skip — not wired up yet">Skip</button>
+      {% if draft.product or draft.component %}
+        <button class="btn btn-reassign" disabled title="Reassign — not wired up yet">Reassign</button>
+      {% elif draft.resolution %}
+        <button class="btn btn-primary" disabled title="Apply & close — not wired up yet">Apply &amp; close</button>
+      {% else %}
+        <button class="btn btn-primary" disabled title="Apply — not wired up yet">Apply</button>
+      {% endif %}
+      {% if draft.section == '§1b' %}
+        <button class="btn btn-copy" type="button"
+                onclick="navigator.clipboard.writeText('/bug-start {{ draft.bug_id }}').then(() => { this.textContent='copied'; setTimeout(() => location.reload(), 800); })">/bug-start {{ draft.bug_id }}</button>
+      {% endif %}
+    </div>
+  </div>
+</article>

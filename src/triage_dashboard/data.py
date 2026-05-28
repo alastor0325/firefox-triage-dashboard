@@ -1,0 +1,211 @@
+"""Read-only loaders for the triage data directory (~/firefox-triage/)."""
+
+from __future__ import annotations
+
+import json
+import os
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Iterable, Literal
+
+DEFAULT_TRIAGE_DIR = Path.home() / "firefox-triage"
+
+Section = Literal["§1b", "§1a", "§1c"]
+
+
+@dataclass
+class Draft:
+    """One pending triage draft from ~/firefox-triage/pending/bug-*.json."""
+
+    bug_id: int
+    title: str
+    comment: str
+    ni_targets: list[str]
+    priority: str | None
+    severity: str | None
+    blocks_add: list[int]
+    cc_add: list[str]
+    resolution: str | None
+    keywords_add: list[str]
+    product: str | None
+    component: str | None
+    created_at: str
+    section: Section
+    # Enriched fields (populated lazily; None until set)
+    bug_component: str | None = None
+    bug_reporter: str | None = None
+
+
+def classify_section(d: dict) -> Section:
+    """Infer §1b / §1a / §1c from the pending JSON fields.
+
+    The /triage skill writes pending drafts without an explicit section
+    label, but the field shape is sufficient to classify:
+
+    - §1c: setting a resolution (INCOMPLETE/FIXED/etc.) or reassigning
+      product/component
+    - §1b: setting priority/severity (root-cause triaged, fields fixed)
+    - §1a: everything else (needinfo with P/S unchanged)
+    """
+    if d.get("resolution") or d.get("product") or d.get("component"):
+        return "§1c"
+    if d.get("priority") or d.get("severity"):
+        return "§1b"
+    return "§1a"
+
+
+def load_drafts(triage_dir: Path = DEFAULT_TRIAGE_DIR) -> list[Draft]:
+    pending = triage_dir / "pending"
+    if not pending.is_dir():
+        return []
+    drafts: list[Draft] = []
+    for path in sorted(pending.glob("bug-*.json")):
+        try:
+            data = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        drafts.append(
+            Draft(
+                bug_id=int(data.get("bug_id") or 0),
+                title=data.get("title") or "(no title)",
+                comment=data.get("comment") or "",
+                ni_targets=list(data.get("ni_targets") or []),
+                priority=data.get("priority"),
+                severity=data.get("severity"),
+                blocks_add=list(data.get("blocks_add") or []),
+                cc_add=list(data.get("cc_add") or []),
+                resolution=data.get("resolution"),
+                keywords_add=list(data.get("keywords_add") or []),
+                product=data.get("product"),
+                component=data.get("component"),
+                created_at=data.get("created_at") or "",
+                section=classify_section(data),
+            )
+        )
+    return drafts
+
+
+def group_by_section(drafts: Iterable[Draft]) -> dict[Section, list[Draft]]:
+    groups: dict[Section, list[Draft]] = {"§1b": [], "§1a": [], "§1c": []}
+    for d in drafts:
+        groups[d.section].append(d)
+    return groups
+
+
+@dataclass
+class LogEntry:
+    bug_id: int
+    date: str
+    component: str
+    reporter: str
+    decision: str
+    reason: str
+    priority: str | None
+    severity: str | None
+
+
+def load_log(
+    triage_dir: Path = DEFAULT_TRIAGE_DIR, limit: int = 20
+) -> list[LogEntry]:
+    path = triage_dir / "triage-log.json"
+    if not path.is_file():
+        return []
+    try:
+        entries = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(entries, list):
+        return []
+    out: list[LogEntry] = []
+    for e in entries[-limit:][::-1]:
+        if not isinstance(e, dict):
+            continue
+        out.append(
+            LogEntry(
+                bug_id=int(e.get("bug_id") or 0),
+                date=e.get("date") or "",
+                component=e.get("component") or "",
+                reporter=e.get("reporter") or "",
+                decision=e.get("decision") or "",
+                reason=e.get("reason") or "",
+                priority=e.get("priority"),
+                severity=e.get("severity"),
+            )
+        )
+    return out
+
+
+@dataclass
+class WatchEntry:
+    bug_id: int
+    title: str
+    ni_targets: list[str]
+    added_at: str
+
+
+def load_watch(triage_dir: Path = DEFAULT_TRIAGE_DIR) -> list[WatchEntry]:
+    path = triage_dir / "ni-watch.json"
+    if not path.is_file():
+        return []
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return []
+    # ni-watch.json may be either a list of entries or a dict keyed by bug_id.
+    items: list[dict] = []
+    if isinstance(data, dict):
+        for bug_id, entry in data.items():
+            if isinstance(entry, dict):
+                items.append({"bug_id": bug_id, **entry})
+    elif isinstance(data, list):
+        items = [e for e in data if isinstance(e, dict)]
+    out: list[WatchEntry] = []
+    for e in items:
+        out.append(
+            WatchEntry(
+                bug_id=int(e.get("bug_id") or 0),
+                title=e.get("title") or "",
+                ni_targets=list(e.get("ni_targets") or []),
+                added_at=e.get("added_at") or "",
+            )
+        )
+    return out
+
+
+@dataclass
+class Stats:
+    pending_total: int
+    pending_by_section: dict[Section, int]
+    watching: int
+
+    @property
+    def section_label(self) -> dict[Section, str]:
+        return {"§1b": "triaged", "§1a": "needs info", "§1c": "close"}
+
+
+def compute_stats(
+    drafts: list[Draft], watch: list[WatchEntry]
+) -> Stats:
+    by_section: dict[Section, int] = {"§1b": 0, "§1a": 0, "§1c": 0}
+    for d in drafts:
+        by_section[d.section] += 1
+    return Stats(
+        pending_total=len(drafts),
+        pending_by_section=by_section,
+        watching=len(watch),
+    )
+
+
+def triage_dir_from_env() -> Path:
+    """Resolve the triage data directory from $TRIAGE_DIR or the default."""
+    override = os.environ.get("TRIAGE_DIR")
+    if override:
+        return Path(override).expanduser()
+    return DEFAULT_TRIAGE_DIR
+
+
+def now_local_dateline() -> str:
+    """Human-friendly date for the top bar (e.g. 'Thursday, May 28')."""
+    now = datetime.now()
+    return now.strftime("%A, %B %-d")

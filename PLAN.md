@@ -50,21 +50,24 @@ Claude skills (`/triage`, `/bug-start`) directly from the dashboard.
 
 ## Phases
 
-### Phase 1 — Read-only dashboard  ← IN PROGRESS
+### Phase 1 — Read-only dashboard  ← AWAITING USER SIGN-OFF
 
 `triage-dashboard` opens browser at `localhost:8765` and renders pending
 drafts with real data from `~/firefox-triage/`.
 
-- [ ] pyproject.toml + uv project scaffold
-- [ ] FastAPI app skeleton (`app.py`) with single `GET /`
-- [ ] Data loaders (`data.py`): pending drafts, triage-log, ni-watch
-- [ ] Section grouping logic (§1a / §1b / §1c) inferred from pending JSON fields
-- [ ] Extract CSS from `mockup.html` → `static/style.css`
-- [ ] Extract HTML from `mockup.html` → Jinja templates
-- [ ] Bug detail enrichment: read component/reporter from pending JSON (or fetch via `bugzilla-cli get` if missing)
-- [ ] CLI entry (`__main__.py`) that runs uvicorn and opens browser
-- [ ] Manual verification: run the server, see real pending drafts rendered
-- [ ] Commit + push
+- [x] pyproject.toml + project scaffold (stdlib venv, uv-compatible)
+- [x] FastAPI app skeleton (`app.py`) with single `GET /`
+- [x] Data loaders (`data.py`): pending drafts, triage-log, ni-watch
+- [x] Section grouping logic (§1a / §1b / §1c) inferred from pending JSON fields
+- [x] Extract CSS from `mockup.html` → `static/style.css`
+- [x] Extract HTML from `mockup.html` → Jinja templates (base, index, card, sidebar)
+- [ ] Bug detail enrichment: component/reporter via `bugzilla-cli get` with cache *(deferred — cards render fine without it; revisit if context feels sparse)*
+- [x] CLI entry (`__main__.py`) that runs uvicorn and opens browser
+- [x] Manual verification: real 15 drafts + 20 log entries render
+- [x] Commit + push
+
+**Run:** `~/projects/firefox-triage-dashboard/.venv/bin/triage-dashboard`
+(opens `http://127.0.0.1:8765/`)
 
 ### Phase 2 — Live updates  ← PENDING
 

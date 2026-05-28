@@ -1,0 +1,49 @@
+{# Sidebar — Watching + Recent. Expects `watch` (list[WatchEntry]) and `log` (list[LogEntry]). #}
+<section class="panel">
+  <h2>Watching <span class="count">{{ watch|length }}</span></h2>
+  {% if not watch %}
+    <p class="empty" style="padding: 1rem;">No bugs being watched.</p>
+  {% else %}
+    <ol>
+      {% for w in watch %}
+      <li class="item">
+        <div class="item-row1">
+          <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ w.bug_id }}" target="_blank" rel="noopener">{{ w.bug_id }}</a></span>
+          {% if w.added_at %}<span class="timeago">{{ w.added_at[:10] }}</span>{% endif %}
+        </div>
+        {% if w.title %}<div class="text">{{ w.title }}</div>{% endif %}
+        {% if w.ni_targets %}<div class="ni">{{ w.ni_targets|join(', ') }}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Recent <span class="count">last {{ log|length }}</span></h2>
+  {% if not log %}
+    <p class="empty" style="padding: 1rem;">No recent decisions.</p>
+  {% else %}
+    <ol>
+      {% for e in log %}
+      <li class="item">
+        <div class="item-row1">
+          <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ e.bug_id }}" target="_blank" rel="noopener">{{ e.bug_id }}</a></span>
+          <span class="timeago">{{ e.date }}</span>
+        </div>
+        {% if e.reason %}<div class="text">{{ e.reason }}</div>{% endif %}
+        {% set tag_class = {
+          'ni_sent': 'tag-ni',
+          'triaged': 'tag-triaged',
+          'duplicate': 'tag-duplicate',
+          'incomplete': 'tag-incomplete',
+          'wrong_component': 'tag-wrong',
+          'skipped': 'tag-skipped',
+          'invalid': 'tag-skipped',
+        }.get(e.decision, 'tag-skipped') %}
+        <span class="tag {{ tag_class }}">{{ e.decision|replace('_', ' ') }}</span>
+      </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+</section>

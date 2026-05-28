@@ -1,0 +1,23 @@
+[project]
+name = "triage-dashboard"
+version = "0.1.0"
+description = "Local web dashboard for Firefox A/V bug triage. Consumes /triage skill output from ~/firefox-triage/."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "jinja2>=3.1",
+]
+
+[project.scripts]
+triage-dashboard = "triage_dashboard.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+triage_dashboard = ["templates/*.html", "static/*"]
