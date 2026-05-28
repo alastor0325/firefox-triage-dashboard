@@ -593,20 +593,35 @@ code, kbd {
   transition: width 0.18s ease;
 }
 .deck-hint {
-  display: inline-flex; gap: 0.15rem;
+  display: inline-flex; gap: 0.2rem;
   font-size: 0.72rem;
   color: var(--ink-4);
   cursor: help;
 }
-.deck-hint kbd {
+.deck-kbd-btn {
+  padding: 0; border: none; background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.deck-kbd-btn:disabled { cursor: default; }
+.deck-kbd-btn kbd {
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  padding: 0.05rem 0.32rem;
+  font-size: 0.72rem;
+  padding: 0.08rem 0.4rem;
   border: 1px solid var(--border-strong);
   border-radius: 3px;
-  background: var(--surface-2);
-  color: var(--ink-3);
+  background: var(--surface);
+  color: var(--ink-2);
+  display: inline-block;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s, transform 0.06s;
 }
+.deck-kbd-btn:not(:disabled):hover kbd {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+.deck-kbd-btn:not(:disabled):active kbd { transform: translateY(1px); }
+.deck-kbd-btn:disabled kbd { opacity: 0.4; }
 
 /* ── Deck stage (focused card + stack-paper depth hint) ── */
 .deck-stage {

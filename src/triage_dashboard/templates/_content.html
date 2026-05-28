@@ -37,7 +37,18 @@
             next →
           </button>
           <span class="deck-hint" title="Keyboard: ↑/↓ prev/next · / search · a apply · s skip · Esc unfocus">
-            <kbd>↑</kbd><kbd>↓</kbd>
+            <button type="button" class="deck-kbd-btn"
+                    {% if deck_nav.prev_bug_id %}
+                    hx-get="?tab={{ active_tab }}&bug={{ deck_nav.prev_bug_id }}"
+                    hx-target="#tab-content" hx-swap="innerHTML" hx-push-url="true"
+                    {% else %}disabled aria-disabled="true"{% endif %}
+                    aria-label="Previous bug (Up arrow)"><kbd>↑</kbd></button>
+            <button type="button" class="deck-kbd-btn"
+                    {% if deck_nav.next_bug_id %}
+                    hx-get="?tab={{ active_tab }}&bug={{ deck_nav.next_bug_id }}"
+                    hx-target="#tab-content" hx-swap="innerHTML" hx-push-url="true"
+                    {% else %}disabled aria-disabled="true"{% endif %}
+                    aria-label="Next bug (Down arrow)"><kbd>↓</kbd></button>
           </span>
         </nav>
         {% endif %}
