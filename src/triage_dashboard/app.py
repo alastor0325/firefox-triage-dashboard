@@ -284,6 +284,37 @@ def skip_draft(request: Request, bug_id: int):
     return _backend_result_response(request, "skip", bug_id, result)
 
 
+def _count_queue(triage_dir: Path) -> int:
+    """Number of `refine` entries currently in the queue file."""
+    path = triage_dir / claude_queue.QUEUE_FILE
+    if not path.is_file():
+        return 0
+    n = 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict) and obj.get("action") == "refine":
+            n += 1
+    return n
+
+
+@app.get("/queue/count")
+def queue_count() -> dict:
+    return {"count": _count_queue(data.triage_dir_from_env())}
+
+
+@app.post("/queue/prepare")
+def queue_prepare() -> dict:
+    """Build the Claude drain prompt: write CLAUDE_QUEUE_PROMPT.md and
+    return a short string suitable for copying into a Claude session."""
+    return claude_queue.prepare_queue_drain(data.triage_dir_from_env())
+
+
 @app.post("/draft/{bug_id}/refine")
 def refine_draft(
     request: Request, bug_id: int, feedback: str = Form(default="")
