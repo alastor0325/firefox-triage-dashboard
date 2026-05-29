@@ -29,6 +29,12 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+html {
+  /* Reserve space for the scrollbar even when content fits, so switching
+     to a shorter card doesn't change the layout width. */
+  scrollbar-gutter: stable;
+}
+
 html, body {
   margin: 0; padding: 0;
   background: var(--bg);
@@ -38,6 +44,12 @@ html, body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  /* Always at least viewport-tall so a shorter card doesn't make the
+     page shrink below the visible area. */
+  min-height: 100vh;
 }
 
 a { color: var(--accent); text-decoration: none; }
