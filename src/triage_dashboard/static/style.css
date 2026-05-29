@@ -29,12 +29,6 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html {
-  /* Reserve space for the scrollbar even when content fits, so switching
-     to a shorter card doesn't change the layout width. */
-  scrollbar-gutter: stable;
-}
-
 html, body {
   margin: 0; padding: 0;
   background: var(--bg);
@@ -46,11 +40,13 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  /* Always at least viewport-tall so a shorter card doesn't make the
-     page shrink below the visible area. */
-  min-height: 100vh;
-}
+/* App-shell layout: the page is exactly the viewport height, with chrome
+   (topbar + tabs) fixed at the top and the workspace filling the rest.
+   Inner panes (rail + deck-area) scroll independently. Switching to a
+   shorter card can no longer change the page height because the page
+   isn't sized by its content. */
+html, body { height: 100vh; overflow: hidden; }
+body { display: flex; flex-direction: column; }
 
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; text-underline-offset: 2px; }
@@ -70,7 +66,7 @@ code, kbd {
   padding: 0.65rem 1.75rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
-  position: sticky; top: 0; z-index: 10;
+  flex-shrink: 0;
 }
 .brand { display: flex; align-items: baseline; gap: 0.55rem; }
 .brand-title {
@@ -113,10 +109,27 @@ code, kbd {
 .layout {
   max-width: 1080px;
   margin: 0 auto;
+  width: 100%;
+  flex: 1;             /* fill remaining viewport height under the topbar */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .layout > main {
   padding: 0.75rem 1.75rem 1.5rem;
   min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#tab-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* ───── TABS ───── */
@@ -125,13 +138,9 @@ code, kbd {
   gap: 1.5rem;
   border-bottom: 1px solid var(--border);
   margin-bottom: 0.75rem;
-  /* Sticky under the topbar so the tab row stays visible while
-     scrolling a tall card. */
-  position: sticky;
-  top: 49px;       /* matches the topbar's rendered height */
   background: var(--bg);
-  z-index: 5;
   padding-top: 0.2rem;
+  flex-shrink: 0;
 }
 .tab {
   padding: 0.5rem 0 0.55rem;
@@ -589,15 +598,20 @@ code, kbd {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 1.1rem;
-  align-items: start;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+#rail-host {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;       /* let .rail fill 100% */
 }
 
 /* ── Left rail (picker list) ── */
 .rail {
-  position: sticky;
-  /* Stays below the topbar (~49px) and tabs (~40px). */
-  top: 95px;
-  max-height: calc(100vh - 115px);
+  flex: 1;
   overflow-y: auto;
   padding-right: 0.2rem;
 }
@@ -763,11 +777,13 @@ code, kbd {
 .deck-kbd-btn:not(:disabled):active kbd { transform: translateY(1px); }
 .deck-kbd-btn:disabled kbd { opacity: 0.4; }
 
-/* Deck-area is sized to fill the visible viewport so switching between a
-   short card and a tall card doesn't make the page height (and your scroll
-   position) jump. */
+/* Deck-area fills the grid cell and scrolls internally. The shell layout
+   above prevents the page itself from changing height when card content
+   changes — switching between bugs no longer reflows the chrome. */
 #deck-area {
-  min-height: calc(100vh - 130px);
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 /* ── Deck stage (focused card + stack-paper depth hint) ── */
