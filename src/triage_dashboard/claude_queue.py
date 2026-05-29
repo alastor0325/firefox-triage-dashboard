@@ -1,11 +1,15 @@
-"""Action queue: dashboard writes, /process-queue skill reads.
+"""Action queue: dashboard writes, a separate Claude session drains.
 
 The queue is a JSONL file at `<triage_dir>/claude-queue.jsonl`. Each line is
-an action that a Claude session, run separately by the user, drains by
-invoking the `/process-queue` skill. Today the only action is `refine`,
-which asks Claude to re-draft a pending triage comment given the user's
-feedback. Future actions (e.g. `bug-start`, `re-triage`) will share the
-same file shape.
+an action that Claude drains by reading the file directly. Today the only
+action is `refine`, which asks Claude to re-draft a pending triage comment
+given the user's feedback.
+
+`prepare_queue_drain` builds the short clipboard prompt the dashboard hands
+the user when they click "Process queue". The prompt tells Claude where to
+find the JSONL and what to do — Claude reads the JSONL itself, so the
+queue contents are NOT embedded in the prompt. This keeps the clipboard
+payload small and avoids any second on-disk artifact.
 """
 
 from __future__ import annotations
@@ -13,12 +17,47 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 QUEUE_FILE = "claude-queue.jsonl"
-PROMPT_FILE = "CLAUDE_QUEUE_PROMPT.md"
 
-_DRAFT_EXCERPT_CHARS = 350
+DRAIN_PROMPT_TEMPLATE = """\
+Drain the Claude queue.
+
+Files involved:
+- {queue_path}
+    Each line is one feedback record:
+    {{"action":"refine","bug_id":<int>,"feedback":<string>,"ts":<iso8601>}}
+- {pending_dir}/bug-<id>.json
+    The current triage draft for that bug. Fields include `comment`,
+    `severity`, `priority`, `resolution`, `blocks_add`, `ni_targets`,
+    `keywords_add`, `cc_add`, `component`, `product`, and a free-form
+    `ai_reasoning` block.
+
+Procedure:
+
+1. Read {queue_path}. If it is empty, stop.
+
+2. Group entries by bug_id, preserving order within each bug.
+
+3. For each bug, in ascending bug_id order:
+   a. Read {pending_dir}/bug-<id>.json.
+   b. Apply all feedback entries for that bug as a single revision pass.
+      The feedback may direct you to change the comment text, adjust
+      severity/priority/resolution, add or remove blocks, ni_targets, cc,
+      or keywords, or reassign the component — apply whatever each
+      feedback warrants. Preserve fields you weren't told to change.
+   c. Write the updated JSON back to the same path.
+
+4. After all bugs are processed, truncate {queue_path} to empty
+   (write a zero-byte file).
+
+5. Print a one-line summary per bug describing what changed, e.g.
+     2039425: shortened analysis, removed bisect mention
+     2042320: added request for media log
+
+Begin.
+"""
 
 
 def append_refine(
@@ -50,81 +89,6 @@ def append_refine(
     return entry
 
 
-def _excerpt(text: str, n: int = _DRAFT_EXCERPT_CHARS) -> str:
-    text = text.strip()
-    if len(text) <= n:
-        return text
-    return text[:n].rstrip() + "…"
-
-
-def format_queue_prompt(
-    entries: Iterable[dict],
-    drafts_by_bug_id: dict[int, dict],
-    *,
-    queue_path: str = "~/firefox-triage/claude-queue.jsonl",
-) -> str:
-    """Build the Markdown drain prompt for the queue.
-
-    `entries` are the raw lines from `claude-queue.jsonl`. `drafts_by_bug_id`
-    maps a bug id to its current pending JSON (a dict like the one in
-    `pending/bug-<id>.json`) so each section can quote the current draft.
-    Returns "" if there are no refine entries to process.
-    """
-    refines = [e for e in entries if e.get("action") == "refine" and e.get("bug_id")]
-    if not refines:
-        return ""
-
-    # Group by bug_id, preserving the chronological order of first appearance.
-    grouped: dict[int, list[dict]] = {}
-    for e in refines:
-        grouped.setdefault(int(e["bug_id"]), []).append(e)
-
-    out: list[str] = []
-    out.append("# Claude Queue — Drain Request\n")
-    out.append("## Procedure\n")
-    out.append(
-        "For each bug below:\n\n"
-        "1. Apply **all** the listed feedback together as one revision pass "
-        "to `~/firefox-triage/pending/bug-<id>.json`. The feedback may direct "
-        "you to change the `comment` text, severity/priority, blocks, "
-        "ni_targets, or other fields — apply whatever the feedback warrants.\n"
-        "2. Write the updated pending JSON back.\n\n"
-        "After all bugs are processed:\n\n"
-        f"3. Truncate `{queue_path}` to empty (its content is the queue's "
-        "source of truth; empty file = nothing to drain).\n"
-        "4. Print a one-line summary per bug describing what changed.\n"
-    )
-
-    out.append("\n## Bugs to drain\n")
-    for bug_id, items in grouped.items():
-        title = ""
-        excerpt = ""
-        if bug_id in drafts_by_bug_id:
-            draft = drafts_by_bug_id[bug_id]
-            title = (draft.get("title") or "").strip()
-            excerpt = _excerpt(draft.get("comment") or "")
-        n = len(items)
-        suffix = "feedback item" if n == 1 else "feedback items"
-        out.append(f"### Bug {bug_id} — {n} {suffix}")
-        if title:
-            out.append(f"*{title}*\n")
-        if excerpt:
-            out.append("**Current draft (excerpt):**\n")
-            for line in excerpt.splitlines():
-                out.append(f"> {line}" if line else ">")
-        else:
-            out.append("**Current draft:** _missing — no pending JSON for this bug._\n")
-        out.append("\n**Feedback to apply:**\n")
-        for i, item in enumerate(items, start=1):
-            ts = (item.get("ts") or "")[:19].replace("T", " ")
-            fb = (item.get("feedback") or "").strip()
-            out.append(f"{i}. *({ts})* {fb}")
-        out.append("")  # blank line between bugs
-        out.append("---\n")
-
-    return "\n".join(out)
-
-
 def _read_jsonl(path: Path) -> list[dict]:
     entries: list[dict] = []
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -140,46 +104,36 @@ def _read_jsonl(path: Path) -> list[dict]:
     return entries
 
 
-def prepare_queue_drain(triage_dir: Path) -> dict[str, Any]:
-    """Read the queue, build the drain prompt, write the Markdown to disk.
+def _refines(entries: list[dict]) -> list[dict]:
+    return [
+        e for e in entries
+        if e.get("action") == "refine" and e.get("bug_id")
+    ]
 
-    Returns `{count, prompt, feedbackPath}`. When the queue is empty,
-    returns `{count: 0, prompt: None, feedbackPath: None}` and writes
-    nothing.
+
+_EMPTY = {"count": 0, "prompt": None, "bugs_affected": 0}
+
+
+def prepare_queue_drain(triage_dir: Path) -> dict[str, Any]:
+    """Build the short clipboard prompt for draining the queue.
+
+    Returns `{count, prompt, bugs_affected}`. When the queue is missing
+    or has no refine entries, returns the empty shape and writes nothing.
     """
     queue_path = triage_dir / QUEUE_FILE
     if not queue_path.is_file():
-        return {"count": 0, "prompt": None, "feedbackPath": None}
+        return dict(_EMPTY)
 
-    entries = _read_jsonl(queue_path)
-    refines = [e for e in entries if e.get("action") == "refine" and e.get("bug_id")]
+    refines = _refines(_read_jsonl(queue_path))
     if not refines:
-        return {"count": 0, "prompt": None, "feedbackPath": None}
+        return dict(_EMPTY)
 
-    # Load current pending JSON for each bug we'll reference.
-    drafts_by_id: dict[int, dict] = {}
-    for entry in refines:
-        bug_id = int(entry["bug_id"])
-        if bug_id in drafts_by_id:
-            continue
-        pending = triage_dir / "pending" / f"bug-{bug_id}.json"
-        if pending.is_file():
-            try:
-                drafts_by_id[bug_id] = json.loads(pending.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-
-    md = format_queue_prompt(
-        refines, drafts_by_id, queue_path=str(queue_path),
-    )
-    md_path = triage_dir / PROMPT_FILE
-    md_path.write_text(md, encoding="utf-8")
-
-    prompt = (
-        f"Read {md_path} and drain the Claude queue described there."
+    prompt = DRAIN_PROMPT_TEMPLATE.format(
+        queue_path=str(queue_path),
+        pending_dir=str(triage_dir / "pending"),
     )
     return {
         "count": len(refines),
         "prompt": prompt,
-        "feedbackPath": str(md_path),
+        "bugs_affected": len({int(e["bug_id"]) for e in refines}),
     }

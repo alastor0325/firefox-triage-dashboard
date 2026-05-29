@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -45,13 +44,14 @@ def test_queue_count_ignores_unparseable_lines(triage_dir: Path) -> None:
 def test_prepare_empty_queue_returns_zero(triage_dir: Path) -> None:
     response = client.post("/queue/prepare")
     assert response.status_code == 200
-    body = response.json()
-    assert body["count"] == 0
-    assert body["prompt"] is None
-    assert body["feedbackPath"] is None
+    assert response.json() == {
+        "count": 0, "prompt": None, "bugs_affected": 0,
+    }
 
 
-def test_prepare_writes_md_and_returns_prompt(triage_dir: Path) -> None:
+def test_prepare_returns_prompt_and_writes_no_md(triage_dir: Path) -> None:
+    """Prompt is returned inline; nothing is written to disk by /prepare.
+    The on-disk MD that the previous design wrote is gone for good."""
     write_draft(triage_dir, 42, comment="the original draft")
     queue_path = triage_dir / "claude-queue.jsonl"
     queue_path.write_text(
@@ -63,35 +63,30 @@ def test_prepare_writes_md_and_returns_prompt(triage_dir: Path) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["count"] == 1
+    assert body["bugs_affected"] == 1
     assert body["prompt"]
-    assert "claude" in body["prompt"].lower()
-    assert body["feedbackPath"].endswith("CLAUDE_QUEUE_PROMPT.md")
-
-    md = (triage_dir / "CLAUDE_QUEUE_PROMPT.md").read_text()
-    assert "Bug 42" in md
-    assert "shorten it" in md
-    assert "the original draft" in md
+    # The prompt names the queue file (so Claude can Read it).
+    assert "claude-queue.jsonl" in body["prompt"]
+    # No on-disk MD: the previous design wrote ~/firefox-triage/CLAUDE_QUEUE_PROMPT.md;
+    # this design never does.
+    assert not (triage_dir / "CLAUDE_QUEUE_PROMPT.md").exists()
 
 
-def test_prepare_overwrites_md_on_repeat(triage_dir: Path) -> None:
-    write_draft(triage_dir, 1, comment="orig")
+def test_prepare_response_shape_uses_bugs_affected_key(
+    triage_dir: Path,
+) -> None:
+    """The pointer-style `feedbackPath` is gone; the new shape uses
+    `bugs_affected` (count of distinct bug_ids in the queue)."""
+    write_draft(triage_dir, 1)
+    write_draft(triage_dir, 2)
     queue_path = triage_dir / "claude-queue.jsonl"
     queue_path.write_text(
-        '{"action":"refine","bug_id":1,"feedback":"first",'
-        '"ts":"2026-05-29T00:00:00+00:00"}\n'
+        '{"action":"refine","bug_id":1,"feedback":"a","ts":"2026-05-29T00:00:00+00:00"}\n'
+        '{"action":"refine","bug_id":1,"feedback":"b","ts":"2026-05-29T00:01:00+00:00"}\n'
+        '{"action":"refine","bug_id":2,"feedback":"c","ts":"2026-05-29T00:02:00+00:00"}\n'
     )
-    client.post("/queue/prepare")
-
-    # Append more and re-prepare — file is overwritten, not appended.
-    queue_path.write_text(
-        '{"action":"refine","bug_id":1,"feedback":"first",'
-        '"ts":"2026-05-29T00:00:00+00:00"}\n'
-        '{"action":"refine","bug_id":1,"feedback":"second",'
-        '"ts":"2026-05-29T00:01:00+00:00"}\n'
-    )
-    client.post("/queue/prepare")
-
-    md = (triage_dir / "CLAUDE_QUEUE_PROMPT.md").read_text()
-    assert "first" in md and "second" in md
-    # Single header, not two stacked drains.
-    assert md.count("# Claude Queue") == 1
+    body = client.post("/queue/prepare").json()
+    assert set(body.keys()) == {"count", "prompt", "bugs_affected"}
+    assert body["count"] == 3
+    assert body["bugs_affected"] == 2
+    assert "feedbackPath" not in body

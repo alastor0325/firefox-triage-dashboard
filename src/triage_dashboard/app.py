@@ -311,8 +311,13 @@ def queue_count() -> dict:
 
 @app.post("/queue/prepare")
 def queue_prepare() -> dict:
-    """Build the Claude drain prompt: write CLAUDE_QUEUE_PROMPT.md and
-    return a short string suitable for copying into a Claude session."""
+    """Return the clipboard prompt for draining the queue.
+
+    Shape: `{count, prompt, bugs_affected}`. The prompt is a short text
+    block (~900B) that tells Claude where the JSONL lives and what to do;
+    Claude reads `claude-queue.jsonl` itself rather than the prompt
+    embedding the queue contents. Nothing is written to disk.
+    """
     return claude_queue.prepare_queue_drain(data.triage_dir_from_env())
 
 
