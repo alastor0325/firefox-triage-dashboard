@@ -120,15 +120,22 @@ description excerpt, recent comments, attachments.
 - [x] Render `bug_context` in the focused card (byline / inventory / see-also / expandables — gracefully absent when missing).
 - [x] Tests for active-card selection, rail rendering, bug_context rendering, schema parsing (90 tests passing).
 
-### Phase 2 — Live updates  ← PENDING
+### Phase 2 — Live updates  ← DONE
 
-Page auto-refreshes when terminal `/triage` writes new pending drafts.
+Page auto-refreshes when files in `~/firefox-triage/` change underfoot
+(terminal `/triage`, `/process-queue`, manual edits, etc.).
 
-- [ ] Add `watchdog` dependency
-- [ ] File watcher on `~/firefox-triage/pending/` and `triage-log.json`
-- [ ] SSE endpoint `/events` that pushes reload signals
-- [ ] htmx listener on the page that re-fetches affected cards
-- [ ] Commit + push
+- [x] `watchdog` dependency
+- [x] `watch.py` with `event_for_path`, `FileWatchBroker` (async pub/sub),
+      `TriageDirEventHandler`, `TriageDirWatcher`
+- [x] Lifespan: broker bound to event loop, watcher started/stopped
+- [x] `GET /events` SSE endpoint streaming `WatchEvent`s
+- [x] Pure `sse_event_stream(queue, is_disconnected)` generator (testable
+      without HTTP — covers all the streaming logic)
+- [x] Client: `EventSource('/events')` + `htmx.ajax` to refresh `#tab-content`
+      on `draft-changed` / `draft-deleted` / `watch-changed`
+- [x] 30+ tests across pure helpers, broker, FS event mapping, and the
+      generator — fast and reliable
 
 ### Phase 3 — Feedback loop with the AI  ← NEXT
 
