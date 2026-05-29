@@ -614,6 +614,9 @@ code, kbd {
   flex: 1;
   overflow-y: auto;
   padding-right: 0.2rem;
+  /* Reserve scrollbar gutter even when not scrolling, so items don't
+     shift sideways when the list grows past the column. */
+  scrollbar-gutter: stable;
 }
 .rail-head {
   display: flex; align-items: baseline; justify-content: space-between;
@@ -779,11 +782,15 @@ code, kbd {
 
 /* Deck-area fills the grid cell and scrolls internally. The shell layout
    above prevents the page itself from changing height when card content
-   changes — switching between bugs no longer reflows the chrome. */
+   changes — switching between bugs no longer reflows the chrome.
+   scrollbar-gutter: stable reserves space for the vertical scrollbar so
+   card content position doesn't jump sideways when switching between a
+   tall card (scrollbar visible) and a short card (no scrollbar). */
 #deck-area {
   min-height: 0;
   overflow-y: auto;
   padding-right: 0.25rem;
+  scrollbar-gutter: stable;
 }
 
 /* ── Deck stage (focused card + stack-paper depth hint) ── */
