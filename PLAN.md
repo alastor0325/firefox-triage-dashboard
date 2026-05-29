@@ -137,7 +137,7 @@ Page auto-refreshes when files in `~/firefox-triage/` change underfoot
 - [x] 30+ tests across pure helpers, broker, FS event mapping, and the
       generator — fast and reliable
 
-### Phase 3 — Feedback loop with the AI  ← NEXT
+### Phase 3 — Feedback loop with the AI  ← DONE
 
 The core review-and-revise workflow. You read the AI's draft, write
 feedback in your own words ("don't ask about extensions, focus on
@@ -146,14 +146,15 @@ Repeat until you're happy, then move on. The textarea stays
 read-mostly — direct edits are an escape hatch, not the main path.
 
 **What gets built:**
-- [ ] Feedback textarea + "Revise" button on each card
-- [ ] `POST /draft/{id}/refine` writes a queue entry to `~/firefox-triage/claude-queue.jsonl`
-- [ ] Card shows "⟳ revising…" state with Apply disabled while feedback is pending
-- [ ] Revision history per card (collapsed by default), pulled from `~/firefox-triage/revisions/bug-<id>.jsonl`
-- [ ] Version badge on the current draft (v1, v2, …)
-- [ ] `/process-queue` skill: drains the queue, re-runs `/triage <id>` with feedback + prior draft as context, writes new pending JSON + appends to revision log
-- [ ] Tests (queue writer, refine endpoint, revising-state rendering, history rendering)
-- [ ] Commit + push
+- [x] Feedback textarea + "Revise" composer on each card
+- [x] `POST /draft/{id}/refine` writes a queue entry to `~/firefox-triage/claude-queue.jsonl`
+- [x] Topbar **Process queue · N** button (count-aware via SSE `queue-changed`)
+- [x] `POST /queue/prepare` builds `CLAUDE_QUEUE_PROMPT.md` with batched feedback per bug; returns a short clipboard-ready pointer prompt (Revue pattern)
+- [x] `GET /queue/count` for live count refresh
+- [x] Dialog auto-opens with prompt + clipboard copy + re-copy fallback
+- [x] Skipped: dedicated `/process-queue` skill — replaced by an inline Markdown drain spec generated per click, which is simpler and self-documenting
+- [x] Skipped: per-bug "revising…" state and revision history — can revisit if real use shows we need them
+- [x] Tests: pure formatter (7), I/O wrapper (4), queue endpoints (6), watch event mapping, topbar button rendering
 
 **Storage layout:**
 ```
