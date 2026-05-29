@@ -131,7 +131,10 @@
 
   async function processQueue(btn) {
     if (!btn || btn.disabled) return;
-    const original = btn.textContent;
+    // Save innerHTML (not textContent) so the .queue-count span is
+    // preserved through the transient "Preparing…" state — without it,
+    // subsequent queue-changed SSE updates can't find the span to refresh.
+    const originalHTML = btn.innerHTML;
     btn.disabled = true;
     btn.textContent = 'Preparing…';
     try {
@@ -139,7 +142,7 @@
       const data = await r.json();
       if (!r.ok || !data.prompt) {
         btn.textContent = 'Nothing to drain';
-        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1500);
+        setTimeout(() => { btn.innerHTML = originalHTML; btn.disabled = false; }, 1500);
         return;
       }
       const dialog = document.getElementById('queue-prompt-dialog');
@@ -151,10 +154,10 @@
       textarea.select();
     } catch (e) {
       btn.textContent = 'Failed';
-      setTimeout(() => { btn.textContent = original; }, 1500);
+      setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
     } finally {
+      btn.innerHTML = originalHTML;
       btn.disabled = false;
-      btn.querySelector('.queue-count') || (btn.textContent = original);
     }
   }
   document.addEventListener('click', async (e) => {
