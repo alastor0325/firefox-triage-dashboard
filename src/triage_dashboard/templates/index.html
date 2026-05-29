@@ -7,15 +7,17 @@
     <h1 class="brand-title">Triage</h1>
     <span class="brand-sub"><strong>Audio/Video</strong> · {{ dateline }}</span>
   </div>
-  <div class="stats">
-    <span class="stat stat--primary"><span class="num">{{ stats.pending_total }}</span><span class="lbl">pending</span></span>
+  <div class="topbar-right">
+    <div class="stats">
+      <span class="stat stat--primary"><span class="num">{{ stats.pending_total }}</span><span class="lbl">pending</span></span>
+    </div>
+    <button id="btn-process-queue" class="btn-process-queue"
+            type="button"
+            onclick="processQueue(this)"
+            {% if queue_count == 0 %}disabled{% endif %}>
+      Process queue · <span class="queue-count">{{ queue_count }}</span>
+    </button>
   </div>
-  <button id="btn-process-queue" class="btn-process-queue"
-          type="button"
-          onclick="processQueue(this)"
-          {% if queue_count == 0 %}disabled{% endif %}>
-    Process queue · <span class="queue-count">{{ queue_count }}</span>
-  </button>
 </header>
 
 <dialog id="queue-prompt-dialog" class="queue-dialog">

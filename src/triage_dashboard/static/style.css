@@ -62,11 +62,21 @@ code, kbd {
 
 /* ───── TOP BAR ───── */
 .topbar {
-  display: flex; align-items: center; gap: 1.4rem;
+  display: flex; align-items: center;
+  justify-content: space-between;     /* brand left, .topbar-right anchored right */
+  gap: 1rem;
   padding: 0.65rem 1.75rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
+  flex-wrap: wrap;                    /* if too narrow, .topbar-right drops to a new row, still right-aligned */
+}
+.topbar-right {
+  display: flex; align-items: center;
+  gap: 1rem;
+  margin-left: auto;                  /* belt-and-suspenders so it hugs the right when on the same row */
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .brand { display: flex; align-items: baseline; gap: 0.55rem; }
 .brand-title {
@@ -89,7 +99,6 @@ code, kbd {
 .stats {
   display: flex; align-items: baseline;
   gap: 1.4rem;
-  margin-left: auto;
   font-size: 0.86rem;
   color: var(--ink-2);
 }
@@ -1038,8 +1047,8 @@ code, kbd {
 
 /* ───── RESPONSIVE ───── */
 @media (max-width: 1080px) {
-  .topbar { gap: 1rem; flex-wrap: wrap; padding: 0.9rem 1rem; }
-  .stats { margin-left: 0; gap: 1rem; flex-wrap: wrap; }
+  .topbar { gap: 0.7rem; padding: 0.9rem 1rem; }
+  .stats { gap: 1rem; flex-wrap: wrap; }
 }
 @media (max-width: 640px) {
   .layout > main, .layout > aside { padding: 1rem 1rem 2rem; }

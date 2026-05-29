@@ -53,6 +53,23 @@ def test_topbar_has_process_queue_button(triage_dir: Path) -> None:
     assert "/queue/prepare" in body
 
 
+def test_topbar_right_groups_stats_and_button(triage_dir: Path) -> None:
+    """Stats and the Process-queue button are wrapped together in
+    .topbar-right so they stay anchored at the right edge even when the
+    window is narrow (instead of left-aligning on small viewports)."""
+    body = client.get("/").text
+    import re
+    # Find the .topbar-right wrapper and verify both elements live inside it.
+    m = re.search(
+        r'<div\s+class="topbar-right"[^>]*>(.*?)</div>\s*</header>',
+        body, re.DOTALL,
+    )
+    assert m is not None, "missing .topbar-right wrapper"
+    inner = m.group(1)
+    assert 'class="stats"' in inner
+    assert 'id="btn-process-queue"' in inner
+
+
 def test_process_queue_button_shows_count_zero_when_empty(
     triage_dir: Path,
 ) -> None:
