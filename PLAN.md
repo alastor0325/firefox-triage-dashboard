@@ -208,12 +208,11 @@ of gate (2) requires a separate, explicit "go" — see Phase 4.5.
 - The dashboard status panel renders it for visual inspection.
 
 **Sub-steps**:
-- [ ] `backend.py` with `BackendResult`, ABC, `MockBackend`, `BugzillaCLIBackend` stub, `get_backend()`
-- [ ] Unit tests: mock returns expected shape; stub raises; env-var selection works
-- [ ] `POST /draft/{id}/apply` and `POST /draft/{id}/skip` endpoints
-- [ ] Integration tests with mock backend
-- [ ] UI wiring — enable buttons, htmx-post, render `BackendResult` (visual design discussed separately)
-- [ ] Commit + push
+- [x] `backend.py` with `BackendResult`, ABC, `MockBackend`, `BugzillaCLIBackend` stub, `get_backend()`
+- [x] Unit tests: mock returns expected shape; stub raises; env-var selection works
+- [x] `POST /draft/{id}/apply` and `POST /draft/{id}/skip` endpoints (with 501 surfaced if LIVE=1 but real backend unimplemented)
+- [x] Integration tests with mock backend
+- [x] UI wiring — buttons enabled, htmx-post, `BackendResult` rendered in per-card status panel
 
 ### Phase 4.5 — Real bugzilla-cli backend  ← GATED, DO NOT START WITHOUT EXPLICIT APPROVAL
 
