@@ -165,15 +165,63 @@ read-mostly — direct edits are an escape hatch, not the main path.
 
 **Open**: per-paragraph feedback (vs whole-draft) — deferred, only build whole-draft for now.
 
-### Phase 4 — Apply / Skip  ← PENDING
+### Phase 4 — Apply / Skip via swappable backend (mock-first)  ← NEXT
 
-Buttons in the UI actually execute against Bugzilla.
+The dashboard's primary buttons (Apply / Skip / Apply & close / Reassign)
+need to actually do something. Wiring them straight to `bugzilla-cli`
+is risky — Bugzilla writes are production and irreversible, and we
+don't trust the dashboard wiring blindly yet.
 
-- [ ] `POST /draft/{id}/apply` → subprocess `bugzilla-cli apply {id}`, stream output
-- [ ] `POST /draft/{id}/skip` → delete pending file, append `skipped` to triage-log
-- [ ] Toast / output pane for apply-result streaming
-- [ ] Card fade-out + remove on success
+**Approach**: a swappable backend interface. The default is a **mock**
+that computes and returns the plan without touching Bugzilla or local
+state. A second slot is reserved for real `bugzilla-cli` invocation,
+but **its implementation is gated** behind explicit user approval —
+the class exists as a stub that raises `NotImplementedError`.
+
+**Architecture**:
+```
+src/triage_dashboard/
+├── applier.py   ← pure planner (done — commit 6e7119a)
+│                  plan_apply(pending) → list[PlannedAction]
+│                  plan_skip(pending)  → list[PlannedAction]
+├── backend.py   ← NEW
+│                  BackendResult dataclass: {ok, actions, output, side_effects}
+│                  TriageBackend ABC: apply() / skip()
+│                  MockBackend       — computes plan, no I/O
+│                  BugzillaCLIBackend — stub; methods raise NotImplementedError
+│                  get_backend()     — env-var-selected; default = mock
+└── app.py       ← POST /draft/{id}/apply, POST /draft/{id}/skip
+                   call get_backend(), return BackendResult
+```
+
+**Two gates between us and real Bugzilla writes**:
+1. `TRIAGE_DASHBOARD_LIVE=1` env var (your conscious flip).
+2. `BugzillaCLIBackend.apply/skip` actually have implementations.
+
+Setting only gate (1) selects the real backend but its methods raise,
+so nothing happens. Both gates active = real writes. The implementation
+of gate (2) requires a separate, explicit "go" — see Phase 4.5.
+
+**Where we examine mock results**:
+- `BackendResult.actions` is a structured list — tests assert directly on it.
+- The endpoint returns it (JSON for curl, HTML fragment for htmx).
+- The dashboard status panel renders it for visual inspection.
+
+**Sub-steps**:
+- [ ] `backend.py` with `BackendResult`, ABC, `MockBackend`, `BugzillaCLIBackend` stub, `get_backend()`
+- [ ] Unit tests: mock returns expected shape; stub raises; env-var selection works
+- [ ] `POST /draft/{id}/apply` and `POST /draft/{id}/skip` endpoints
+- [ ] Integration tests with mock backend
+- [ ] UI wiring — enable buttons, htmx-post, render `BackendResult` (visual design discussed separately)
 - [ ] Commit + push
+
+### Phase 4.5 — Real bugzilla-cli backend  ← GATED, DO NOT START WITHOUT EXPLICIT APPROVAL
+
+- [ ] Implement `BugzillaCLIBackend.apply()` — subprocess `bugzilla-cli apply {id}`, capture stdout/stderr, parse, return `BackendResult`
+- [ ] Implement `BugzillaCLIBackend.skip()` — delete pending file, append `skipped` to triage-log
+- [ ] Cross-check parity: `MockBackend.apply().actions == BugzillaCLIBackend(...).preview(pending)` for the same pending JSON
+- [ ] Integration tests via subprocess mocking
+- [ ] **Do not start without explicit user request.**
 
 ### Phase 5 — /bug-start handoff  ← PENDING
 
