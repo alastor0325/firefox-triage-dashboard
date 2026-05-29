@@ -139,6 +139,50 @@ def test_c1_apply_close_button_when_resolving(triage_dir: Path) -> None:
     assert "Apply &amp; close" in body or "Apply &amp; Close" in body
 
 
+# ─── Apply / Skip buttons wired up ──────────────────────────────────
+
+def test_apply_button_posts_to_apply_endpoint(triage_dir: Path) -> None:
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    body = client.get("/").text
+    assert 'hx-post="/draft/5551/apply"' in body
+
+
+def test_skip_button_posts_to_skip_endpoint(triage_dir: Path) -> None:
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    body = client.get("/").text
+    assert 'hx-post="/draft/5551/skip"' in body
+
+
+def test_apply_button_not_disabled(triage_dir: Path) -> None:
+    """The Apply button must be clickable now — no `disabled` attribute."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    body = client.get("/").text
+    # Find the apply button line and ensure it has no `disabled`.
+    import re
+    apply_btn = re.search(
+        r'<button[^>]*hx-post="/draft/5551/apply"[^>]*>', body
+    )
+    assert apply_btn is not None
+    assert "disabled" not in apply_btn.group(0)
+
+
+def test_card_has_apply_status_target(triage_dir: Path) -> None:
+    """Each card has its own status target so apply/skip results land
+    next to the right card, not bleeding across cards."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    body = client.get("/").text
+    assert 'id="apply-status-5551"' in body
+
+
+def test_c1_reassign_button_wired_to_apply(triage_dir: Path) -> None:
+    """Reassign and Apply & close are still semantically `apply` — they
+    post to the same endpoint; the backend uses pending.product /
+    pending.resolution to decide what happens."""
+    write_draft(triage_dir, 5551, component="Widget: Gtk", product="Core")
+    body = client.get("/?tab=close").text
+    assert 'hx-post="/draft/5551/apply"' in body
+
+
 # ─── feedback (AI revise) UI ────────────────────────────────────────
 
 def test_card_has_feedback_form(triage_dir: Path) -> None:
