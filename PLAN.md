@@ -173,7 +173,7 @@ read-mostly — direct edits are an escape hatch, not the main path.
 
 **Open**: per-paragraph feedback (vs whole-draft) — deferred, only build whole-draft for now.
 
-### Phase 3.5 — Refinements (queue visibility + simplified handoff)  ← IN PROGRESS
+### Phase 3.5 — Refinements (queue visibility + simplified handoff)  ← DONE
 
 Two refinements to the Phase 3 design, driven by review feedback (2026-05-29):
 
@@ -188,12 +188,12 @@ the bug has queued items. Each entry shows timestamp + feedback text + a ✕
 button to remove that specific entry. SSE `queue-changed` events refresh
 the affected card section live.
 
-- [ ] Backend: `pending_feedback_for(triage_dir, bug_id)` reads JSONL and
+- [x] Backend: `pending_feedback_for(triage_dir, bug_id)` reads JSONL and
       returns entries for that bug, ordered chronologically.
-- [ ] Backend: `POST /draft/{bug_id}/refine/remove` (with the entry's `ts`)
+- [x] Backend: `POST /draft/{bug_id}/refine/remove` (with the entry's `ts`)
       rewrites the JSONL without that line; the watcher emits queue-changed.
-- [ ] Frontend: render the list under the composer in `card.html`.
-- [ ] Tests for both the helper and the endpoint, and for rendering.
+- [x] Frontend: render the list under the composer in `card.html`.
+- [x] Tests for both the helper and the endpoint, and for rendering.
 
 #### Q2 — Drop the on-disk MD; short prompt + Claude reads JSONL (Option C)
 
@@ -211,14 +211,14 @@ The clipboard payload IS the full procedure (~900 bytes), and tells Claude
 to read `claude-queue.jsonl` itself and apply each entry to the matching
 pending JSON. No second file on disk; nothing to clean up.
 
-- [ ] Replace `prepare_queue_drain` so it returns
+- [x] Replace `prepare_queue_drain` so it returns
       `{count, prompt, bugs_affected}` — no file I/O for the prompt.
-- [ ] Add `DRAIN_PROMPT_TEMPLATE` constant; remove `format_queue_prompt`
+- [x] Add `DRAIN_PROMPT_TEMPLATE` constant; remove `format_queue_prompt`
       and `PROMPT_FILE`.
-- [ ] Update `/queue/prepare` to surface the new shape.
-- [ ] Update the dialog copy in `index.html` — the paste is the full
+- [x] Update `/queue/prepare` to surface the new shape.
+- [x] Update the dialog copy in `index.html` — the paste is the full
       procedure, not a pointer.
-- [ ] Update unit + integration tests.
+- [x] Update unit + integration tests.
 
 **Design rationale**:
 - Storage = JSONL (programmatic ops: count badge, per-card list, remove).
