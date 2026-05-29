@@ -2,18 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 import html as _html
+import json
+import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-import json
-import os
-
-from . import applier, backend, claude_queue, data, descriptions
+from . import applier, backend, claude_queue, data, descriptions, watch as watch_mod
 
 PKG_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = PKG_DIR / "templates"
@@ -25,8 +26,46 @@ templates.env.filters["linkify"] = descriptions.linkify
 templates.env.filters["render_markdown"] = descriptions.render_markdown
 templates.env.filters["filter_key_comments"] = descriptions.filter_key_comments
 
-app = FastAPI(title="Triage Dashboard")
+# Module-level broker so tests can `broker.emit(...)` to drive the SSE endpoint
+# without going through the actual filesystem watcher.
+broker = watch_mod.FileWatchBroker()
+_watcher: watch_mod.TriageDirWatcher | None = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Bind the broker to the running event loop and start the filesystem
+    watcher on the configured triage_dir at startup; stop it on shutdown."""
+    global _watcher
+    broker.bind_loop(asyncio.get_running_loop())
+    _watcher = watch_mod.TriageDirWatcher(data.triage_dir_from_env(), broker)
+    _watcher.start()
+    try:
+        yield
+    finally:
+        if _watcher is not None:
+            _watcher.stop()
+            _watcher = None
+
+
+app = FastAPI(title="Triage Dashboard", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+def format_sse_event(event: watch_mod.WatchEvent) -> str:
+    """Format a `WatchEvent` as a single SSE message:
+
+        event: <type>
+        data: <json payload>
+        (blank line)
+
+    `bug_id` is omitted from the payload when None so log/watch events
+    don't carry a stray null field.
+    """
+    payload = {"type": event.type}
+    if event.bug_id is not None:
+        payload["bug_id"] = event.bug_id
+    return f"event: {event.type}\ndata: {json.dumps(payload)}\n\n"
 
 
 # Tabs: (slug, section marker | None, label)
@@ -134,6 +173,45 @@ def index(
 @app.get("/healthz")
 def healthz() -> dict:
     return {"ok": True}
+
+
+_SSE_KEEPALIVE_SECONDS = 3
+
+
+async def sse_event_stream(queue, is_disconnected, *, keepalive_seconds: float = _SSE_KEEPALIVE_SECONDS):
+    """Pure SSE event generator. Pulls events off `queue` until
+    `is_disconnected()` returns True, emitting keepalive comments when
+    idle. Decoupled from `Request` so it's directly testable: pass an
+    `asyncio.Queue` and an async-callable that returns the disconnect state."""
+    while True:
+        if await is_disconnected():
+            break
+        try:
+            event = await asyncio.wait_for(queue.get(), timeout=keepalive_seconds)
+        except asyncio.TimeoutError:
+            yield ": keepalive\n\n"
+            continue
+        yield format_sse_event(event)
+
+
+@app.get("/events")
+async def sse_events(request: Request) -> StreamingResponse:
+    """Stream filesystem-change events as Server-Sent Events.
+
+    The browser keeps this connection open; the broker pushes
+    `WatchEvent`s when ~/firefox-triage/ files change (whether from
+    terminal `/triage` runs, `/process-queue`, or any other tool).
+    """
+    queue = await broker.subscribe()
+
+    async def stream():
+        try:
+            async for chunk in sse_event_stream(queue, request.is_disconnected):
+                yield chunk
+        finally:
+            await broker.unsubscribe(queue)
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
 
 
 def _load_pending_or_404(bug_id: int) -> dict:
