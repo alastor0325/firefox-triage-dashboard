@@ -113,6 +113,13 @@ code, kbd {
   gap: 1.5rem;
   border-bottom: 1px solid var(--border);
   margin-bottom: 0.75rem;
+  /* Sticky under the topbar so the tab row stays visible while
+     scrolling a tall card. */
+  position: sticky;
+  top: 49px;       /* matches the topbar's rendered height */
+  background: var(--bg);
+  z-index: 5;
+  padding-top: 0.2rem;
 }
 .tab {
   padding: 0.5rem 0 0.55rem;
@@ -576,8 +583,9 @@ code, kbd {
 /* ── Left rail (picker list) ── */
 .rail {
   position: sticky;
-  top: 72px;
-  max-height: calc(100vh - 92px);
+  /* Stays below the topbar (~49px) and tabs (~40px). */
+  top: 95px;
+  max-height: calc(100vh - 115px);
   overflow-y: auto;
   padding-right: 0.2rem;
 }
@@ -742,6 +750,13 @@ code, kbd {
 }
 .deck-kbd-btn:not(:disabled):active kbd { transform: translateY(1px); }
 .deck-kbd-btn:disabled kbd { opacity: 0.4; }
+
+/* Deck-area is sized to fill the visible viewport so switching between a
+   short card and a tall card doesn't make the page height (and your scroll
+   position) jump. */
+#deck-area {
+  min-height: calc(100vh - 130px);
+}
 
 /* ── Deck stage (focused card + stack-paper depth hint) ── */
 .deck-stage {
