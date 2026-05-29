@@ -131,3 +131,67 @@ def test_skip_does_not_delete_pending(triage_dir: Path) -> None:
     pending = triage_dir / "pending" / "bug-2039425.json"
     client.post("/draft/2039425/skip")
     assert pending.is_file()
+
+
+# ─── §1b Apply queues a bug-start action (Phase 5) ──────────────────
+
+def _queue_actions(triage_dir: Path) -> list[dict]:
+    path = triage_dir / "claude-queue.jsonl"
+    if not path.is_file():
+        return []
+    return [json.loads(line) for line in path.read_text().splitlines() if line]
+
+
+def test_b1_apply_queues_bug_start(triage_dir: Path) -> None:
+    """Applying a §1b draft (severity+priority set) queues a /bug-start."""
+    write_draft(triage_dir, 555, severity="S3", priority="P3")
+    response = client.post("/draft/555/apply")
+    assert response.status_code == 200
+    entries = _queue_actions(triage_dir)
+    assert len(entries) == 1
+    assert entries[0]["action"] == "bug-start"
+    assert entries[0]["bug_id"] == 555
+
+
+def test_a1_apply_does_not_queue_bug_start(triage_dir: Path) -> None:
+    """§1a drafts (needinfo only) → no /bug-start handoff."""
+    write_draft(triage_dir, 555, ni_targets=["x@y"])
+    client.post("/draft/555/apply")
+    assert _queue_actions(triage_dir) == []
+
+
+def test_c1_apply_does_not_queue_bug_start(triage_dir: Path) -> None:
+    """§1c drafts (resolve / reassign) → no /bug-start handoff."""
+    write_draft(triage_dir, 555, resolution="INCOMPLETE")
+    client.post("/draft/555/apply")
+    assert _queue_actions(triage_dir) == []
+
+
+def test_b1_skip_does_not_queue_bug_start(triage_dir: Path) -> None:
+    """Skipping any draft (even §1b) does NOT queue /bug-start."""
+    write_draft(triage_dir, 555, severity="S3", priority="P3")
+    client.post("/draft/555/skip")
+    assert _queue_actions(triage_dir) == []
+
+
+def test_b1_apply_queue_count_visible_in_topbar(triage_dir: Path) -> None:
+    """After §1b apply, the topbar count is 1 (bug-start counts)."""
+    write_draft(triage_dir, 555, severity="S3", priority="P3")
+    client.post("/draft/555/apply")
+    # Use the count endpoint.
+    assert client.get("/queue/count").json() == {"count": 1}
+
+
+def test_b1_apply_failure_does_not_queue_bug_start(
+    triage_dir: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If the backend returns ok=False, no bug-start gets queued.
+
+    We achieve this by pointing at LIVE mode where the real backend
+    raises NotImplementedError → 501. The queue must stay empty.
+    """
+    write_draft(triage_dir, 555, severity="S3", priority="P3")
+    monkeypatch.setenv("TRIAGE_DASHBOARD_LIVE", "1")
+    response = client.post("/draft/555/apply")
+    assert response.status_code == 501
+    assert _queue_actions(triage_dir) == []

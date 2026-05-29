@@ -268,12 +268,20 @@ def apply_draft(request: Request, bug_id: int):
     Bugzilla writes require `TRIAGE_DASHBOARD_LIVE=1` AND a real
     implementation of `BugzillaCLIBackend` (see PLAN.md Phase 4.5).
     If LIVE=1 but the implementation isn't there, this returns 501.
+
+    Side effect: when a §1b draft is applied successfully, a
+    `bug-start` action is appended to `claude-queue.jsonl` so the next
+    drain invokes `/bug-start <bug_id>` (Phase 5).
     """
     pending = _load_pending_or_404(bug_id)
     try:
         result = backend.get_backend().apply(bug_id, pending)
     except NotImplementedError as e:
         raise HTTPException(status_code=501, detail=str(e))
+    if result.ok and data.classify_section(pending) == "§1b":
+        claude_queue.append_bug_start(
+            data.triage_dir_from_env(), bug_id=bug_id,
+        )
     return _backend_result_response(request, "apply", bug_id, result)
 
 
