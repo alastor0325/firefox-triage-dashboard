@@ -9,6 +9,7 @@ dependencies = [
     "jinja2>=3.1",
     "python-multipart>=0.0.9",
     "markdown>=3.5",
+    "watchdog>=4.0",
 ]
 
 [project.optional-dependencies]
