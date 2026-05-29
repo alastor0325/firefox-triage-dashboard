@@ -54,8 +54,10 @@ Procedure:
       feedback warrants. Preserve fields you weren't told to change.
    c. Write the updated JSON back to the same path.
 
-4. Run `/bug-start <bug_id>` for each bug-start entry (invoke the
-   /bug-start skill — this kicks off the investigation flow for that bug).
+4. For each bug-start entry, invoke the `bug-start` skill via the Skill
+   tool with the bug_id as its argument — do not just print the slash
+   command, actually run the skill so the investigation flow kicks off.
+   Distinct bug_ids only (de-duplicate if the same bug appears twice).
 
 5. After all actions are processed, truncate {queue_path} to empty
    (write a zero-byte file).
