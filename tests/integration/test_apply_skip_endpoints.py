@@ -182,6 +182,22 @@ def test_b1_apply_queue_count_visible_in_topbar(triage_dir: Path) -> None:
     assert client.get("/queue/count").json() == {"count": 1}
 
 
+def test_b1_repeat_apply_queues_one_bug_start_per_click(
+    triage_dir: Path,
+) -> None:
+    """Two clicks on Apply for the same §1b draft queue TWO bug-start
+    entries (current behavior — no dedupe at queue-write time). The
+    drain prompt de-duplicates by distinct bug_id at consume time, so
+    /bug-start fires once even though the queue holds two entries.
+    """
+    write_draft(triage_dir, 555, severity="S3", priority="P3")
+    client.post("/draft/555/apply")
+    client.post("/draft/555/apply")
+    entries = _queue_actions(triage_dir)
+    assert len(entries) == 2
+    assert all(e["action"] == "bug-start" and e["bug_id"] == 555 for e in entries)
+
+
 def test_b1_apply_failure_does_not_queue_bug_start(
     triage_dir: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

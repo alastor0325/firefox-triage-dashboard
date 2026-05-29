@@ -370,3 +370,15 @@ def test_drain_prompt_describes_bug_start_action(triage_dir: Path) -> None:
     prompt = claude_queue.prepare_queue_drain(triage_dir)["prompt"]
     assert "bug-start" in prompt
     assert "/bug-start" in prompt
+
+
+def test_prepare_queue_drain_bugs_affected_dedups_across_action_types(
+    triage_dir: Path,
+) -> None:
+    """One bug with both a refine and a bug-start → bugs_affected is 1,
+    not 2. count still reflects both entries (2)."""
+    claude_queue.append_refine(triage_dir, bug_id=42, feedback="x")
+    claude_queue.append_bug_start(triage_dir, bug_id=42)
+    result = claude_queue.prepare_queue_drain(triage_dir)
+    assert result["count"] == 2
+    assert result["bugs_affected"] == 1
