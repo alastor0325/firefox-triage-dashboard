@@ -105,7 +105,7 @@
 
   // SSE: re-fetch the current tab content when the dashboard's data
   // directory changes (e.g. terminal /triage writes a new pending JSON,
-  // /process-queue revises a draft, or anything else touches the files).
+  // a Claude session drains the queue, or anything else touches the files).
   (function () {
     if (typeof EventSource === 'undefined' || typeof htmx === 'undefined') return;
     const es = new EventSource('/events');

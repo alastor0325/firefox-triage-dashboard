@@ -206,7 +206,8 @@ async def sse_events(request: Request) -> StreamingResponse:
 
     The browser keeps this connection open; the broker pushes
     `WatchEvent`s when ~/firefox-triage/ files change (whether from
-    terminal `/triage` runs, `/process-queue`, or any other tool).
+    terminal `/triage` runs, a Claude session draining the queue, or
+    any other tool).
     """
     queue = await broker.subscribe()
 
@@ -333,8 +334,9 @@ def refine_draft(
     """Queue a refine request for the AI to revise this draft.
 
     The draft itself isn't touched here; we just append to claude-queue.jsonl.
-    The /process-queue skill is what eventually consumes the queue and
-    rewrites the pending JSON with a revised draft.
+    A separate Claude session drains the queue (invoked via the
+    "Process queue" button) and rewrites the pending JSON with a
+    revised draft.
 
     htmx clients (form submissions on the dashboard) get back a small HTML
     fragment they can swap into a status div. Everything else (curl, scripts,
