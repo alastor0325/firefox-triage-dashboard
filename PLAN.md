@@ -1,7 +1,7 @@
 # Firefox Triage Dashboard — Implementation Plan
 
 > Living document. Updated whenever phases progress or decisions change.
-> Last updated: 2026-05-28
+> Last updated: 2026-05-29
 
 ## What this is
 
@@ -172,6 +172,62 @@ read-mostly — direct edits are an escape hatch, not the main path.
 - Bug context cached in pending JSON at draft time so /process-queue doesn't need to re-fetch Bugzilla
 
 **Open**: per-paragraph feedback (vs whole-draft) — deferred, only build whole-draft for now.
+
+### Phase 3.5 — Refinements (queue visibility + simplified handoff)  ← IN PROGRESS
+
+Two refinements to the Phase 3 design, driven by review feedback (2026-05-29):
+
+#### Q1 — Inline queue visibility per card
+
+Today, after clicking Revise, the textarea clears and you have no idea what's
+queued for the bug you're looking at — or for any bug. Multiple Revise clicks
+do accumulate (the JSONL is append-only), but the UI doesn't show it.
+
+Fix: under each card's composer, render a "Pending feedback (N)" list when
+the bug has queued items. Each entry shows timestamp + feedback text + a ✕
+button to remove that specific entry. SSE `queue-changed` events refresh
+the affected card section live.
+
+- [ ] Backend: `pending_feedback_for(triage_dir, bug_id)` reads JSONL and
+      returns entries for that bug, ordered chronologically.
+- [ ] Backend: `POST /draft/{bug_id}/refine/remove` (with the entry's `ts`)
+      rewrites the JSONL without that line; the watcher emits queue-changed.
+- [ ] Frontend: render the list under the composer in `card.html`.
+- [ ] Tests for both the helper and the endpoint, and for rendering.
+
+#### Q2 — Drop the on-disk MD; short prompt + Claude reads JSONL (Option C)
+
+Today, `/queue/prepare` writes `~/firefox-triage/CLAUDE_QUEUE_PROMPT.md` and
+returns a short "read this file" pointer. The MD is built by stitching the
+procedure block with each queued feedback rendered inline.
+
+The design has two distinct files on disk (`claude-queue.jsonl` + the MD),
+and the procedure text is regenerated and rewritten on every Process queue
+click. Both can be avoided.
+
+Fix: the procedure becomes a Python constant; `/queue/prepare` returns it
+filled-in with the actual queue/pending paths, plus `{count, bugs_affected}`.
+The clipboard payload IS the full procedure (~900 bytes), and tells Claude
+to read `claude-queue.jsonl` itself and apply each entry to the matching
+pending JSON. No second file on disk; nothing to clean up.
+
+- [ ] Replace `prepare_queue_drain` so it returns
+      `{count, prompt, bugs_affected}` — no file I/O for the prompt.
+- [ ] Add `DRAIN_PROMPT_TEMPLATE` constant; remove `format_queue_prompt`
+      and `PROMPT_FILE`.
+- [ ] Update `/queue/prepare` to surface the new shape.
+- [ ] Update the dialog copy in `index.html` — the paste is the full
+      procedure, not a pointer.
+- [ ] Update unit + integration tests.
+
+**Design rationale**:
+- Storage = JSONL (programmatic ops: count badge, per-card list, remove).
+- Clipboard = short text prompt with the procedure inline; tells Claude
+  what files to read and what to do. Claude does the Read tool calls itself.
+- One on-disk artifact for queue state (`claude-queue.jsonl`). The procedure
+  lives in code as a template constant.
+- Pending JSONs aren't queue infrastructure — they pre-exist as the drafts
+  the dashboard renders.
 
 ### Phase 4 — Apply / Skip via swappable backend (mock-first)  ← NEXT
 
