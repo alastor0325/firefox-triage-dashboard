@@ -131,6 +131,56 @@ def test_rail_host_div_present(triage_dir: Path) -> None:
     assert 'id="rail-host"' in body
 
 
+def test_rail_reserves_scrollbar_gutter(triage_dir: Path) -> None:
+    """Rail must declare `scrollbar-gutter: stable` so list items don't
+    shift left when the rail grows past its column height."""
+    import re
+    from pathlib import Path as P
+    css = (
+        P(__file__).resolve().parent.parent.parent
+        / "src" / "triage_dashboard" / "static" / "style.css"
+    ).read_text()
+    m = re.search(r'\.rail\s*\{[^}]*\}', css)
+    assert m is not None, "no .rail rule found"
+    assert "scrollbar-gutter: stable" in m.group(0), (
+        ".rail must use `scrollbar-gutter: stable`; without it the items "
+        "shift sideways when the rail starts/stops scrolling."
+    )
+
+
+def test_deck_area_reserves_scrollbar_gutter(triage_dir: Path) -> None:
+    """#deck-area must declare `scrollbar-gutter: stable` so card content
+    doesn't shift sideways when switching between a tall card (scrollbar
+    visible) and a short card (no scrollbar)."""
+    import re
+    from pathlib import Path as P
+    css = (
+        P(__file__).resolve().parent.parent.parent
+        / "src" / "triage_dashboard" / "static" / "style.css"
+    ).read_text()
+    m = re.search(r'#deck-area\s*\{[^}]*\}', css)
+    assert m is not None, "no #deck-area rule found"
+    assert "scrollbar-gutter: stable" in m.group(0), (
+        "#deck-area must use `scrollbar-gutter: stable`; without it the "
+        "card shifts left when the scrollbar appears."
+    )
+
+
+def test_app_shell_locks_body_height(triage_dir: Path) -> None:
+    """html and body must be height: 100vh + overflow: hidden so the page
+    itself doesn't scroll — only the inner panes do. This is what keeps
+    the topbar + tabs + rail anchored regardless of card content."""
+    from pathlib import Path as P
+    css = (
+        P(__file__).resolve().parent.parent.parent
+        / "src" / "triage_dashboard" / "static" / "style.css"
+    ).read_text()
+    assert "height: 100vh" in css and "overflow: hidden" in css, (
+        "the app-shell layout requires html/body to be locked to 100vh "
+        "with overflow: hidden so the page doesn't scroll as a whole."
+    )
+
+
 def test_prev_next_buttons_target_deck_area(triage_dir: Path) -> None:
     write_draft(triage_dir, 1, ni_targets=["x"])
     write_draft(triage_dir, 2, ni_targets=["x"])
