@@ -107,6 +107,46 @@ def render_markdown(text: str) -> Markup:
     return Markup(html)
 
 
+_BOT_AUTHOR_TOKENS = (
+    "release-mgmt-account-bot",
+    "intermittent-bug-filer",
+    "bugbug",
+    "bugbot",
+    "@mozilla.bugs",     # auto-filer mailbox
+    "triage-bot",
+)
+
+_NOISE_PREFIXES = (
+    "created attachment",
+    "bugbug moved",
+    "bugbug routed",
+    "the severity field is not set",
+)
+
+
+def _is_noise_comment(comment: dict) -> bool:
+    author = (comment.get("author") or "").lower()
+    if any(tok in author for tok in _BOT_AUTHOR_TOKENS):
+        return True
+    text = (comment.get("text") or "").strip()
+    if not text:
+        return True
+    lo = text.lower()
+    return any(lo.startswith(p) for p in _NOISE_PREFIXES)
+
+
+def filter_key_comments(comments, limit: int = 3) -> list:
+    """Drop bot / routing / 'Created attachment' noise; cap to `limit`.
+
+    Anything left is treated as a meaningful comment on the bug — usually
+    dev hypotheses, reporter follow-ups with new info, or third-party
+    confirmations.
+    """
+    if not comments:
+        return []
+    return [c for c in comments if not _is_noise_comment(c)][:limit]
+
+
 def linkify(text: str) -> Markup:
     """HTML-escape `text` and turn URLs into anchor tags.
 

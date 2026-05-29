@@ -95,15 +95,16 @@
         </div>
       </details>
       {% endif %}
-      {% if ctx.recent_comments %}
+      {% set key_comments = ctx.recent_comments | filter_key_comments %}
+      {% if key_comments %}
       <details>
-        <summary>{{ ctx.recent_comments|length }} recent comment{% if ctx.recent_comments|length != 1 %}s{% endif %}</summary>
+        <summary>{{ key_comments|length }} key comment{% if key_comments|length != 1 %}s{% endif %}</summary>
         <div class="body">
-          {% for c in ctx.recent_comments %}
+          {% for c in key_comments %}
           <div class="comment-snippet">
             <span class="author">{{ c.author }}</span>
             <span class="ts">{{ c.ts[:16].replace('T', ' ') if c.ts else '' }}</span>
-            <p>{{ c.text }}</p>
+            <p>{{ c.text | linkify }}</p>
           </div>
           {% endfor %}
         </div>

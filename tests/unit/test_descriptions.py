@@ -163,3 +163,77 @@ def test_render_markdown_blocks_raw_html_via_attribute() -> None:
     """Even via attributes (e.g. <img onerror=...>), no raw HTML survives."""
     out = str(desc.render_markdown('<img src=x onerror="alert(1)">'))
     assert "<img" not in out.lower() or "onerror" not in out.lower()
+
+
+# ─── filter_key_comments ────────────────────────────────────────────
+
+def _c(author: str, text: str = "substantive comment text", ts: str = "2026-05-22T10:00:00Z") -> dict:
+    return {"author": author, "ts": ts, "text": text}
+
+
+def test_filter_drops_bot_authors() -> None:
+    comments = [
+        _c("release-mgmt-account-bot@mozilla.tld",
+           "The severity field is not set for this bug. :jimm…"),
+        _c("padenot@mozilla.com", "this is 10-bit high h264, should work"),
+    ]
+    out = desc.filter_key_comments(comments)
+    assert len(out) == 1
+    assert out[0]["author"] == "padenot@mozilla.com"
+
+
+def test_filter_drops_bugbug_routing_messages() -> None:
+    """'Bugbug moved bug ...' / 'Bugbug routed ...' lines are routing noise."""
+    comments = [
+        _c("release-mgmt-account-bot@mozilla.tld",
+           "Bugbug moved bug to Core::Audio/Video: Playback component."),
+        _c("padenot@mozilla.com", "actual diagnosis here"),
+    ]
+    out = desc.filter_key_comments(comments)
+    assert [c["author"] for c in out] == ["padenot@mozilla.com"]
+
+
+def test_filter_drops_intermittent_bug_filer() -> None:
+    comments = [
+        _c("intermittent-bug-filer@mozilla.bugs", "[Failure summary] …"),
+        _c("dev@mozilla.com", "real analysis"),
+    ]
+    assert len(desc.filter_key_comments(comments)) == 1
+
+
+def test_filter_drops_created_attachment_lines() -> None:
+    """Per-attachment marker comments are noise — the attachment list shows them."""
+    comments = [
+        _c("reporter@example.com", "Created attachment 9587067 — Memory report"),
+        _c("reporter@example.com", "I confirmed the issue still reproduces on 151"),
+    ]
+    out = desc.filter_key_comments(comments)
+    assert len(out) == 1
+    assert "still reproduces" in out[0]["text"]
+
+
+def test_filter_keeps_substantive_reporter_comments() -> None:
+    """Reporter follow-ups with real content (analysis, source refs) are kept."""
+    comments = [
+        _c("reporter@example.com",
+           "Looking closer, AutoplayPolicy.cpp#297-299 is just …"),
+    ]
+    out = desc.filter_key_comments(comments)
+    assert len(out) == 1
+
+
+def test_filter_caps_at_three() -> None:
+    comments = [_c("dev@mozilla.com", f"comment {i}") for i in range(10)]
+    assert len(desc.filter_key_comments(comments)) == 3
+
+
+def test_filter_handles_empty_input() -> None:
+    assert desc.filter_key_comments([]) == []
+    assert desc.filter_key_comments(None) == []
+
+
+def test_filter_drops_empty_text() -> None:
+    comments = [_c("x@y.com", "  "), _c("x@y.com", "real text")]
+    out = desc.filter_key_comments(comments)
+    assert len(out) == 1
+    assert out[0]["text"] == "real text"

@@ -112,7 +112,7 @@ def test_description_excerpt_in_expandable(triage_dir: Path) -> None:
     assert "When playing HEVC content" in body
 
 
-def test_recent_comments_in_expandable(triage_dir: Path) -> None:
+def test_key_comments_in_expandable(triage_dir: Path) -> None:
     write_draft(
         triage_dir, 1,
         bug_context={
@@ -123,9 +123,27 @@ def test_recent_comments_in_expandable(triage_dir: Path) -> None:
         },
     )
     body = client.get("/").text
-    assert "recent comment" in body.lower()
+    assert "key comment" in body.lower()
     assert "jya@mozilla.com" in body
     assert "Looking at the HEVCChangeMonitor path" in body
+
+
+def test_key_comments_filters_out_bots(triage_dir: Path) -> None:
+    """Bot routing noise is dropped — section disappears if only bots."""
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "recent_comments": [
+                {"author": "release-mgmt-account-bot@mozilla.tld",
+                 "ts": "2026-05-22T14:08:00Z",
+                 "text": "Bugbug moved bug to Core::Audio/Video: Playback."},
+            ],
+        },
+    )
+    body = client.get("/").text
+    assert "Bugbug moved" not in body
+    # With only noise, the section should be omitted entirely.
+    assert "key comment" not in body.lower()
 
 
 def test_attachments_in_expandable(triage_dir: Path) -> None:
