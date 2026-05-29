@@ -96,6 +96,53 @@ def test_bug_param_for_wrong_tab_falls_back(triage_dir: Path) -> None:
 
 # ─── watching tab — keeps multi-item list ──────────────────────────
 
+# ─── stable layout: rail / tabs don't re-swap on bug click ──────────
+
+def test_rail_items_target_deck_area_not_full_tab_content(
+    triage_dir: Path,
+) -> None:
+    """Bug-click must swap ONLY the deck-area so the rail stays mounted
+    and the page doesn't reflow when cards have different heights."""
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    body = client.get("/?tab=needs-info").text
+    # Rail items target #deck-area, not #tab-content.
+    import re
+    rail_anchor = re.search(r'class="rail-item[^"]*"[^>]*', body)
+    assert rail_anchor is not None
+    snippet = rail_anchor.group(0)
+    assert 'hx-target="#deck-area"' in snippet
+    assert 'hx-target="#tab-content"' not in snippet
+
+
+def test_deck_area_div_present(triage_dir: Path) -> None:
+    """The dedicated swap target must exist."""
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    body = client.get("/?tab=needs-info").text
+    assert 'id="deck-area"' in body
+
+
+def test_rail_host_div_present(triage_dir: Path) -> None:
+    """The rail is wrapped in its own host so we can swap deck without it."""
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    body = client.get("/?tab=needs-info").text
+    assert 'id="rail-host"' in body
+
+
+def test_prev_next_buttons_target_deck_area(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    write_draft(triage_dir, 3, ni_targets=["x"])
+    body = client.get("/?tab=needs-info&bug=2").text
+    import re
+    prev = re.search(r'class="[^"]*deck-prev[^"]*"[^>]*', body)
+    next_ = re.search(r'class="[^"]*deck-next[^"]*"[^>]*', body)
+    assert prev is not None and 'hx-target="#deck-area"' in prev.group(0)
+    assert next_ is not None and 'hx-target="#deck-area"' in next_.group(0)
+
+
 def test_watching_tab_does_not_use_the_rail(
     triage_dir: Path, monkeypatch
 ) -> None:

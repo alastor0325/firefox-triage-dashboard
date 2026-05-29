@@ -12,14 +12,19 @@
     </p>
   {% else %}
     <div class="workspace">
-      {% include "rail.html" %}
-      <div>
+      <div id="rail-host">
+        {% include "rail.html" %}
+      </div>
+      <div id="deck-area">
         {% if deck_nav.total > 1 %}
         <nav class="deck-nav" aria-label="Bug navigation">
           <button class="deck-nav-arrow deck-prev"
                   {% if deck_nav.prev_bug_id %}
                   hx-get="?tab={{ active_tab }}&bug={{ deck_nav.prev_bug_id }}"
-                  hx-target="#tab-content" hx-swap="innerHTML" hx-push-url="true"
+                  hx-target="#deck-area"
+                  hx-select="#deck-area"
+                  hx-swap="outerHTML"
+                  hx-push-url="true"
                   {% else %}disabled aria-disabled="true"{% endif %}>
             ← prev
           </button>
@@ -32,7 +37,10 @@
           <button class="deck-nav-arrow deck-next"
                   {% if deck_nav.next_bug_id %}
                   hx-get="?tab={{ active_tab }}&bug={{ deck_nav.next_bug_id }}"
-                  hx-target="#tab-content" hx-swap="innerHTML" hx-push-url="true"
+                  hx-target="#deck-area"
+                  hx-select="#deck-area"
+                  hx-swap="outerHTML"
+                  hx-push-url="true"
                   {% else %}disabled aria-disabled="true"{% endif %}>
             next →
           </button>
@@ -40,13 +48,19 @@
             <button type="button" class="deck-kbd-btn"
                     {% if deck_nav.prev_bug_id %}
                     hx-get="?tab={{ active_tab }}&bug={{ deck_nav.prev_bug_id }}"
-                    hx-target="#tab-content" hx-swap="innerHTML" hx-push-url="true"
+                    hx-target="#deck-area"
+                    hx-select="#deck-area"
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
                     {% else %}disabled aria-disabled="true"{% endif %}
                     aria-label="Previous bug (Up arrow)"><kbd>↑</kbd></button>
             <button type="button" class="deck-kbd-btn"
                     {% if deck_nav.next_bug_id %}
                     hx-get="?tab={{ active_tab }}&bug={{ deck_nav.next_bug_id }}"
-                    hx-target="#tab-content" hx-swap="innerHTML" hx-push-url="true"
+                    hx-target="#deck-area"
+                    hx-select="#deck-area"
+                    hx-swap="outerHTML"
+                    hx-push-url="true"
                     {% else %}disabled aria-disabled="true"{% endif %}
                     aria-label="Next bug (Down arrow)"><kbd>↓</kbd></button>
           </span>

@@ -92,6 +92,17 @@
     document.fonts.ready.then(autosizeAll);
   }
 
+  // After a bug-click htmx swap, only the deck swaps — the rail stays
+  // mounted. Sync the rail's active-item highlight from the URL.
+  document.addEventListener('htmx:afterSwap', () => {
+    const params = new URLSearchParams(window.location.search);
+    const activeBug = params.get('bug');
+    if (!activeBug) return;   // tab switch — rail was freshly rendered
+    document.querySelectorAll('.rail-item').forEach(el => {
+      el.classList.toggle('is-active', el.dataset.bugId === activeBug);
+    });
+  });
+
   // SSE: re-fetch the current tab content when the dashboard's data
   // directory changes (e.g. terminal /triage writes a new pending JSON,
   // /process-queue revises a draft, or anything else touches the files).

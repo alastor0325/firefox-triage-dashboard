@@ -17,8 +17,9 @@
            data-bug-id="{{ d.bug_id }}"
            href="?tab={{ active_tab }}&bug={{ d.bug_id }}"
            hx-get="?tab={{ active_tab }}&bug={{ d.bug_id }}"
-           hx-target="#tab-content"
-           hx-swap="innerHTML"
+           hx-target="#deck-area"
+           hx-select="#deck-area"
+           hx-swap="outerHTML"
            hx-push-url="true">
           <div class="rail-item-row1">
             <span class="rail-bug-id">{{ d.bug_id }}</span>
