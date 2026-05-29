@@ -291,3 +291,82 @@ def test_remove_refine_returns_false_when_queue_missing(
     assert claude_queue.remove_refine(
         triage_dir, bug_id=1, ts="2026-05-29T00:00:00+00:00",
     ) is False
+
+
+# ─── append_bug_start — Phase 5 ─────────────────────────────────────
+
+def test_append_bug_start_writes_a_jsonl_line(triage_dir: Path) -> None:
+    fixed_ts = datetime(2026, 5, 29, 12, 0, 0, tzinfo=timezone.utc)
+    entry = claude_queue.append_bug_start(
+        triage_dir, bug_id=2039425, now=fixed_ts,
+    )
+    queue_path = triage_dir / "claude-queue.jsonl"
+    assert queue_path.is_file()
+    lines = _read_lines(queue_path)
+    assert lines == [entry]
+    assert entry == {
+        "action": "bug-start",
+        "bug_id": 2039425,
+        "ts": "2026-05-29T12:00:00+00:00",
+    }
+
+
+def test_append_bug_start_coexists_with_refines(triage_dir: Path) -> None:
+    """The queue holds both action types interleaved; both are preserved."""
+    claude_queue.append_refine(triage_dir, bug_id=1, feedback="x")
+    claude_queue.append_bug_start(triage_dir, bug_id=1)
+    claude_queue.append_refine(triage_dir, bug_id=2, feedback="y")
+    lines = _read_lines(triage_dir / "claude-queue.jsonl")
+    assert [l["action"] for l in lines] == ["refine", "bug-start", "refine"]
+
+
+def test_append_bug_start_creates_parent_dir(tmp_path: Path) -> None:
+    target = tmp_path / "fresh"
+    claude_queue.append_bug_start(target, bug_id=42)
+    assert (target / "claude-queue.jsonl").is_file()
+
+
+def test_append_bug_start_default_ts_is_now(triage_dir: Path) -> None:
+    entry = claude_queue.append_bug_start(triage_dir, bug_id=1)
+    parsed = datetime.fromisoformat(entry["ts"])
+    delta = abs((datetime.now(timezone.utc) - parsed).total_seconds())
+    assert delta < 5
+
+
+# pending_feedback_for is for the per-card list and stays refine-only;
+# bug-start actions live in the queue but aren't surfaced as "feedback".
+def test_pending_feedback_for_filters_out_bug_start(triage_dir: Path) -> None:
+    claude_queue.append_bug_start(triage_dir, bug_id=1)
+    claude_queue.append_refine(triage_dir, bug_id=1, feedback="x")
+    items = claude_queue.pending_feedback_for(triage_dir, 1)
+    assert [i["feedback"] for i in items] == ["x"]
+
+
+# prepare_queue_drain counts ALL drainable actions (both kinds) — that's
+# what the topbar badge represents to the user.
+def test_prepare_queue_drain_counts_bug_start_too(triage_dir: Path) -> None:
+    claude_queue.append_refine(triage_dir, bug_id=1, feedback="x")
+    claude_queue.append_bug_start(triage_dir, bug_id=2)
+    result = claude_queue.prepare_queue_drain(triage_dir)
+    assert result["count"] == 2
+    assert result["bugs_affected"] == 2
+
+
+def test_prepare_queue_drain_with_only_bug_start_actions(
+    triage_dir: Path,
+) -> None:
+    """No refines but at least one bug-start → still a drainable queue."""
+    claude_queue.append_bug_start(triage_dir, bug_id=42)
+    result = claude_queue.prepare_queue_drain(triage_dir)
+    assert result["count"] == 1
+    assert result["bugs_affected"] == 1
+    assert result["prompt"] is not None
+
+
+def test_drain_prompt_describes_bug_start_action(triage_dir: Path) -> None:
+    """The prompt must tell Claude how to handle bug-start entries —
+    invoking the /bug-start skill for each."""
+    claude_queue.append_bug_start(triage_dir, bug_id=1)
+    prompt = claude_queue.prepare_queue_drain(triage_dir)["prompt"]
+    assert "bug-start" in prompt
+    assert "/bug-start" in prompt
