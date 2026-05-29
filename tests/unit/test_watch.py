@@ -42,6 +42,14 @@ def test_event_for_path_ni_watch(tmp_path: Path) -> None:
     assert ev == watch.WatchEvent(type="watch-changed")
 
 
+def test_event_for_path_claude_queue(tmp_path: Path) -> None:
+    ev = watch.event_for_path(
+        tmp_path / "claude-queue.jsonl",
+        deleted=False, triage_dir=tmp_path,
+    )
+    assert ev == watch.WatchEvent(type="queue-changed")
+
+
 def test_event_for_path_outside_triage_dir_returns_none(tmp_path: Path) -> None:
     ev = watch.event_for_path(
         Path("/somewhere/else/foo.json"),

@@ -38,10 +38,46 @@ def test_full_page_opens_sse_event_source(triage_dir: Path) -> None:
     """The page wires a browser EventSource('/events') for live updates."""
     body = client.get("/").text
     assert "new EventSource('/events')" in body
-    # And subscribes to the three event types the backend emits.
+    # And subscribes to the four event types the backend emits.
     assert "draft-changed" in body
     assert "draft-deleted" in body
     assert "watch-changed" in body
+    assert "queue-changed" in body
+
+
+def test_topbar_has_process_queue_button(triage_dir: Path) -> None:
+    """A 'Process queue' button lives in the topbar so it's always visible."""
+    body = client.get("/").text
+    assert 'id="btn-process-queue"' in body
+    # Posts to the prepare endpoint via JS.
+    assert "/queue/prepare" in body
+
+
+def test_process_queue_button_shows_count_zero_when_empty(
+    triage_dir: Path,
+) -> None:
+    body = client.get("/").text
+    import re
+    m = re.search(r'id="btn-process-queue"[^>]*>(.*?)</button>', body, re.DOTALL)
+    assert m is not None
+    btn_html = m.group(0)
+    # The count surfaces as a span with class queue-count.
+    assert 'class="queue-count"' in btn_html
+    assert ">0<" in btn_html
+
+
+def test_process_queue_button_shows_live_count(triage_dir: Path) -> None:
+    (triage_dir / "claude-queue.jsonl").write_text(
+        '{"action":"refine","bug_id":1,"feedback":"a","ts":"2026-05-29T00:00:00+00:00"}\n'
+        '{"action":"refine","bug_id":2,"feedback":"b","ts":"2026-05-29T00:01:00+00:00"}\n'
+        '{"action":"refine","bug_id":3,"feedback":"c","ts":"2026-05-29T00:02:00+00:00"}\n'
+    )
+    body = client.get("/").text
+    # Count of 3 appears inside the queue-count span.
+    import re
+    m = re.search(r'class="queue-count"[^>]*>(\d+)<', body)
+    assert m is not None
+    assert m.group(1) == "3"
 
 
 def test_healthz_endpoint() -> None:

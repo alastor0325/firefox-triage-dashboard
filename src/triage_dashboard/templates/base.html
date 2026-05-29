@@ -116,7 +116,55 @@
     ['draft-changed', 'draft-deleted', 'watch-changed'].forEach((evt) => {
       es.addEventListener(evt, refresh);
     });
+    // queue-changed: just update the topbar button's count, no full refresh.
+    es.addEventListener('queue-changed', async () => {
+      try {
+        const r = await fetch('/queue/count');
+        const { count } = await r.json();
+        const btn = document.getElementById('btn-process-queue');
+        if (!btn) return;
+        btn.querySelector('.queue-count').textContent = count;
+        btn.disabled = count === 0;
+      } catch (_) { /* ignore */ }
+    });
   })();
+
+  async function processQueue(btn) {
+    if (!btn || btn.disabled) return;
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Preparing…';
+    try {
+      const r = await fetch('/queue/prepare', { method: 'POST' });
+      const data = await r.json();
+      if (!r.ok || !data.prompt) {
+        btn.textContent = 'Nothing to drain';
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1500);
+        return;
+      }
+      const dialog = document.getElementById('queue-prompt-dialog');
+      const textarea = document.getElementById('queue-prompt-text');
+      textarea.value = data.prompt;
+      try { await navigator.clipboard.writeText(data.prompt); } catch (_) {}
+      dialog.showModal();
+      textarea.focus();
+      textarea.select();
+    } catch (e) {
+      btn.textContent = 'Failed';
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    } finally {
+      btn.disabled = false;
+      btn.querySelector('.queue-count') || (btn.textContent = original);
+    }
+  }
+  document.addEventListener('click', async (e) => {
+    if (e.target.id === 'queue-prompt-copy') {
+      const t = document.getElementById('queue-prompt-text');
+      try { await navigator.clipboard.writeText(t.value); e.target.textContent = 'Copied'; } catch (_) {}
+    } else if (e.target.id === 'queue-prompt-close') {
+      document.getElementById('queue-prompt-dialog').close();
+    }
+  });
 </script>
 </body>
 </html>

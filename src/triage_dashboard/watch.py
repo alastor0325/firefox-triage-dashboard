@@ -65,6 +65,8 @@ def event_for_path(
         return WatchEvent(type="log-changed")
     if parts == ("ni-watch.json",):
         return WatchEvent(type="watch-changed")
+    if parts == ("claude-queue.jsonl",):
+        return WatchEvent(type="queue-changed")
     return None
 
 

@@ -105,6 +105,81 @@ code, kbd {
 .stats .lbl { color: var(--ink-3); font-weight: 500; }
 .stats .sep { color: var(--ink-5); padding: 0 0.1rem; }
 
+.btn-process-queue {
+  margin-left: 0.9rem;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.42rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: background-color 0.12s, border-color 0.12s, opacity 0.12s;
+}
+.btn-process-queue:hover:not(:disabled) {
+  background: #b8390b;
+  border-color: #b8390b;
+}
+.btn-process-queue:disabled {
+  background: var(--surface-2);
+  color: var(--ink-4);
+  border-color: var(--border-strong);
+  cursor: not-allowed;
+}
+.btn-process-queue .queue-count {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.86em;
+  margin-left: 0.1em;
+}
+
+.queue-dialog {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 1.2rem 1.4rem;
+  max-width: 560px;
+  width: 90vw;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(9, 9, 11, 0.18);
+}
+.queue-dialog::backdrop {
+  background: rgba(9, 9, 11, 0.35);
+}
+.queue-dialog-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin: 0 0 0.4rem;
+  color: var(--ink);
+}
+.queue-dialog-help {
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  margin: 0 0 0.6rem;
+}
+.queue-dialog-prompt {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  min-height: 4rem;
+  color: var(--ink);
+}
+.queue-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
 /* ───── LAYOUT ───── */
 .layout {
   max-width: 1080px;

@@ -166,6 +166,7 @@ def index(
             "active_draft": active_draft,
             "deck_nav": deck_nav,
             "counts_by_slug": counts_by_slug,
+            "queue_count": _count_queue(triage_dir),
         },
     )
 

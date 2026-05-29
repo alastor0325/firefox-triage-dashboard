@@ -10,7 +10,26 @@
   <div class="stats">
     <span class="stat stat--primary"><span class="num">{{ stats.pending_total }}</span><span class="lbl">pending</span></span>
   </div>
+  <button id="btn-process-queue" class="btn-process-queue"
+          type="button"
+          onclick="processQueue(this)"
+          {% if queue_count == 0 %}disabled{% endif %}>
+    Process queue · <span class="queue-count">{{ queue_count }}</span>
+  </button>
 </header>
+
+<dialog id="queue-prompt-dialog" class="queue-dialog">
+  <h2 class="queue-dialog-title">Prompt copied — paste into Claude</h2>
+  <p class="queue-dialog-help">
+    Switch to your Claude terminal and paste. Claude will read the
+    generated Markdown file and revise the affected drafts.
+  </p>
+  <textarea id="queue-prompt-text" class="queue-dialog-prompt" readonly></textarea>
+  <div class="queue-dialog-actions">
+    <button type="button" id="queue-prompt-copy" class="btn">Copy again</button>
+    <button type="button" id="queue-prompt-close" class="btn btn-primary">Done</button>
+  </div>
+</dialog>
 
 <div class="layout">
   <main>
