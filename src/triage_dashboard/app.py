@@ -10,7 +10,10 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import claude_queue, data, descriptions
+import json
+import os
+
+from . import applier, backend, claude_queue, data, descriptions
 
 PKG_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = PKG_DIR / "templates"
@@ -131,6 +134,76 @@ def index(
 @app.get("/healthz")
 def healthz() -> dict:
     return {"ok": True}
+
+
+def _load_pending_or_404(bug_id: int) -> dict:
+    triage_dir = data.triage_dir_from_env()
+    path = triage_dir / "pending" / f"bug-{bug_id}.json"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="no pending draft for that bug")
+    return json.loads(path.read_text())
+
+
+def _backend_result_response(
+    request: Request,
+    action: str,
+    bug_id: int,
+    result: backend.BackendResult,
+):
+    """HTML fragment for htmx swaps; JSON for everything else."""
+    if request.headers.get("HX-Request") == "true":
+        return templates.TemplateResponse(
+            request=request,
+            name="_plan.html",
+            context={
+                "action": action,
+                "bug_id": bug_id,
+                "result": result,
+                "is_live": os.environ.get(backend.LIVE_ENV_VAR) == "1",
+            },
+        )
+    return JSONResponse({
+        "action": action,
+        "bug_id": bug_id,
+        "ok": result.ok,
+        "output": result.output,
+        "side_effects": result.side_effects,
+        "actions": [
+            {"kind": a.kind, "description": a.description}
+            for a in result.actions
+        ],
+    })
+
+
+@app.post("/draft/{bug_id}/apply")
+def apply_draft(request: Request, bug_id: int):
+    """Apply the pending draft via the configured backend.
+
+    Default backend is the mock, which only computes the plan. Real
+    Bugzilla writes require `TRIAGE_DASHBOARD_LIVE=1` AND a real
+    implementation of `BugzillaCLIBackend` (see PLAN.md Phase 4.5).
+    If LIVE=1 but the implementation isn't there, this returns 501.
+    """
+    pending = _load_pending_or_404(bug_id)
+    try:
+        result = backend.get_backend().apply(bug_id, pending)
+    except NotImplementedError as e:
+        raise HTTPException(status_code=501, detail=str(e))
+    return _backend_result_response(request, "apply", bug_id, result)
+
+
+@app.post("/draft/{bug_id}/skip")
+def skip_draft(request: Request, bug_id: int):
+    """Skip the pending draft via the configured backend.
+
+    Default is the mock; real impl is gated, see PLAN.md Phase 4.5.
+    """
+    pending = _load_pending_or_404(bug_id)
+    try:
+        result = backend.get_backend().skip(bug_id, pending)
+    except NotImplementedError as e:
+        raise HTTPException(status_code=501, detail=str(e))
+    return _backend_result_response(request, "skip", bug_id, result)
 
 
 @app.post("/draft/{bug_id}/refine")

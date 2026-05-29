@@ -1,0 +1,29 @@
+{# Backend result for apply/skip — rendered as a status panel after the
+   action button is clicked. Expects: action ('apply'|'skip'), bug_id,
+   result (BackendResult), is_live (bool). #}
+<div class="apply-status" data-action="{{ action }}" data-bug-id="{{ bug_id }}">
+  <header class="apply-status-head">
+    <span class="apply-status-mode {% if is_live %}is-live{% else %}is-dry{% endif %}">
+      {% if is_live %}LIVE{% else %}DRY RUN{% endif %}
+    </span>
+    <span class="apply-status-label">
+      {% if action == 'apply' %}Would apply{% else %}Would skip{% endif %}
+      bug {{ bug_id }}
+    </span>
+  </header>
+  {% if result.actions %}
+  <ol class="apply-status-actions">
+    {% for a in result.actions %}
+    <li class="apply-status-action apply-status-action--{{ a.kind }}">
+      <span class="apply-status-action-kind">{{ a.kind }}</span>
+      <span class="apply-status-action-desc">{{ a.description }}</span>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="apply-status-empty">(no planned actions)</p>
+  {% endif %}
+  {% if result.output %}
+  <p class="apply-status-output">{{ result.output }}</p>
+  {% endif %}
+</div>
