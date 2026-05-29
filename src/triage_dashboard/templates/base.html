@@ -123,7 +123,11 @@
         const { count } = await r.json();
         const btn = document.getElementById('btn-process-queue');
         if (!btn) return;
-        btn.querySelector('.queue-count').textContent = count;
+        // Sub-second race: a queue-changed event can fire while
+        // processQueue() is mid-flight, between "Preparing…" and
+        // innerHTML restore. The span is gone in that window.
+        const span = btn.querySelector('.queue-count');
+        if (span) span.textContent = count;
         btn.disabled = count === 0;
       } catch (_) { /* ignore */ }
     });
