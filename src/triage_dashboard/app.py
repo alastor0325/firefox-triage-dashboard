@@ -139,6 +139,10 @@ def index(
     active_bucket = groups.get(active_marker, []) if active_marker else []
     active_draft = _resolve_active_draft(active_bucket, bug)
     deck_nav = _deck_nav_info(active_bucket, active_draft)
+    pending_feedback = (
+        claude_queue.pending_feedback_for(triage_dir, active_draft.bug_id)
+        if active_draft is not None else []
+    )
     counts_by_slug = {
         slug: (
             len(groups.get(marker, [])) if marker
@@ -167,6 +171,7 @@ def index(
             "deck_nav": deck_nav,
             "counts_by_slug": counts_by_slug,
             "queue_count": _count_queue(triage_dir),
+            "pending_feedback": pending_feedback,
         },
     )
 

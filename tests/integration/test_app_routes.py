@@ -264,3 +264,68 @@ def test_card_feedback_form_targets_per_card_status(triage_dir: Path) -> None:
     body = client.get("/").text
     assert 'id="fbstatus-1"' in body
     assert 'hx-target="#fbstatus-1"' in body
+
+
+# ─── inline pending-feedback list (Phase 3.5 Q1) ────────────────────
+
+def test_card_has_no_pending_feedback_section_when_queue_empty(
+    triage_dir: Path,
+) -> None:
+    """No queued items → no .pending-feedback block on the card."""
+    write_draft(triage_dir, 1, severity="S3", priority="P3")
+    body = client.get("/").text
+    assert "pending-feedback" not in body
+
+
+def test_card_renders_pending_feedback_for_active_bug(
+    triage_dir: Path,
+) -> None:
+    """Queued items for the active bug show under the composer with
+    each feedback's text and a remove (✕) control."""
+    write_draft(triage_dir, 1, severity="S3", priority="P3")
+    queue_path = triage_dir / "claude-queue.jsonl"
+    queue_path.write_text(
+        '{"action":"refine","bug_id":1,"feedback":"shorten it",'
+        '"ts":"2026-05-29T14:30:00+00:00"}\n'
+        '{"action":"refine","bug_id":1,"feedback":"drop bisect",'
+        '"ts":"2026-05-29T15:12:00+00:00"}\n'
+    )
+    body = client.get("/").text
+    assert 'class="pending-feedback"' in body
+    assert "Pending feedback" in body
+    assert "shorten it" in body
+    assert "drop bisect" in body
+    # Each item has a remove control wired to the new endpoint.
+    assert 'hx-post="/draft/1/refine/remove"' in body
+
+
+def test_card_remove_button_carries_entry_ts_via_hx_vals(
+    triage_dir: Path,
+) -> None:
+    """The ✕ button must POST `ts` so the server can identify the entry."""
+    write_draft(triage_dir, 1, severity="S3", priority="P3")
+    queue_path = triage_dir / "claude-queue.jsonl"
+    queue_path.write_text(
+        '{"action":"refine","bug_id":1,"feedback":"x",'
+        '"ts":"2026-05-29T14:30:00+00:00"}\n'
+    )
+    body = client.get("/").text
+    # The exact ts must be in the hx-vals payload (so the server can
+    # remove the right entry).
+    assert "2026-05-29T14:30:00+00:00" in body
+
+
+def test_card_does_not_show_other_bugs_pending_feedback(
+    triage_dir: Path,
+) -> None:
+    """Only the active bug's feedback list is rendered."""
+    write_draft(triage_dir, 1, severity="S3", priority="P3")
+    write_draft(triage_dir, 2, severity="S3", priority="P3")
+    queue_path = triage_dir / "claude-queue.jsonl"
+    queue_path.write_text(
+        '{"action":"refine","bug_id":2,"feedback":"for-other-bug",'
+        '"ts":"2026-05-29T14:30:00+00:00"}\n'
+    )
+    # Visit bug=1 — should NOT see bug 2's feedback in the active card.
+    body = client.get("/?bug=1").text
+    assert "for-other-bug" not in body

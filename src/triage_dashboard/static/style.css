@@ -1004,6 +1004,69 @@ code, kbd {
   to { transform: rotate(360deg); }
 }
 
+/* ───── PENDING FEEDBACK LIST (queued items per bug) ───── */
+.pending-feedback {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.75rem 0.6rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.pending-feedback-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+}
+.pending-feedback-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.pending-feedback-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.pending-feedback-item .pf-ts {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+.pending-feedback-item .pf-text {
+  color: var(--ink-2);
+  word-break: break-word;
+}
+.pending-feedback-item .pf-remove {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-4);
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.pending-feedback-item .pf-remove:hover {
+  background: var(--surface-3, var(--surface-2));
+  color: var(--danger, var(--ink-1));
+  border-color: var(--border-strong);
+}
+
 /* ───── WATCHING TAB CONTENT ───── */
 .watch-list { list-style: none; padding: 0; margin: 0; }
 .watch-item {

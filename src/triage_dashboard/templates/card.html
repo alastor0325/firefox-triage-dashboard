@@ -146,6 +146,28 @@
   </form>
   <div id="fbstatus-{{ draft.bug_id }}" class="feedback-status" aria-live="polite"></div>
 
+  {% if pending_feedback %}
+  <section class="pending-feedback" aria-label="Queued feedback for this bug">
+    <p class="pending-feedback-label">Pending feedback ({{ pending_feedback|length }})</p>
+    <ul class="pending-feedback-list">
+      {% for fb in pending_feedback %}
+      <li class="pending-feedback-item">
+        <span class="pf-ts">{{ fb.ts[:16].replace('T', ' ') }}</span>
+        <span class="pf-text">{{ fb.feedback }}</span>
+        <button type="button"
+                class="pf-remove"
+                aria-label="Remove this queued feedback"
+                title="Remove"
+                hx-post="/draft/{{ draft.bug_id }}/refine/remove"
+                hx-vals='{"ts": {{ fb.ts | tojson }}}'
+                hx-target="closest .pending-feedback-item"
+                hx-swap="outerHTML">✕</button>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
   <div class="card-foot">
     <div class="diff">
       {% if draft.severity %}<span class="pill pill-sev">{{ draft.severity }}</span>{% endif %}
