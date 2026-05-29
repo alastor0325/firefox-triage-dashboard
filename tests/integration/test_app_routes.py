@@ -34,6 +34,16 @@ def test_full_page_includes_htmx_script(triage_dir: Path) -> None:
     assert "htmx.org" in client.get("/").text
 
 
+def test_full_page_opens_sse_event_source(triage_dir: Path) -> None:
+    """The page wires a browser EventSource('/events') for live updates."""
+    body = client.get("/").text
+    assert "new EventSource('/events')" in body
+    # And subscribes to the three event types the backend emits.
+    assert "draft-changed" in body
+    assert "draft-deleted" in body
+    assert "watch-changed" in body
+
+
 def test_healthz_endpoint() -> None:
     assert client.get("/healthz").json() == {"ok": True}
 

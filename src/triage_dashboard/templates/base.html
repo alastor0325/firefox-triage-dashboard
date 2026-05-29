@@ -91,6 +91,21 @@
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(autosizeAll);
   }
+
+  // SSE: re-fetch the current tab content when the dashboard's data
+  // directory changes (e.g. terminal /triage writes a new pending JSON,
+  // /process-queue revises a draft, or anything else touches the files).
+  (function () {
+    if (typeof EventSource === 'undefined' || typeof htmx === 'undefined') return;
+    const es = new EventSource('/events');
+    const refresh = () => {
+      const url = window.location.pathname + window.location.search;
+      htmx.ajax('GET', url, { target: '#tab-content', swap: 'innerHTML' });
+    };
+    ['draft-changed', 'draft-deleted', 'watch-changed'].forEach((evt) => {
+      es.addEventListener(evt, refresh);
+    });
+  })();
 </script>
 </body>
 </html>
