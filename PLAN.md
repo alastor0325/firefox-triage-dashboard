@@ -149,27 +149,25 @@ read-mostly — direct edits are an escape hatch, not the main path.
 - [x] Feedback textarea + "Revise" composer on each card
 - [x] `POST /draft/{id}/refine` writes a queue entry to `~/firefox-triage/claude-queue.jsonl`
 - [x] Topbar **Process queue · N** button (count-aware via SSE `queue-changed`)
-- [x] `POST /queue/prepare` builds `CLAUDE_QUEUE_PROMPT.md` with batched feedback per bug; returns a short clipboard-ready pointer prompt (Revue pattern)
+- [x] `POST /queue/prepare` returns the drain prompt for the clipboard *(superseded by Phase 3.5: was originally `CLAUDE_QUEUE_PROMPT.md` + pointer; now a static template + Claude reads JSONL directly)*
 - [x] `GET /queue/count` for live count refresh
 - [x] Dialog auto-opens with prompt + clipboard copy + re-copy fallback
-- [x] Skipped: dedicated `/process-queue` skill — replaced by an inline Markdown drain spec generated per click, which is simpler and self-documenting
+- [x] Skipped: dedicated `/process-queue` skill — Claude drains the queue inline from the pasted procedure
 - [x] Skipped: per-bug "revising…" state and revision history — can revisit if real use shows we need them
 - [x] Tests: pure formatter (7), I/O wrapper (4), queue endpoints (6), watch event mapping, topbar button rendering
 
-**Storage layout:**
+**Storage layout** *(post Phase 3.5)*:
 ```
 ~/firefox-triage/
 ├── pending/bug-<id>.json          ← current draft only
-├── claude-queue.jsonl             ← feedback queue (in/out: dashboard writes, /process-queue consumes)
-└── revisions/
-    └── bug-<id>.jsonl             ← one line per revision: feedback + new draft snapshot
+└── claude-queue.jsonl             ← feedback queue (dashboard writes; Claude drains directly)
 ```
 
 **Design decisions (locked):**
 - Feedback can change fields (P/S, blocks, NI), not just text — AI revises whatever's appropriate
 - Latest feedback wins on contradiction; full history retained as context
 - Direct comment edits still allowed (textarea is read-mostly, not read-only) as a tiny escape hatch
-- Bug context cached in pending JSON at draft time so /process-queue doesn't need to re-fetch Bugzilla
+- Bug context cached in pending JSON at draft time so the drainer doesn't need to re-fetch Bugzilla
 
 **Open**: per-paragraph feedback (vs whole-draft) — deferred, only build whole-draft for now.
 
