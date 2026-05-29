@@ -18,11 +18,11 @@
     el.style.height = (el.scrollHeight + 2) + 'px';
   }
   function autosizeAll() {
-    document.querySelectorAll('.card-comment').forEach(autosize);
+    document.querySelectorAll('.composer-input').forEach(autosize);
   }
   document.addEventListener('input', (e) => {
-    if (e.target.classList.contains('card-comment')) autosize(e.target);
     if (e.target.classList.contains('composer-input')) {
+      autosize(e.target);
       const send = e.target.closest('.composer-frame')?.querySelector('.composer-send');
       if (send) send.disabled = !e.target.value.trim();
     }

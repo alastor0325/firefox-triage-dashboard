@@ -129,7 +129,7 @@
     {% endif %}
   {% endif %}
 
-  <textarea class="card-comment" name="comment" readonly>{{ draft.comment }}</textarea>
+  <div class="card-comment md-body" aria-label="Proposed comment">{{ draft.comment | render_markdown }}</div>
 
   <form class="composer"
         hx-post="/draft/{{ draft.bug_id }}/refine"
