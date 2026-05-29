@@ -1,7 +1,7 @@
 # Firefox Triage Dashboard — Implementation Plan
 
 > Living document. Updated whenever phases progress or decisions change.
-> Last updated: 2026-05-29
+> Last updated: 2026-05-29 (Phase 5 done)
 
 ## What this is
 
@@ -284,15 +284,26 @@ of gate (2) requires a separate, explicit "go" — see Phase 4.5.
 - [ ] Integration tests via subprocess mocking
 - [ ] **Do not start without explicit user request.**
 
-### Phase 5 — /bug-start handoff  ← PENDING
+### Phase 5 — /bug-start handoff  ← DONE
 
 §1b cards have a "copy /bug-start {id}" button (already wired up in Phase 1).
 This phase adds the queue-based handoff for full automation.
 
 - [x] Clipboard JS for copy button *(done in Phase 1)*
-- [ ] On apply for §1b cards, also write a `/bug-start` action to `~/firefox-triage/claude-queue.jsonl`
-- [ ] `/process-queue` skill picks it up and runs `/bug-start <id>` (extends Phase 3's skill)
-- [ ] Commit + push
+- [x] On apply for §1b cards, also write a `/bug-start` action to `~/firefox-triage/claude-queue.jsonl`
+- [x] Drain prompt explains both action types so Claude handles refines and bug-starts in one paste
+- [x] Topbar badge counts bug-start entries alongside refines
+- [x] Tests for §1a/§1b/§1c apply and skip
+- [x] Commit + push
+
+**Notes**:
+- §1a apply (needinfo) and §1c apply (resolve/reassign) do NOT queue bug-start —
+  there's nothing to investigate yet (§1a) or the bug is being closed (§1c).
+- Apply failures (e.g. live mode with no real backend → 501) do NOT queue —
+  the bug-start follows a successful apply, not an attempted one.
+- The per-card "Pending feedback" list stays refine-only by design — bug-start
+  isn't feedback on the draft, it's a follow-up action. Users see it only
+  via the topbar count and the drain prompt.
 
 ### Phase 6 — Claude orchestration  ← PENDING (scope TBD)
 
