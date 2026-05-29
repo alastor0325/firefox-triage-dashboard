@@ -111,6 +111,69 @@ def _refines(entries: list[dict]) -> list[dict]:
     ]
 
 
+def pending_feedback_for(triage_dir: Path, bug_id: int) -> list[dict]:
+    """Return all queued refine entries for `bug_id`, file order preserved.
+
+    Each entry has keys `bug_id`, `feedback`, `ts`. Returns an empty list
+    when the queue file is missing or has no matching entries.
+    """
+    queue_path = triage_dir / QUEUE_FILE
+    if not queue_path.is_file():
+        return []
+    out: list[dict] = []
+    for e in _refines(_read_jsonl(queue_path)):
+        if int(e["bug_id"]) == int(bug_id):
+            out.append({
+                "bug_id": int(e["bug_id"]),
+                "feedback": e.get("feedback", ""),
+                "ts": e.get("ts", ""),
+            })
+    return out
+
+
+def remove_refine(triage_dir: Path, *, bug_id: int, ts: str) -> bool:
+    """Remove the one refine entry matching (bug_id, ts). Returns True if
+    a matching entry was removed; False if the file or entry was missing.
+
+    The JSONL is rewritten in place, preserving all non-matching lines
+    verbatim (including malformed lines, so we don't silently destroy
+    anything we don't understand).
+    """
+    queue_path = triage_dir / QUEUE_FILE
+    if not queue_path.is_file():
+        return False
+
+    kept: list[str] = []
+    removed = False
+    for line in queue_path.read_text(encoding="utf-8").splitlines():
+        if not removed:
+            stripped = line.strip()
+            if stripped:
+                try:
+                    obj = json.loads(stripped)
+                except json.JSONDecodeError:
+                    obj = None
+                if (
+                    isinstance(obj, dict)
+                    and obj.get("action") == "refine"
+                    and int(obj.get("bug_id") or 0) == int(bug_id)
+                    and obj.get("ts") == ts
+                ):
+                    removed = True
+                    continue
+        kept.append(line)
+
+    if not removed:
+        return False
+
+    # Rewrite. Preserve trailing newline behaviour of append_refine.
+    body = "\n".join(kept)
+    if body and not body.endswith("\n"):
+        body += "\n"
+    queue_path.write_text(body, encoding="utf-8")
+    return True
+
+
 _EMPTY = {"count": 0, "prompt": None, "bugs_affected": 0}
 
 

@@ -354,3 +354,23 @@ def refine_draft(
             f'</p>'
         )
     return JSONResponse({"ok": True, "queued_at": entry["ts"]})
+
+
+@app.post("/draft/{bug_id}/refine/remove")
+def refine_remove(
+    request: Request, bug_id: int, ts: str = Form(default=""),
+):
+    """Remove one queued refine entry for this bug.
+
+    Identifies the entry by its `ts` (paired with the path bug_id). 404
+    when no entry matches; 400 when ts is missing.
+    """
+    if not ts.strip():
+        raise HTTPException(status_code=400, detail="ts is required")
+    triage_dir = data.triage_dir_from_env()
+    removed = claude_queue.remove_refine(triage_dir, bug_id=bug_id, ts=ts)
+    if not removed:
+        raise HTTPException(status_code=404, detail="no matching queued feedback")
+    if request.headers.get("HX-Request") == "true":
+        return HTMLResponse("")
+    return JSONResponse({"ok": True})

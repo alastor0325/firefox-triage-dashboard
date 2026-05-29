@@ -179,3 +179,115 @@ def test_prepare_queue_drain_ignores_non_refine_actions(
     result = claude_queue.prepare_queue_drain(triage_dir)
     assert result["count"] == 1
     assert result["bugs_affected"] == 1
+
+
+# ─── pending_feedback_for — per-bug queue inspection ────────────────
+
+def test_pending_feedback_for_returns_empty_when_no_queue(
+    triage_dir: Path,
+) -> None:
+    """No queue file → no pending feedback for any bug."""
+    assert claude_queue.pending_feedback_for(triage_dir, 1) == []
+
+
+def test_pending_feedback_for_returns_entries_for_that_bug_only(
+    triage_dir: Path,
+) -> None:
+    """Filter by bug_id; preserve chronological order (file order)."""
+    claude_queue.append_refine(
+        triage_dir, bug_id=1, feedback="a",
+        now=datetime(2026, 5, 29, 0, 0, tzinfo=timezone.utc),
+    )
+    claude_queue.append_refine(
+        triage_dir, bug_id=2, feedback="b",
+        now=datetime(2026, 5, 29, 0, 1, tzinfo=timezone.utc),
+    )
+    claude_queue.append_refine(
+        triage_dir, bug_id=1, feedback="c",
+        now=datetime(2026, 5, 29, 0, 2, tzinfo=timezone.utc),
+    )
+    items = claude_queue.pending_feedback_for(triage_dir, 1)
+    assert [(i["feedback"], i["ts"]) for i in items] == [
+        ("a", "2026-05-29T00:00:00+00:00"),
+        ("c", "2026-05-29T00:02:00+00:00"),
+    ]
+    # bug_id is included in each item so callers can use it as a key.
+    assert all(i["bug_id"] == 1 for i in items)
+
+
+def test_pending_feedback_for_ignores_non_refine_actions(
+    triage_dir: Path,
+) -> None:
+    """Future action types or other shapes → filtered out."""
+    queue_path = triage_dir / "claude-queue.jsonl"
+    queue_path.write_text(
+        '{"action":"refine","bug_id":1,"feedback":"a","ts":"2026-05-29T00:00:00+00:00"}\n'
+        '{"action":"future","bug_id":1,"ts":"2026-05-29T00:01:00+00:00"}\n'
+        '{ malformed line\n'
+    )
+    items = claude_queue.pending_feedback_for(triage_dir, 1)
+    assert len(items) == 1
+    assert items[0]["feedback"] == "a"
+
+
+# ─── remove_refine — rewrites the JSONL without one entry ───────────
+
+def test_remove_refine_removes_the_matching_entry(triage_dir: Path) -> None:
+    claude_queue.append_refine(
+        triage_dir, bug_id=1, feedback="keep me",
+        now=datetime(2026, 5, 29, 0, 0, tzinfo=timezone.utc),
+    )
+    claude_queue.append_refine(
+        triage_dir, bug_id=1, feedback="remove me",
+        now=datetime(2026, 5, 29, 0, 1, tzinfo=timezone.utc),
+    )
+
+    removed = claude_queue.remove_refine(
+        triage_dir, bug_id=1, ts="2026-05-29T00:01:00+00:00",
+    )
+    assert removed is True
+
+    remaining = claude_queue.pending_feedback_for(triage_dir, 1)
+    assert [r["feedback"] for r in remaining] == ["keep me"]
+
+
+def test_remove_refine_returns_false_when_not_found(triage_dir: Path) -> None:
+    """Mismatched bug_id or ts → no-op, returns False."""
+    claude_queue.append_refine(
+        triage_dir, bug_id=1, feedback="a",
+        now=datetime(2026, 5, 29, 0, 0, tzinfo=timezone.utc),
+    )
+
+    assert claude_queue.remove_refine(
+        triage_dir, bug_id=999, ts="2026-05-29T00:00:00+00:00",
+    ) is False
+    assert claude_queue.remove_refine(
+        triage_dir, bug_id=1, ts="2099-01-01T00:00:00+00:00",
+    ) is False
+    # The original entry is still there.
+    assert len(claude_queue.pending_feedback_for(triage_dir, 1)) == 1
+
+
+def test_remove_refine_preserves_other_bugs(triage_dir: Path) -> None:
+    claude_queue.append_refine(
+        triage_dir, bug_id=1, feedback="x",
+        now=datetime(2026, 5, 29, 0, 0, tzinfo=timezone.utc),
+    )
+    claude_queue.append_refine(
+        triage_dir, bug_id=2, feedback="y",
+        now=datetime(2026, 5, 29, 0, 1, tzinfo=timezone.utc),
+    )
+    claude_queue.remove_refine(
+        triage_dir, bug_id=1, ts="2026-05-29T00:00:00+00:00",
+    )
+    assert claude_queue.pending_feedback_for(triage_dir, 1) == []
+    assert [i["feedback"] for i in claude_queue.pending_feedback_for(triage_dir, 2)] == ["y"]
+
+
+def test_remove_refine_returns_false_when_queue_missing(
+    triage_dir: Path,
+) -> None:
+    """No queue file at all → False, no crash."""
+    assert claude_queue.remove_refine(
+        triage_dir, bug_id=1, ts="2026-05-29T00:00:00+00:00",
+    ) is False

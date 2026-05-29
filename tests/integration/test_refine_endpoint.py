@@ -116,3 +116,88 @@ def test_refine_hx_fragment_escapes_html(triage_dir: Path) -> None:
     )
     assert "<script>" not in response.text
     assert "&lt;script&gt;" in response.text
+
+
+# ─── POST /draft/{id}/refine/remove ─────────────────────────────────
+
+def test_refine_remove_removes_matching_entry(triage_dir: Path) -> None:
+    """Posting the entry's ts removes that one entry from the queue."""
+    write_draft(triage_dir, 1)
+    # Queue two entries.
+    client.post("/draft/1/refine", data={"feedback": "keep"})
+    client.post("/draft/1/refine", data={"feedback": "drop"})
+
+    entries = _queue_entries(triage_dir)
+    assert len(entries) == 2
+    drop_ts = entries[1]["ts"]
+
+    response = client.post(
+        "/draft/1/refine/remove", data={"ts": drop_ts}
+    )
+    assert response.status_code == 200
+
+    remaining = _queue_entries(triage_dir)
+    assert [e["feedback"] for e in remaining] == ["keep"]
+
+
+def test_refine_remove_returns_404_when_entry_missing(
+    triage_dir: Path,
+) -> None:
+    """Unknown ts → 404, queue untouched."""
+    write_draft(triage_dir, 1)
+    client.post("/draft/1/refine", data={"feedback": "a"})
+
+    response = client.post(
+        "/draft/1/refine/remove", data={"ts": "2099-01-01T00:00:00+00:00"}
+    )
+    assert response.status_code == 404
+    assert len(_queue_entries(triage_dir)) == 1
+
+
+def test_refine_remove_returns_404_when_bug_has_no_entries(
+    triage_dir: Path,
+) -> None:
+    """Removing from a bug with no queued feedback → 404."""
+    write_draft(triage_dir, 1)
+    response = client.post(
+        "/draft/1/refine/remove", data={"ts": "2026-05-29T00:00:00+00:00"}
+    )
+    assert response.status_code == 404
+
+
+def test_refine_remove_rejects_empty_ts(triage_dir: Path) -> None:
+    """Missing/empty ts → 400."""
+    write_draft(triage_dir, 1)
+    response = client.post("/draft/1/refine/remove", data={"ts": ""})
+    assert response.status_code == 400
+
+
+def test_refine_remove_returns_html_fragment_for_hx_request(
+    triage_dir: Path,
+) -> None:
+    """htmx callers get back an HTML fragment they can swap in to clear
+    the removed item from the rendered list."""
+    write_draft(triage_dir, 1)
+    client.post("/draft/1/refine", data={"feedback": "x"})
+    ts = _queue_entries(triage_dir)[0]["ts"]
+
+    response = client.post(
+        "/draft/1/refine/remove",
+        data={"ts": ts},
+        headers={"HX-Request": "true"},
+    )
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+
+
+def test_refine_remove_returns_json_for_non_htmx_request(
+    triage_dir: Path,
+) -> None:
+    """Non-htmx callers get JSON."""
+    write_draft(triage_dir, 1)
+    client.post("/draft/1/refine", data={"feedback": "x"})
+    ts = _queue_entries(triage_dir)[0]["ts"]
+
+    response = client.post("/draft/1/refine/remove", data={"ts": ts})
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json() == {"ok": True}
