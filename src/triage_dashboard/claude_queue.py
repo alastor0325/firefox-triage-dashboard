@@ -136,7 +136,7 @@ def _read_jsonl(path: Path) -> list[dict]:
     return entries
 
 
-_DRAINABLE_ACTIONS = ("refine", "bug-start")
+DRAINABLE_ACTIONS = ("refine", "bug-start")
 
 
 def _refines(entries: list[dict]) -> list[dict]:
@@ -150,7 +150,7 @@ def _drainables(entries: list[dict]) -> list[dict]:
     """Entries the drainer will act on — used by counts and the badge."""
     return [
         e for e in entries
-        if e.get("action") in _DRAINABLE_ACTIONS and e.get("bug_id")
+        if e.get("action") in DRAINABLE_ACTIONS and e.get("bug_id")
     ]
 
 

@@ -299,12 +299,10 @@ def skip_draft(request: Request, bug_id: int):
     return _backend_result_response(request, "skip", bug_id, result)
 
 
-_BADGE_ACTIONS = {"refine", "bug-start"}
-
-
 def _count_queue(triage_dir: Path) -> int:
     """Number of drainable entries currently in the queue file (covers
-    every action type the topbar badge represents to the user).
+    every action type the topbar badge represents to the user). Single
+    source of truth: `claude_queue.DRAINABLE_ACTIONS`.
     """
     path = triage_dir / claude_queue.QUEUE_FILE
     if not path.is_file():
@@ -318,7 +316,7 @@ def _count_queue(triage_dir: Path) -> int:
             obj = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if isinstance(obj, dict) and obj.get("action") in _BADGE_ACTIONS:
+        if isinstance(obj, dict) and obj.get("action") in claude_queue.DRAINABLE_ACTIONS:
             n += 1
     return n
 
