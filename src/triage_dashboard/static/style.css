@@ -299,6 +299,34 @@ code, kbd {
 }
 .more .body p { margin: 0 0 0.45rem; }
 .more .body p:last-child { margin-bottom: 0; }
+
+/* Rendered markdown (e.g. AI reasoning) */
+.md-body ul, .md-body ol {
+  margin: 0.3rem 0 0.5rem;
+  padding-left: 1.5rem;
+}
+.md-body li { margin: 0.1rem 0; }
+.md-body li > p { margin: 0; }
+.md-body code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  padding: 0.05em 0.32em;
+  background: var(--surface-2);
+  border-radius: 3px;
+  color: var(--ink-2);
+}
+.md-body pre {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.7rem;
+  overflow-x: auto;
+  font-size: 0.85em;
+  margin: 0.3rem 0 0.5rem;
+}
+.md-body pre code { background: transparent; padding: 0; }
+.md-body strong { color: var(--ink); font-weight: 600; }
+.md-body a { color: var(--accent); }
+.md-body a:hover { text-decoration: underline; }
 .description-body .desc-section {
   display: grid;
   grid-template-columns: 7.5rem 1fr;

@@ -109,3 +109,57 @@ def test_linkify_url_at_end_no_trailing_punct() -> None:
     assert 'href="https://example.com/page"' in out
     # The period should be outside the anchor tag.
     assert "page</a>." in out or "page</a> " in out
+
+
+# ─── render_markdown ────────────────────────────────────────────────
+
+def test_render_markdown_paragraph() -> None:
+    out = str(desc.render_markdown("Plain paragraph text."))
+    assert "<p>Plain paragraph text.</p>" in out
+
+
+def test_render_markdown_inline_code() -> None:
+    out = str(desc.render_markdown("Use `foo()` for that."))
+    assert "<code>foo()</code>" in out
+
+
+def test_render_markdown_bold_and_italic() -> None:
+    out = str(desc.render_markdown("This is **bold** and *italic*."))
+    assert "<strong>bold</strong>" in out
+    assert "<em>italic</em>" in out
+
+
+def test_render_markdown_bulleted_list() -> None:
+    out = str(desc.render_markdown("- one\n- two\n- three"))
+    assert "<ul>" in out
+    assert "<li>one</li>" in out
+    assert "<li>three</li>" in out
+
+
+def test_render_markdown_numbered_list() -> None:
+    out = str(desc.render_markdown("1. first\n2. second"))
+    assert "<ol>" in out
+    assert "<li>first</li>" in out
+
+
+def test_render_markdown_inline_link() -> None:
+    out = str(desc.render_markdown("See [docs](https://example.com) here."))
+    assert 'href="https://example.com"' in out
+    assert ">docs</a>" in out
+
+
+def test_render_markdown_empty_input() -> None:
+    assert str(desc.render_markdown("")) == ""
+
+
+def test_render_markdown_blocks_raw_html() -> None:
+    """Raw HTML in the input must be escaped, not passed through."""
+    out = str(desc.render_markdown("Watch <script>alert(1)</script> out."))
+    assert "<script>" not in out
+    assert "&lt;script&gt;" in out
+
+
+def test_render_markdown_blocks_raw_html_via_attribute() -> None:
+    """Even via attributes (e.g. <img onerror=...>), no raw HTML survives."""
+    out = str(desc.render_markdown('<img src=x onerror="alert(1)">'))
+    assert "<img" not in out.lower() or "onerror" not in out.lower()

@@ -19,6 +19,7 @@ STATIC_DIR = PKG_DIR / "static"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.filters["parse_description"] = descriptions.parse_description
 templates.env.filters["linkify"] = descriptions.linkify
+templates.env.filters["render_markdown"] = descriptions.render_markdown
 
 app = FastAPI(title="Triage Dashboard")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

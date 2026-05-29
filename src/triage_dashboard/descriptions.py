@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 
+import markdown as _markdown
 from markupsafe import Markup, escape
 
 
@@ -86,6 +87,24 @@ def _label_to_key(matched_label: str) -> str:
     if "expected" in lo:
         return "expected"
     return "notes"
+
+
+def render_markdown(text: str) -> Markup:
+    """Render a small Markdown subset as safe HTML.
+
+    Suitable for AI-generated fields (e.g. `bug_context.ai_reasoning`) that
+    contain inline code, lists, links, bold/italic. Raw HTML in the input
+    is pre-escaped so it can't inject tags into the page.
+    """
+    if not text:
+        return Markup("")
+    safe_input = str(escape(text))
+    html = _markdown.markdown(
+        safe_input,
+        extensions=["fenced_code", "sane_lists"],
+        output_format="html",
+    )
+    return Markup(html)
 
 
 def linkify(text: str) -> Markup:
