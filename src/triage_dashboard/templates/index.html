@@ -23,8 +23,9 @@
 <dialog id="queue-prompt-dialog" class="queue-dialog">
   <h2 class="queue-dialog-title">Prompt copied — paste into Claude</h2>
   <p class="queue-dialog-help">
-    Switch to your Claude terminal and paste. Claude will read the
-    generated Markdown file and revise the affected drafts.
+    Switch to your Claude terminal and paste. Claude will read
+    <code>claude-queue.jsonl</code>, apply each feedback to the matching
+    pending draft, then truncate the queue.
   </p>
   <textarea id="queue-prompt-text" class="queue-dialog-prompt" readonly></textarea>
   <div class="queue-dialog-actions">
