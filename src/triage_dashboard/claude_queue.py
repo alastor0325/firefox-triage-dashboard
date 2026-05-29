@@ -138,6 +138,10 @@ def remove_refine(triage_dir: Path, *, bug_id: int, ts: str) -> bool:
     The JSONL is rewritten in place, preserving all non-matching lines
     verbatim (including malformed lines, so we don't silently destroy
     anything we don't understand).
+
+    Concurrency: this is a non-atomic read-then-write. Callers must assume
+    a single writer — the dashboard is local single-user, so concurrent
+    `append_refine` from another process is not a real risk here.
     """
     queue_path = triage_dir / QUEUE_FILE
     if not queue_path.is_file():
