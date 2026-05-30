@@ -347,3 +347,44 @@ def test_level_class_legacy_strings_fall_back_to_unknown() -> None:
 def test_level_class_case_insensitive_and_trimmed() -> None:
     assert data.level_class("s3") == "s3"
     assert data.level_class(" P2 ") == "p2"
+
+
+# ─── split_see_also ──────────────────────────────────────────────────
+
+def test_split_see_also_empty_or_none() -> None:
+    assert data.split_see_also(None) == ([], [])
+    assert data.split_see_also([]) == ([], [])
+
+
+def test_split_see_also_pulls_out_regressors() -> None:
+    entries = [
+        {"bug_id": 1, "label": "regressor"},
+        {"bug_id": 2, "label": "same root cause"},
+        {"bug_id": 3, "label": "Regressed by"},
+    ]
+    regressors, similar = data.split_see_also(entries)
+    assert [e["bug_id"] for e in regressors] == [1, 3]
+    assert [e["bug_id"] for e in similar] == [2]
+
+
+def test_split_see_also_no_regressors() -> None:
+    entries = [{"bug_id": 1, "label": "same root cause"}]
+    regressors, similar = data.split_see_also(entries)
+    assert regressors == []
+    assert similar == entries
+
+
+def test_split_see_also_entries_without_label_are_similar() -> None:
+    entries = [{"bug_id": 1}, {"bug_id": 2, "label": ""}]
+    regressors, similar = data.split_see_also(entries)
+    assert regressors == []
+    assert len(similar) == 2
+
+
+def test_split_see_also_progression_is_not_regression() -> None:
+    """Word-boundary match — labels that happen to contain 'gress' as
+    a substring (progression, etc.) must not be mis-classified."""
+    entries = [{"bug_id": 1, "label": "progression"}]
+    regressors, similar = data.split_see_also(entries)
+    assert regressors == []
+    assert similar == entries

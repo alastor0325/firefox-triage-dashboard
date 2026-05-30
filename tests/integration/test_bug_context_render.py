@@ -83,21 +83,23 @@ def test_inventory_chips_absent_when_inventory_empty(triage_dir: Path) -> None:
 # ─── see-also pills ─────────────────────────────────────────────────
 
 def test_see_also_pills_link_to_bugs(triage_dir: Path) -> None:
+    """Non-regressor see_also entries render as see-also-pill items
+    (regressors get their own block — see test_see_also_split)."""
     write_draft(
         triage_dir, 1,
         bug_context={
             "see_also": [
-                {"bug_id": 1981503, "label": "regressor"},
                 {"bug_id": 2012108, "label": "follow-up fix"},
+                {"bug_id": 2012109, "label": "same root cause"},
             ],
         },
     )
     body = client.get("/").text
     assert "see-also-pill" in body
-    assert "1981503" in body
-    assert "regressor" in body
     assert "2012108" in body
     assert "follow-up fix" in body
+    assert "2012109" in body
+    assert "same root cause" in body
 
 
 # ─── expandable sections ────────────────────────────────────────────

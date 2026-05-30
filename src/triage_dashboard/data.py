@@ -36,6 +36,32 @@ def level_class(value: str | None) -> str:
     return "unknown"
 
 
+# Whole-word match on "regress" so labels like "regressor" / "regressed
+# by" / "regression" count, but a label like "progression" or "egress"
+# does not. Anchored at a word boundary on the left only — "regression
+# test" still counts, which matches user intent (it's still a regressor
+# relationship).
+_REGRESSOR_LABEL_RE = re.compile(r"\bregress", re.IGNORECASE)
+
+
+def split_see_also(entries: list[dict] | None) -> tuple[list[dict], list[dict]]:
+    """Split see_also entries into (regressors, similar).
+
+    A "regressor" is any entry whose label matches `\\bregress`
+    (case-insensitive) — e.g. "regressor", "regressed by", "regression".
+    Everything else (or entries without a label) is similar.
+    """
+    regressors: list[dict] = []
+    similar: list[dict] = []
+    for entry in entries or []:
+        label = str(entry.get("label") or "")
+        if label and _REGRESSOR_LABEL_RE.search(label):
+            regressors.append(entry)
+        else:
+            similar.append(entry)
+    return regressors, similar
+
+
 @dataclass
 class BugContext:
     """Rich context snapshot of the bug at /triage draft time.

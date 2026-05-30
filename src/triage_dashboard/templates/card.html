@@ -52,9 +52,20 @@
     </ul>
     {% endif %}
 
-    {% if ctx.see_also %}
+    {% set _regressors, _similar = (ctx.see_also | split_see_also) %}
+    {% if _regressors %}
+    <div class="regression-tag-block">
+      <span class="regression-tag">regression</span>
+      {% for s in _regressors %}
+        <a class="regression-bug"
+           href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ s.bug_id }}"
+           target="_blank" rel="noopener">bug {{ s.bug_id }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if _similar %}
     <div class="see-also">
-      {% for s in ctx.see_also %}
+      {% for s in _similar %}
         <a class="see-also-pill"
            href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ s.bug_id }}"
            target="_blank" rel="noopener">

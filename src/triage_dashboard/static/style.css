@@ -483,6 +483,41 @@ code, kbd {
 .card-byline strong { font-weight: 600; color: var(--ink); }
 .card-byline .dot { color: var(--ink-5); margin: 0 0.1rem; }
 
+/* ── Regression tag block ──
+   Entries from bug_context.see_also whose label matches `\bregress`
+   (regressor / regressed by / regression …) are pulled out of the
+   Similar list and rendered here. The leading "regression" tag is
+   the section header — actionable amber, distinct from the rail's
+   red `crash` tag. */
+.regression-tag-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.55rem;
+  font-size: 0.85rem;
+}
+.regression-tag {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.12rem 0.5rem;
+  border-radius: 3px;
+  background: var(--amber);
+  color: #fff;
+  white-space: nowrap;
+}
+.regression-bug {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--amber);
+  text-decoration: none;
+}
+.regression-bug:hover { text-decoration: underline; }
+
 .see-also {
   display: flex; gap: 0.35rem; flex-wrap: wrap;
   margin: 0 0 0.7rem;
