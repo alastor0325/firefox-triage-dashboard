@@ -27,6 +27,32 @@ def test_rail_lists_every_bug_in_the_current_tab(triage_dir: Path) -> None:
     assert 'data-bug-id="3"' in body
 
 
+def test_rail_head_shows_info_icon_with_tab_specific_tooltip(
+    triage_dir: Path,
+) -> None:
+    """Each draft tab's rail header carries an info icon. The tooltip
+    text (data-tooltip attr) describes what that tab is for and what
+    Apply will do."""
+    # §1a (Needs Info)
+    write_draft(triage_dir, 1, ni_targets=["x@y"])
+    body_a = client.get("/?tab=needs-info").text
+    assert 'class="info-icon"' in body_a
+    assert "needinfo" in body_a.lower()
+
+    # §1b (Analyzed)
+    write_draft(triage_dir, 2, severity="S3", priority="P3")
+    body_b = client.get("/?tab=triaged&bug=2").text
+    assert 'class="info-icon"' in body_b
+    # Mentions bug-start since that's a §1b side effect
+    assert "/bug-start" in body_b
+
+    # §1c (Close / Reassign)
+    write_draft(triage_dir, 3, resolution="INCOMPLETE")
+    body_c = client.get("/?tab=close&bug=3").text
+    assert 'class="info-icon"' in body_c
+    assert "INCOMPLETE" in body_c or "resolution" in body_c.lower()
+
+
 def test_rail_does_not_show_bugs_from_other_tabs(triage_dir: Path) -> None:
     write_draft(triage_dir, 1, ni_targets=["a@b"])           # §1a
     write_draft(triage_dir, 2, severity="S3", priority="P3") # §1b
