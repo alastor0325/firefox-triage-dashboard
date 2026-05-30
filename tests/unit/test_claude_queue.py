@@ -382,3 +382,50 @@ def test_prepare_queue_drain_bugs_affected_dedups_across_action_types(
     result = claude_queue.prepare_queue_drain(triage_dir)
     assert result["count"] == 2
     assert result["bugs_affected"] == 1
+
+
+# ─── append_apply — Phase 5.5 ────────────────────────────────────────
+
+def test_append_apply_writes_a_jsonl_line(triage_dir: Path) -> None:
+    fixed_ts = datetime(2026, 5, 30, 12, 0, 0, tzinfo=timezone.utc)
+    entry = claude_queue.append_apply(
+        triage_dir, bug_id=2039425, now=fixed_ts,
+    )
+    queue_path = triage_dir / "claude-queue.jsonl"
+    assert queue_path.is_file()
+    lines = _read_lines(queue_path)
+    assert lines == [entry]
+    assert entry == {
+        "action": "apply",
+        "bug_id": 2039425,
+        "ts": "2026-05-30T12:00:00+00:00",
+    }
+
+
+def test_append_apply_coexists_with_other_actions(triage_dir: Path) -> None:
+    """All three action kinds can interleave in the queue file."""
+    claude_queue.append_refine(triage_dir, bug_id=1, feedback="x")
+    claude_queue.append_apply(triage_dir, bug_id=1)
+    claude_queue.append_bug_start(triage_dir, bug_id=1)
+    lines = _read_lines(triage_dir / "claude-queue.jsonl")
+    assert [l["action"] for l in lines] == ["refine", "apply", "bug-start"]
+
+
+def test_apply_is_in_drainable_actions(triage_dir: Path) -> None:
+    """The badge / drain count must include apply."""
+    assert "apply" in claude_queue.DRAINABLE_ACTIONS
+
+
+def test_prepare_queue_drain_counts_apply_entries(triage_dir: Path) -> None:
+    claude_queue.append_apply(triage_dir, bug_id=42)
+    result = claude_queue.prepare_queue_drain(triage_dir)
+    assert result["count"] == 1
+    assert result["bugs_affected"] == 1
+
+
+def test_pending_feedback_for_filters_out_apply(triage_dir: Path) -> None:
+    """Apply isn't 'feedback on the draft' — the per-card list must skip it."""
+    claude_queue.append_apply(triage_dir, bug_id=1)
+    claude_queue.append_refine(triage_dir, bug_id=1, feedback="x")
+    items = claude_queue.pending_feedback_for(triage_dir, 1)
+    assert [i["feedback"] for i in items] == ["x"]

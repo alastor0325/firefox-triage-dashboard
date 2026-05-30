@@ -123,6 +123,31 @@ def append_bug_start(
     return entry
 
 
+def append_apply(
+    triage_dir: Path,
+    *,
+    bug_id: int,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Append an apply action to the queue file.
+
+    Queued by /draft/<id>/apply for any draft; drained by a Claude
+    session which then runs `bugzilla-cli apply <bug_id>`. The CLI's
+    built-in [y/N] prompt is the production-write gate — the drain
+    prompt instructs Claude NOT to auto-confirm.
+    """
+    triage_dir.mkdir(parents=True, exist_ok=True)
+    ts = (now or datetime.now(timezone.utc)).isoformat()
+    entry: dict[str, Any] = {
+        "action": "apply",
+        "bug_id": int(bug_id),
+        "ts": ts,
+    }
+    with (triage_dir / QUEUE_FILE).open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    return entry
+
+
 def _read_jsonl(path: Path) -> list[dict]:
     entries: list[dict] = []
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -138,7 +163,7 @@ def _read_jsonl(path: Path) -> list[dict]:
     return entries
 
 
-DRAINABLE_ACTIONS = ("refine", "bug-start")
+DRAINABLE_ACTIONS = ("refine", "apply", "bug-start")
 
 
 def _refines(entries: list[dict]) -> list[dict]:
