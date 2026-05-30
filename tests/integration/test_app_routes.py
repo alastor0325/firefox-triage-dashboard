@@ -295,10 +295,26 @@ def test_blocks_add_renders_each_id_as_bugzilla_link(
         assert 'rel="noopener"' in m.group(0)
 
 
-def test_skip_button_posts_to_skip_endpoint(triage_dir: Path) -> None:
+def test_card_does_not_render_skip_button(triage_dir: Path) -> None:
+    """The Skip button is gone from the card action row; the /skip
+    endpoint stays callable but no longer has a UI affordance."""
     write_draft(triage_dir, 5551, severity="S3", priority="P3")
     body = client.get("/").text
-    assert 'hx-post="/draft/5551/skip"' in body
+    assert 'hx-post="/draft/5551/skip"' not in body
+    assert ">Skip<" not in body
+    # The Apply button is still rendered — sanity check that the action
+    # row hasn't been gutted entirely.
+    assert 'hx-post="/draft/5551/apply"' in body
+
+
+def test_skip_endpoint_still_callable_without_button(
+    triage_dir: Path,
+) -> None:
+    """Removing the button must not break the endpoint — scripts and
+    cleanup tooling still POST to /draft/{id}/skip directly."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    response = client.post("/draft/5551/skip")
+    assert response.status_code == 200
 
 
 def test_apply_button_not_disabled(triage_dir: Path) -> None:

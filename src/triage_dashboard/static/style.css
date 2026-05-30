@@ -775,8 +775,6 @@ code, kbd {
   background: var(--green); color: #fff; border-color: var(--green); font-weight: 600;
 }
 .btn-primary:hover { background: #126b34; border-color: #126b34; color: #fff; }
-.btn-ghost { background: transparent; color: var(--ink-3); border-color: transparent; }
-.btn-ghost:hover { background: var(--surface-2); color: var(--red); border-color: transparent; }
 .btn-copy {
   font-family: var(--font-mono);
   font-size: 0.8rem; font-weight: 600;
