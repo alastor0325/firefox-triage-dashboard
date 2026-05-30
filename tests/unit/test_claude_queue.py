@@ -489,3 +489,14 @@ def test_drain_prompt_only_apply_action_still_works(
     result = claude_queue.prepare_queue_drain(triage_dir)
     assert result["count"] == 1
     assert "bugzilla-cli apply" in result["prompt"]
+
+
+def test_drain_prompt_says_to_leave_queue_intact_on_decline(
+    triage_dir: Path,
+) -> None:
+    """If the user declines an apply ([y/N] → N) or it errors, the drain
+    must NOT truncate the queue — the user (or a future drain) needs
+    that state to recover. Lock the contract phrase into the prompt."""
+    claude_queue.append_apply(triage_dir, bug_id=1)
+    prompt = claude_queue.prepare_queue_drain(triage_dir)["prompt"].lower()
+    assert "leave the queue intact" in prompt
