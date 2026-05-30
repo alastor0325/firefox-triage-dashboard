@@ -27,8 +27,9 @@ Drain the Claude queue.
 
 Files involved:
 - {queue_path}
-    Each line is one of two action records:
+    Each line is one of three action records:
       refine:     {{"action":"refine","bug_id":<int>,"feedback":<string>,"ts":<iso8601>}}
+      apply:      {{"action":"apply","bug_id":<int>,"ts":<iso8601>}}
       bug-start:  {{"action":"bug-start","bug_id":<int>,"ts":<iso8601>}}
 - {pending_dir}/bug-<id>.json
     The current triage draft for that bug. Fields include `comment`,
@@ -42,6 +43,7 @@ Procedure:
 
 2. Partition entries by action:
    - All `refine` entries → group by bug_id.
+   - All `apply` entries → collect distinct bug_ids.
    - All `bug-start` entries → collect distinct bug_ids.
 
 3. Apply refines first. For each bug with refines, in ascending bug_id
@@ -54,17 +56,34 @@ Procedure:
       feedback warrants. Preserve fields you weren't told to change.
    c. Write the updated JSON back to the same path.
 
-4. For each bug-start entry, invoke the `bug-start` skill via the Skill
+4. For each queued apply (distinct bug_ids only), run:
+
+       bugzilla-cli apply <bug_id>
+
+   The CLI will print the post preview and prompt the user with [y/N].
+   **SAFETY GATE — read carefully:**
+   - Do NOT auto-confirm. Do NOT pass `--yes`, `-y`, or any flag that
+     bypasses the prompt.
+   - Wait for the user to type `y` or `N` at the terminal. This is the
+     production-write gate — the user must approve each bug individually.
+   - If the user answers N (or the apply errors), stop and ask the user
+     how to proceed. Do NOT charge ahead to the next apply.
+   - If the user answers y, the CLI posts to Bugzilla and deletes the
+     pending JSON. Move on to the next apply.
+
+5. For each bug-start entry, invoke the `bug-start` skill via the Skill
    tool with the bug_id as its argument — do not just print the slash
    command, actually run the skill so the investigation flow kicks off.
    Distinct bug_ids only (de-duplicate if the same bug appears twice).
 
-5. After all actions are processed, truncate {queue_path} to empty
-   (write a zero-byte file).
+6. After all actions are processed successfully, truncate {queue_path}
+   to empty (write a zero-byte file). If any apply was declined by the
+   user, leave the queue intact and let the user decide what to do.
 
-6. Print a one-line summary per bug describing what changed, e.g.
+7. Print a one-line summary per bug describing what happened, e.g.
      2039425: refined — shortened analysis
-     2042320: refined — asked for media log
+     2040167: applied (user confirmed)
+     2042320: apply declined by user
      2045110: /bug-start invoked
 
 Begin.

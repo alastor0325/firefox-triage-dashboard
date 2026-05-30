@@ -429,3 +429,57 @@ def test_pending_feedback_for_filters_out_apply(triage_dir: Path) -> None:
     claude_queue.append_refine(triage_dir, bug_id=1, feedback="x")
     items = claude_queue.pending_feedback_for(triage_dir, 1)
     assert [i["feedback"] for i in items] == ["x"]
+
+
+# ─── drain prompt — apply step + no-auto-confirm gate ───────────────
+
+def test_drain_prompt_describes_apply_action(triage_dir: Path) -> None:
+    """The prompt tells Claude to run bugzilla-cli apply for each
+    queued apply entry."""
+    claude_queue.append_apply(triage_dir, bug_id=1)
+    prompt = claude_queue.prepare_queue_drain(triage_dir)["prompt"]
+    assert "apply" in prompt.lower()
+    assert "bugzilla-cli apply" in prompt
+
+
+def test_drain_prompt_has_explicit_no_auto_confirm_gate(
+    triage_dir: Path,
+) -> None:
+    """The prompt MUST forbid auto-confirming the [y/N]. This is the
+    production-write safety gate."""
+    claude_queue.append_apply(triage_dir, bug_id=1)
+    prompt = claude_queue.prepare_queue_drain(triage_dir)["prompt"]
+    lo = prompt.lower()
+    # Must mention [y/N] / y or N so the model knows the prompt format.
+    assert "[y/n]" in lo or "y/n" in lo
+    # Must forbid auto-confirmation.
+    assert "do not auto-confirm" in lo or "do not pass --yes" in lo or "wait for the user" in lo
+
+
+def test_drain_prompt_specifies_order_refines_applies_bug_starts(
+    triage_dir: Path,
+) -> None:
+    """Drain order matters: revise before posting; post before starting
+    investigation. Anchor on specific step phrases rather than action
+    names (which appear together in step 2's partition list)."""
+    claude_queue.append_apply(triage_dir, bug_id=1)
+    body = (
+        claude_queue.prepare_queue_drain(triage_dir)["prompt"]
+        .split("Procedure:", 1)[1]
+        .lower()
+    )
+    refine_step = body.find("apply refines first")
+    apply_step = body.find("bugzilla-cli apply")
+    bug_start_step = body.find("invoke the `bug-start` skill")
+    assert 0 <= refine_step < apply_step < bug_start_step
+
+
+def test_drain_prompt_only_apply_action_still_works(
+    triage_dir: Path,
+) -> None:
+    """A queue with just an apply (no refines or bug-starts) still
+    produces a usable prompt."""
+    claude_queue.append_apply(triage_dir, bug_id=42)
+    result = claude_queue.prepare_queue_drain(triage_dir)
+    assert result["count"] == 1
+    assert "bugzilla-cli apply" in result["prompt"]
