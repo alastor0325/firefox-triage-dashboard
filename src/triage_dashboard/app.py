@@ -269,19 +269,23 @@ def apply_draft(request: Request, bug_id: int):
     implementation of `BugzillaCLIBackend` (see PLAN.md Phase 4.5).
     If LIVE=1 but the implementation isn't there, this returns 501.
 
-    Side effect: when a §1b draft is applied successfully, a
-    `bug-start` action is appended to `claude-queue.jsonl` so the next
-    drain invokes `/bug-start <bug_id>` (Phase 5).
+    Side effects on success (Phase 5 / 5.5):
+    - Append an `apply` action to `claude-queue.jsonl` (every section).
+      The drain prompt runs `bugzilla-cli apply <id>`; the CLI's [y/N]
+      prompt is the production-write gate.
+    - For §1b drafts, also append a `bug-start` action so the next
+      drain invokes the bug-start skill after the apply lands.
     """
     pending = _load_pending_or_404(bug_id)
     try:
         result = backend.get_backend().apply(bug_id, pending)
     except NotImplementedError as e:
         raise HTTPException(status_code=501, detail=str(e))
-    if result.ok and data.classify_section(pending) == "§1b":
-        claude_queue.append_bug_start(
-            data.triage_dir_from_env(), bug_id=bug_id,
-        )
+    if result.ok:
+        triage_dir = data.triage_dir_from_env()
+        claude_queue.append_apply(triage_dir, bug_id=bug_id)
+        if data.classify_section(pending) == "§1b":
+            claude_queue.append_bug_start(triage_dir, bug_id=bug_id)
     return _backend_result_response(request, "apply", bug_id, result)
 
 

@@ -142,70 +142,79 @@ def _queue_actions(triage_dir: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line]
 
 
-def test_b1_apply_queues_bug_start(triage_dir: Path) -> None:
-    """Applying a §1b draft (severity+priority set) queues a /bug-start."""
+def test_b1_apply_queues_apply_then_bug_start(triage_dir: Path) -> None:
+    """Applying a §1b draft queues two entries: apply (post to Bugzilla)
+    THEN bug-start (start investigation after the post). Order matters —
+    apply must happen before bug-start in the drained sequence."""
     write_draft(triage_dir, 555, severity="S3", priority="P3")
     response = client.post("/draft/555/apply")
     assert response.status_code == 200
     entries = _queue_actions(triage_dir)
-    assert len(entries) == 1
-    assert entries[0]["action"] == "bug-start"
+    assert [e["action"] for e in entries] == ["apply", "bug-start"]
+    assert all(e["bug_id"] == 555 for e in entries)
+
+
+def test_a1_apply_queues_only_apply(triage_dir: Path) -> None:
+    """§1a (needinfo only) → apply queued, no bug-start."""
+    write_draft(triage_dir, 555, ni_targets=["x@y"])
+    client.post("/draft/555/apply")
+    entries = _queue_actions(triage_dir)
+    assert [e["action"] for e in entries] == ["apply"]
     assert entries[0]["bug_id"] == 555
 
 
-def test_a1_apply_does_not_queue_bug_start(triage_dir: Path) -> None:
-    """§1a drafts (needinfo only) → no /bug-start handoff."""
-    write_draft(triage_dir, 555, ni_targets=["x@y"])
-    client.post("/draft/555/apply")
-    assert _queue_actions(triage_dir) == []
-
-
-def test_c1_apply_does_not_queue_bug_start(triage_dir: Path) -> None:
-    """§1c drafts (resolve / reassign) → no /bug-start handoff."""
+def test_c1_apply_queues_only_apply(triage_dir: Path) -> None:
+    """§1c (resolve / reassign) → apply queued, no bug-start."""
     write_draft(triage_dir, 555, resolution="INCOMPLETE")
     client.post("/draft/555/apply")
-    assert _queue_actions(triage_dir) == []
+    entries = _queue_actions(triage_dir)
+    assert [e["action"] for e in entries] == ["apply"]
+    assert entries[0]["bug_id"] == 555
 
 
-def test_b1_skip_does_not_queue_bug_start(triage_dir: Path) -> None:
-    """Skipping any draft (even §1b) does NOT queue /bug-start."""
+def test_skip_queues_nothing(triage_dir: Path) -> None:
+    """Skipping a draft (any section) does NOT queue any action.
+    Skip is local-only — no Bugzilla side effect, ever."""
     write_draft(triage_dir, 555, severity="S3", priority="P3")
     client.post("/draft/555/skip")
     assert _queue_actions(triage_dir) == []
 
 
 def test_b1_apply_queue_count_visible_in_topbar(triage_dir: Path) -> None:
-    """After §1b apply, the topbar count is 1 (bug-start counts)."""
+    """After §1b apply, the topbar count is 2 (apply + bug-start)."""
     write_draft(triage_dir, 555, severity="S3", priority="P3")
     client.post("/draft/555/apply")
-    # Use the count endpoint.
+    assert client.get("/queue/count").json() == {"count": 2}
+
+
+def test_a1_apply_queue_count_is_one(triage_dir: Path) -> None:
+    """§1a apply queues only the apply action."""
+    write_draft(triage_dir, 555, ni_targets=["x@y"])
+    client.post("/draft/555/apply")
     assert client.get("/queue/count").json() == {"count": 1}
 
 
-def test_b1_repeat_apply_queues_one_bug_start_per_click(
+def test_b1_repeat_apply_queues_one_pair_per_click(
     triage_dir: Path,
 ) -> None:
-    """Two clicks on Apply for the same §1b draft queue TWO bug-start
-    entries (current behavior — no dedupe at queue-write time). The
-    drain prompt de-duplicates by distinct bug_id at consume time, so
-    /bug-start fires once even though the queue holds two entries.
-    """
+    """Two clicks on Apply for the same §1b draft queue two apply +
+    two bug-start entries (no dedupe at queue-write time). The drain
+    prompt de-duplicates by distinct bug_id at consume time."""
     write_draft(triage_dir, 555, severity="S3", priority="P3")
     client.post("/draft/555/apply")
     client.post("/draft/555/apply")
     entries = _queue_actions(triage_dir)
-    assert len(entries) == 2
-    assert all(e["action"] == "bug-start" and e["bug_id"] == 555 for e in entries)
+    assert [e["action"] for e in entries] == [
+        "apply", "bug-start", "apply", "bug-start",
+    ]
+    assert all(e["bug_id"] == 555 for e in entries)
 
 
-def test_b1_apply_failure_does_not_queue_bug_start(
+def test_apply_failure_queues_nothing(
     triage_dir: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """If the backend returns ok=False, no bug-start gets queued.
-
-    We achieve this by pointing at LIVE mode where the real backend
-    raises NotImplementedError → 501. The queue must stay empty.
-    """
+    """If the backend returns ok=False (here: LIVE-mode 501 from the
+    unimplemented real backend), neither apply nor bug-start gets queued."""
     write_draft(triage_dir, 555, severity="S3", priority="P3")
     monkeypatch.setenv("TRIAGE_DASHBOARD_LIVE", "1")
     response = client.post("/draft/555/apply")
