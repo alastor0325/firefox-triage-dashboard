@@ -4,6 +4,9 @@ The queue is a JSONL file at `<triage_dir>/claude-queue.jsonl`. Each line
 is one action:
 
 - `refine`    — re-draft a pending triage comment given user feedback.
+- `apply`     — run `bugzilla-cli apply <bug_id>` to post the draft to
+                Bugzilla; the CLI's [y/N] prompt is the production-write
+                gate.
 - `bug-start` — kick off `/bug-start <bug_id>` after a §1b Apply.
 
 `prepare_queue_drain` builds the short clipboard prompt the dashboard hands
@@ -11,6 +14,11 @@ the user when they click "Process queue". The prompt tells Claude where to
 find the JSONL and what to do — Claude reads the JSONL itself, so the
 queue contents are NOT embedded in the prompt. This keeps the clipboard
 payload small and avoids any second on-disk artifact.
+
+Single-writer assumption: the dashboard is the only producer of queue
+entries, and a Claude drain session is the only consumer. Concurrent
+writes (e.g. dashboard appending while drain truncates) are not
+guarded against — this is a local single-user tool.
 """
 
 from __future__ import annotations
@@ -273,10 +281,11 @@ _EMPTY = {"count": 0, "prompt": None, "bugs_affected": 0}
 def prepare_queue_drain(triage_dir: Path) -> dict[str, Any]:
     """Build the short clipboard prompt for draining the queue.
 
-    Returns `{count, prompt, bugs_affected}`. `count` covers both
-    drainable action types (refine + bug-start) — i.e. everything the
-    drainer will touch. When the queue is missing or has no drainable
-    entries, returns the empty shape.
+    Returns `{count, prompt, bugs_affected}`. `count` covers every
+    drainable action type (`refine`, `apply`, `bug-start`) — i.e.
+    everything the drainer will touch. `bugs_affected` is the number
+    of distinct `bug_id`s across all those actions. When the queue is
+    missing or has no drainable entries, returns the empty shape.
     """
     queue_path = triage_dir / QUEUE_FILE
     if not queue_path.is_file():
