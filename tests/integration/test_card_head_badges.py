@@ -77,3 +77,17 @@ def test_card_head_unrecognised_level_falls_back_to_unknown(
     body = client.get("/").text
     # Two unknown pills.
     assert body.count("badge-level--unknown") >= 2
+
+
+# ─── ni badge in card-head is gone (footer "+ni" still present) ─────
+
+def test_card_head_has_no_ni_badge_even_with_ni_targets(
+    triage_dir: Path,
+) -> None:
+    """The card-head NI badge duplicated the footer's `+ni …` text.
+    The footer is the canonical place — the card-head badge is gone."""
+    write_draft(triage_dir, 1, ni_targets=["alwu@mozilla.com"])
+    body = client.get("/").text
+    assert 'class="badge-ni"' not in body
+    # The "Will apply" footer must still surface the needinfo target.
+    assert "+ni alwu@mozilla.com" in body or "alwu@mozilla.com" in body
