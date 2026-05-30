@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Literal
+
+# Socorro crash IDs look like bp-<uuid-ish>, e.g. bp-12345678-abcd-...
+_CRASH_ID_RE = re.compile(r"bp-[a-f0-9-]+", re.IGNORECASE)
 
 DEFAULT_TRIAGE_DIR = Path.home() / "firefox-triage"
 
@@ -34,6 +38,21 @@ class BugContext:
     recent_comments: list[dict] = field(default_factory=list)
     attachments: list[dict] = field(default_factory=list)
     ai_reasoning: str = ""
+    # Current Bugzilla state of the bug at draft time. Used by the rail
+    # to render bug-state tags ("S3·P2", "no P/S", "crash"). The /triage
+    # skill is expected to populate these; older pending JSONs without
+    # them parse cleanly via the defaults.
+    current_severity: str = ""
+    current_priority: str = ""
+    keywords: list[str] = field(default_factory=list)
+
+    @property
+    def is_crash(self) -> bool:
+        """True if the bug looks crash-related: a `crash` keyword
+        (case-insensitive) or a Socorro `bp-<uuid>` ID in the description."""
+        if any(k.lower() == "crash" for k in self.keywords):
+            return True
+        return bool(_CRASH_ID_RE.search(self.description_excerpt or ""))
 
 
 def _parse_bug_context(raw: Any) -> BugContext | None:
@@ -52,6 +71,9 @@ def _parse_bug_context(raw: Any) -> BugContext | None:
         recent_comments=[e for e in (raw.get("recent_comments") or []) if isinstance(e, dict)],
         attachments=[e for e in (raw.get("attachments") or []) if isinstance(e, dict)],
         ai_reasoning=str(raw.get("ai_reasoning") or ""),
+        current_severity=str(raw.get("current_severity") or ""),
+        current_priority=str(raw.get("current_priority") or ""),
+        keywords=[str(k) for k in (raw.get("keywords") or [])],
     )
 
 

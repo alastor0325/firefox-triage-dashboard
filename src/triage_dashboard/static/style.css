@@ -953,13 +953,25 @@ code, kbd {
   color: var(--ink);
 }
 .rail-item.is-active .rail-bug-id { color: var(--accent); }
-.rail-meta {
+/* ── Rail bug-state tags ──
+   Small pills that reflect the bug's CURRENT Bugzilla state at draft
+   time (not what the draft will write). Three variants — ps (info),
+   no-ps (warning nudge), crash (danger). */
+.rail-tag {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
-  color: var(--amber);
-  letter-spacing: 0.04em;
+  font-size: 0.65rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  line-height: 1.4;
 }
+.rail-tag + .rail-tag { margin-left: 0.25rem; }
+.rail-tag--ps     { background: var(--surface-2); color: var(--ink-2); }
+.rail-tag--no-ps  { background: var(--amber-soft); color: var(--amber); }
+.rail-tag--crash  { background: #fee2e2; color: var(--red); }
 .rail-title {
   font-size: 0.85rem;
   color: var(--ink-2);
