@@ -78,3 +78,54 @@ def test_regression_block_renders_each_regressor(triage_dir: Path) -> None:
     assert "regression-tag-block" in body
     assert "111" in body
     assert "222" in body
+
+
+# ─── similar section as <details open> ──────────────────────────────
+
+def test_similar_renders_as_details_open_with_count(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "see_also": [
+                {"bug_id": 101, "label": "same root cause"},
+                {"bug_id": 102, "label": "follow-up fix"},
+                {"bug_id": 103, "label": "duplicate"},
+            ],
+        },
+    )
+    body = client.get("/").text
+    assert "similar-details" in body
+    # <details ... open ...> — Jinja may render attributes in either order,
+    # so we check for both substrings.
+    similar_idx = body.index("similar-details")
+    details_open_section = body[max(0, similar_idx - 200): similar_idx + 200]
+    assert "<details" in details_open_section
+    assert " open" in details_open_section
+    assert "<summary>Similar (3)</summary>" in body
+    # Each non-regressor bug link is inside the details.
+    end_idx = body.index("</details>", similar_idx)
+    block = body[similar_idx:end_idx]
+    assert "101" in block
+    assert "102" in block
+    assert "103" in block
+
+
+def test_similar_details_absent_when_only_regressors(triage_dir: Path) -> None:
+    """If every see_also entry is a regressor, the Similar <details>
+    must not render — no empty section."""
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "see_also": [{"bug_id": 1981503, "label": "regressor"}],
+        },
+    )
+    body = client.get("/").text
+    assert "similar-details" not in body
+    # Regression block still renders.
+    assert "regression-tag-block" in body
+
+
+def test_similar_details_absent_when_no_see_also(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, bug_context={"see_also": []})
+    body = client.get("/").text
+    assert "similar-details" not in body

@@ -64,15 +64,18 @@
     </div>
     {% endif %}
     {% if _similar %}
-    <div class="see-also">
-      {% for s in _similar %}
-        <a class="see-also-pill"
-           href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ s.bug_id }}"
-           target="_blank" rel="noopener">
-          bug {{ s.bug_id }}{% if s.label %}<span class="lbl">{{ s.label }}</span>{% endif %}
-        </a>
-      {% endfor %}
-    </div>
+    <details open class="similar-details">
+      <summary>Similar ({{ _similar|length }})</summary>
+      <div class="see-also similar-list">
+        {% for s in _similar %}
+          <a class="see-also-pill"
+             href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ s.bug_id }}"
+             target="_blank" rel="noopener">
+            bug {{ s.bug_id }}{% if s.label %}<span class="lbl">{{ s.label }}</span>{% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    </details>
     {% endif %}
 
     {% if ctx.description_excerpt or ctx.recent_comments or ctx.attachments or ctx.ai_reasoning %}

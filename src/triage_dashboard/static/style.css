@@ -523,6 +523,35 @@ code, kbd {
   margin: 0 0 0.7rem;
   font-size: 0.82rem;
 }
+/* "Similar" details mirrors the disclosure style used by Bug
+   description / key comments / AI reasoning so the page reads as a
+   consistent family of collapsible sections — except this one
+   defaults to open. */
+.similar-details { margin: 0 0 0.7rem; }
+.similar-details > summary {
+  cursor: pointer;
+  font-size: 0.86rem;
+  color: var(--ink-3);
+  font-weight: 500;
+  list-style: none;
+  padding: 0.2rem 0;
+  user-select: none;
+}
+.similar-details > summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 0.45em;
+  transition: transform 0.12s;
+  color: var(--ink-4);
+  font-size: 0.7em;
+}
+.similar-details[open] > summary::before { transform: rotate(90deg); }
+.similar-details > summary:hover { color: var(--ink); }
+.similar-details > summary::-webkit-details-marker { display: none; }
+.similar-details .similar-list {
+  margin-top: 0.3rem;
+  margin-bottom: 0;
+}
 .see-also-pill {
   padding: 0.15rem 0.6rem;
   border-radius: 999px;
