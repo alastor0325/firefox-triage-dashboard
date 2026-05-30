@@ -264,6 +264,37 @@ def test_apply_button_posts_to_apply_endpoint(triage_dir: Path) -> None:
     assert 'hx-post="/draft/5551/apply"' in body
 
 
+def test_blocks_add_renders_each_id_as_bugzilla_link(
+    triage_dir: Path,
+) -> None:
+    """The Will Apply `+blocks` list must hyperlink each bug id, not show
+    plain text, so the user can jump straight to the referenced bug."""
+    write_draft(
+        triage_dir, 5551, severity="S3", priority="P3",
+        blocks_add=[12345, 67890],
+    )
+    body = client.get("/").text
+    assert (
+        '<a class="meta" '
+        'href="https://bugzilla.mozilla.org/show_bug.cgi?id=12345"'
+    ) in body
+    assert (
+        '<a class="meta" '
+        'href="https://bugzilla.mozilla.org/show_bug.cgi?id=67890"'
+    ) in body
+    # Open in a new tab and harden the rel attribute, matching the other
+    # bugzilla anchors in card.html.
+    import re
+    for bug_id in (12345, 67890):
+        m = re.search(
+            rf'<a class="meta"[^>]*id={bug_id}"[^>]*>',
+            body,
+        )
+        assert m is not None, f"missing anchor for blocks bug {bug_id}"
+        assert 'target="_blank"' in m.group(0)
+        assert 'rel="noopener"' in m.group(0)
+
+
 def test_skip_button_posts_to_skip_endpoint(triage_dir: Path) -> None:
     write_draft(triage_dir, 5551, severity="S3", priority="P3")
     body = client.get("/").text
