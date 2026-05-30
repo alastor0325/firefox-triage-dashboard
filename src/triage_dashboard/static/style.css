@@ -847,9 +847,14 @@ code, kbd {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  position: relative;       /* positioning context for .info-tooltip */
 }
 
-/* ───── INFO ICON + TOOLTIP (shared) ───── */
+/* ───── INFO ICON + TOOLTIP (shared) ─────
+   The tooltip body is a real DOM element (role="tooltip") referenced
+   via aria-describedby, so screen readers announce it. CSS handles
+   the show/hide on hover and keyboard focus via a sibling combinator
+   on the trigger. */
 .info-icon {
   display: inline-flex;
   align-items: center;
@@ -871,12 +876,11 @@ code, kbd {
   color: var(--ink-1);
   outline: none;
 }
-.info-icon:hover::after,
-.info-icon:focus-visible::after {
-  content: attr(data-tooltip);
+.info-tooltip {
   position: absolute;
-  top: calc(100% + 0.55rem);
+  top: 100%;
   left: 0;
+  margin-top: 0.55rem;
   width: 280px;
   max-width: 80vw;
   padding: 0.55rem 0.7rem;
@@ -894,17 +898,16 @@ code, kbd {
   text-align: left;
   z-index: 100;
   pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 120ms ease, visibility 0s linear 120ms;
 }
-.info-icon:hover::before,
-.info-icon:focus-visible::before {
-  content: "";
-  position: absolute;
-  top: calc(100% + 0.15rem);
-  left: 0.35rem;
-  border: 5px solid transparent;
-  border-bottom-color: var(--ink-1, #18181b);
-  z-index: 100;
-  pointer-events: none;
+.info-icon:hover + .info-tooltip,
+.info-icon:focus-visible + .info-tooltip,
+.info-tooltip:hover {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 120ms ease;
 }
 .rail-search {
   width: 100%;

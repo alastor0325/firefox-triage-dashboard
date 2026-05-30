@@ -438,3 +438,46 @@ def test_rail_tag_does_not_render_old_ni_tag(triage_dir: Path) -> None:
     row = _rail_row_for(body, 1)
     assert ">NI<" not in row
     assert "rail-meta" not in row
+
+
+# ─── info-icon tooltip: ARIA describedby + real tooltip element ─────
+
+def test_info_icon_uses_aria_describedby_to_real_tooltip(
+    triage_dir: Path,
+) -> None:
+    """Screen readers don't read CSS-generated content. The tooltip body
+    must be a real DOM node, referenced via aria-describedby."""
+    write_draft(triage_dir, 1, ni_targets=["x@y"])
+    body = client.get("/?tab=needs-info").text
+    import re
+    icon = re.search(r'<span class="info-icon"[^>]*>', body)
+    assert icon is not None, "info-icon missing from rail head"
+    icon_attrs = icon.group(0)
+    m = re.search(r'aria-describedby="([^"]+)"', icon_attrs)
+    assert m is not None, "info-icon must have aria-describedby"
+    tooltip_id = m.group(1)
+    # The trigger isn't a button — a tooltip trigger doesn't activate
+    # anything. Keep tabindex for keyboard focus and an accessible name.
+    assert 'role="button"' not in icon_attrs
+    assert 'tabindex="0"' in icon_attrs
+    assert 'aria-label="About this tab"' in icon_attrs
+    # The referenced element exists, has role="tooltip", and carries the
+    # same help text the prior data-tooltip attribute used to carry.
+    tip = re.search(
+        rf'<span[^>]*role="tooltip"[^>]*id="{re.escape(tooltip_id)}"[^>]*>'
+        r'(.*?)</span>',
+        body, re.DOTALL,
+    )
+    assert tip is not None, f"no tooltip element with id={tooltip_id}"
+    assert "needinfo" in tip.group(1).lower()
+
+
+def test_info_icon_tooltip_id_includes_active_tab(triage_dir: Path) -> None:
+    """The tooltip id varies per tab so it doesn't collide with other
+    tabs' tooltips if they ever appear in the same DOM."""
+    write_draft(triage_dir, 1, ni_targets=["x@y"])
+    write_draft(triage_dir, 2, severity="S3", priority="P3")
+    body_a = client.get("/?tab=needs-info").text
+    body_b = client.get("/?tab=triaged&bug=2").text
+    assert 'id="tab-info-needs-info"' in body_a
+    assert 'id="tab-info-triaged"' in body_b

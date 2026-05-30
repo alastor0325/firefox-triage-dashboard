@@ -20,11 +20,18 @@
     <span class="rail-head-title">
       {{ _info.title if _info else '' }}
       {% if _info %}
+      {# Render the tooltip body as a real DOM node and reference it via
+         aria-describedby so screen readers can announce the help text.
+         CSS-generated ::after content is not announced. The trigger is
+         not a button — a tooltip doesn't activate anything — so we drop
+         role="button" but keep tabindex for keyboard focus. #}
       <span class="info-icon"
             tabindex="0"
-            role="button"
             aria-label="About this tab"
-            data-tooltip="{{ _info.help }}">ⓘ</span>
+            aria-describedby="tab-info-{{ active_tab }}">ⓘ</span>
+      <span role="tooltip"
+            id="tab-info-{{ active_tab }}"
+            class="info-tooltip">{{ _info.help }}</span>
       {% endif %}
     </span>
     <span class="count">{{ active_bucket|length }} bugs</span>
