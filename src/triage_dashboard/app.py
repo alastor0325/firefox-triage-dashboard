@@ -75,7 +75,6 @@ TABS = [
     ("needs-info", "§1a", "Needs Info"),
     ("close", "§1c", "Close"),
     ("watching", None, "Watching"),
-    ("queue", None, "Queue"),
 ]
 SLUG_TO_MARKER = {slug: marker for slug, marker, _ in TABS}
 DRAFT_TAB_SLUGS = {slug for slug, marker, _ in TABS if marker}
@@ -161,10 +160,7 @@ def index(
     counts_by_slug = {
         slug: (
             len(groups.get(marker, [])) if marker
-            else (
-                len(watch) if slug == "watching"
-                else (queue_count if slug == "queue" else 0)
-            )
+            else (len(watch) if slug == "watching" else 0)
         )
         for slug, marker, _ in TABS
     }

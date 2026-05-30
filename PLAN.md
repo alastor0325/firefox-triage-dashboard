@@ -373,11 +373,18 @@ prompt" button replaces the auto-copy-on-click behaviour.
 - The Queue tab (Phase 5.7) is retained for the bigger view, but
   the dropdown is now the fast path.
 
-### Phase 5.7 — Queue inspector tab  ← DONE
+### Phase 5.7 — Queue inspector tab  ← SUPERSEDED by Phase 5.8
 
 A "Queue" tab in the topbar lists every queued action (refines, applies,
 bug-starts) in chronological order. Each row jumps to its bug's card and
 can be removed individually without draining the queue.
+
+**Status**: removed in 2026-05-30. The Phase 5.8 dropdown delivers the
+same affordances directly from the topbar with no tab switch, so the
+extra tab was redundant. `queue.html` template, the `queue` tab entry,
+the inspector-specific CSS, and the related route branch are gone;
+`POST /queue/remove`, `all_queued_actions`, and the dropdown's
+`_queue_dropdown.html` remain (they back the dropdown).
 
 - [x] Generalize `remove_refine` → `remove_entry(action, bug_id, ts)`;
       keep `remove_refine` as a thin wrapper for backwards compatibility.

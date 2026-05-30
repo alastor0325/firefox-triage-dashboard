@@ -1,5 +1,6 @@
 {# Dropdown content for the topbar Process queue dropdown.
-   Context: queue_rows, bug_meta_by_id (same as queue.html). #}
+   Context: queue_rows (from claude_queue.all_queued_actions) and
+   bug_meta_by_id ({bug_id: {section_slug, title}}). #}
 <div class="queue-dropdown-content" id="queue-dropdown-content">
   {% if not queue_rows %}
     <p class="queue-dropdown-empty">Nothing queued.</p>
