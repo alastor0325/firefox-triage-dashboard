@@ -291,3 +291,31 @@ def test_bug_context_malformed_falls_back_to_none(triage_dir: Path) -> None:
     """If bug_context isn't a dict, load it as None rather than crashing."""
     write_draft(triage_dir, 1, bug_context="not a dict")
     assert data.load_drafts(triage_dir)[0].bug_context is None
+
+
+# ─── bug_context.is_crash (rail tag heuristic) ─────────────────────
+
+def test_is_crash_empty_context_is_false() -> None:
+    assert data.BugContext().is_crash is False
+
+
+def test_is_crash_crash_keyword_case_insensitive() -> None:
+    assert data.BugContext(keywords=["crash"]).is_crash is True
+    assert data.BugContext(keywords=["Crash"]).is_crash is True
+    assert data.BugContext(keywords=["CRASH"]).is_crash is True
+
+
+def test_is_crash_other_keywords_do_not_trigger() -> None:
+    # 'crash-' or 'crashy' must not match; only the exact 'crash' keyword.
+    assert data.BugContext(keywords=["regression", "perf"]).is_crash is False
+    assert data.BugContext(keywords=["crashy"]).is_crash is False
+
+
+def test_is_crash_socorro_id_in_description() -> None:
+    desc = "Crashed once; bp-12345678-abcd-1234-5678-abcdef012345 above."
+    assert data.BugContext(description_excerpt=desc).is_crash is True
+
+
+def test_is_crash_bare_bp_dash_does_not_match() -> None:
+    # 'bp-' must be followed by at least one hex/dash char to match.
+    assert data.BugContext(description_excerpt="see bp- log").is_crash is False
