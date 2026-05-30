@@ -350,6 +350,26 @@ def queue_count() -> dict:
     return {"count": _count_queue(data.triage_dir_from_env())}
 
 
+@app.get("/queue/dropdown", response_class=HTMLResponse)
+def queue_dropdown(request: Request) -> HTMLResponse:
+    """Render the topbar Process queue dropdown content as an HTML
+    fragment, fetched on demand (queue-changed SSE) by the client."""
+    triage_dir = data.triage_dir_from_env()
+    drafts = data.load_drafts(triage_dir)
+    bug_meta_by_id = {
+        d.bug_id: {"section_slug": _slug_for_section(d.section), "title": d.title}
+        for d in drafts
+    }
+    return templates.TemplateResponse(
+        request=request,
+        name="_queue_dropdown.html",
+        context={
+            "queue_rows": claude_queue.all_queued_actions(triage_dir),
+            "bug_meta_by_id": bug_meta_by_id,
+        },
+    )
+
+
 @app.post("/queue/remove")
 def queue_remove(
     request: Request,

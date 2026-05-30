@@ -168,3 +168,56 @@ def test_queue_remove_json_for_non_htmx(triage_dir: Path) -> None:
         "action": "bug-start", "bug_id": 1, "ts": entry_ts,
     })
     assert response.json() == {"ok": True}
+
+
+# ─── GET /queue/dropdown (topbar dropdown content) ──────────────────
+
+def test_dropdown_empty_queue_renders_empty_state(triage_dir: Path) -> None:
+    body = client.get("/queue/dropdown").text
+    assert "Nothing queued" in body
+    # Copy button must exist even when empty — but disabled.
+    assert 'id="btn-copy-prompt"' in body
+    assert "disabled" in body
+
+
+def test_dropdown_renders_each_action_type(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, severity="S3", priority="P3")
+    write_draft(triage_dir, 2, ni_targets=["x@y"])
+    (triage_dir / "claude-queue.jsonl").write_text(
+        '{"action":"refine","bug_id":1,"feedback":"shorten it","ts":"2026-05-30T14:30:00+00:00"}\n'
+        '{"action":"apply","bug_id":1,"ts":"2026-05-30T14:35:00+00:00"}\n'
+        '{"action":"bug-start","bug_id":2,"ts":"2026-05-30T15:00:00+00:00"}\n'
+    )
+    body = client.get("/queue/dropdown").text
+    assert "queue-badge--refine" in body
+    assert "queue-badge--apply" in body
+    assert "queue-badge--bug-start" in body
+    assert "shorten it" in body
+    # Bug ids link to their section tabs.
+    assert 'href="?tab=triaged&bug=1"' in body
+    assert 'href="?tab=needs-info&bug=2"' in body
+
+
+def test_dropdown_remove_button_hits_queue_remove(triage_dir: Path) -> None:
+    (triage_dir / "claude-queue.jsonl").write_text(
+        '{"action":"apply","bug_id":1,"ts":"2026-05-30T00:00:00+00:00"}\n'
+    )
+    body = client.get("/queue/dropdown").text
+    assert 'hx-post="/queue/remove"' in body
+    assert '"action": "apply"' in body
+
+
+def test_dropdown_copy_button_enabled_when_queue_has_entries(
+    triage_dir: Path,
+) -> None:
+    (triage_dir / "claude-queue.jsonl").write_text(
+        '{"action":"apply","bug_id":1,"ts":"2026-05-30T00:00:00+00:00"}\n'
+    )
+    body = client.get("/queue/dropdown").text
+    # Pull out the copy button HTML and confirm no `disabled` attribute.
+    import re
+    m = re.search(
+        r'<button[^>]*id="btn-copy-prompt"[^>]*>', body,
+    )
+    assert m is not None
+    assert "disabled" not in m.group(0)
