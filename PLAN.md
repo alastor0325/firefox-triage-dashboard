@@ -328,10 +328,21 @@ human-in-the-loop confirmation step without needing the full Phase 4.5 build.
 **Notes**:
 - Skip queues nothing — it's local-only, no Bugzilla side effect.
 - Re-apply double-queues; the drain prompt de-duplicates by distinct bug_id.
-- Drain prompt explicitly forbids `--yes` / `-y` and tells Claude to stop
-  rather than barrel past a declined `[y/N]`.
+- Drain prompt forbids `--yes` / `-y` flags AND stdin-piping bypasses
+  (`yes |`, `echo y |`, heredocs, herestrings) — the realistic ways a
+  drainer model would defeat the `[y/N]` gate.
 - This pattern means Phase 4.5 (real `BugzillaCLIBackend.apply`) is optional
   in practice — the user can run live writes through the drain flow today.
+
+**`TRIAGE_DASHBOARD_LIVE` is bypassed by design**:
+The env var gates only the in-process `BugzillaCLIBackend`. Phase 5.5
+routes around it via the queue, so real Bugzilla writes can happen with
+the default mock backend. That's intentional — the user has to take
+**three deliberate actions** to land a real write:
+  1. Click Apply on the dashboard (queues the action).
+  2. Click Process queue and paste the prompt into a Claude session.
+  3. Type `y` at the `bugzilla-cli apply` `[y/N]` prompt for each bug.
+The CLI's `[y/N]` is the actual safety gate, not the env var.
 
 ### Phase 6 — Claude orchestration  ← PENDING (scope TBD)
 
