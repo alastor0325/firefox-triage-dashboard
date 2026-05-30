@@ -1,7 +1,7 @@
 # Firefox Triage Dashboard — Implementation Plan
 
 > Living document. Updated whenever phases progress or decisions change.
-> Last updated: 2026-05-29 (Phase 5 done)
+> Last updated: 2026-05-30 (Phase 5.5 done)
 
 ## What this is
 
@@ -304,6 +304,34 @@ This phase adds the queue-based handoff for full automation.
 - The per-card "Pending feedback" list stays refine-only by design — bug-start
   isn't feedback on the draft, it's a follow-up action. Users see it only
   via the topbar count and the drain prompt.
+
+### Phase 5.5 — Apply handoff via queue (gated by bugzilla-cli [y/N])  ← DONE
+
+The dashboard's Apply button doesn't go straight to Bugzilla (that's Phase 4.5,
+still gated). Instead, Apply queues an `apply` action; the drained Claude
+session runs `bugzilla-cli apply <id>` which prompts the user with `[y/N]`
+in their terminal before any production write happens. That preserves the
+human-in-the-loop confirmation step without needing the full Phase 4.5 build.
+
+**What gets built:**
+- [x] `claude_queue.append_apply` + `apply` added to `DRAINABLE_ACTIONS`
+- [x] `/draft/{id}/apply` queues an `apply` entry on every successful apply
+      (§1a / §1b / §1c — all sections); §1b additionally queues bug-start
+- [x] Drain prompt extended with an apply step + explicit no-auto-confirm gate
+      (must wait for user `[y/N]` at the `bugzilla-cli apply` prompt)
+- [x] Drain order locked to refines → applies → bug-starts
+- [x] Status panel after Apply explains the queue + gate
+- [x] Tests: append_apply, drain prompt has gate language, drain order,
+      §1a/§1b/§1c apply queueing, skip queues nothing, failed apply queues
+      nothing, status panel hint
+
+**Notes**:
+- Skip queues nothing — it's local-only, no Bugzilla side effect.
+- Re-apply double-queues; the drain prompt de-duplicates by distinct bug_id.
+- Drain prompt explicitly forbids `--yes` / `-y` and tells Claude to stop
+  rather than barrel past a declined `[y/N]`.
+- This pattern means Phase 4.5 (real `BugzillaCLIBackend.apply`) is optional
+  in practice — the user can run live writes through the drain flow today.
 
 ### Phase 6 — Claude orchestration  ← PENDING (scope TBD)
 
