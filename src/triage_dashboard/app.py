@@ -75,9 +75,16 @@ TABS = [
     ("needs-info", "§1a", "Needs Info"),
     ("close", "§1c", "Close"),
     ("watching", None, "Watching"),
+    ("queue", None, "Queue"),
 ]
 SLUG_TO_MARKER = {slug: marker for slug, marker, _ in TABS}
 DRAFT_TAB_SLUGS = {slug for slug, marker, _ in TABS if marker}
+MARKER_TO_SLUG = {marker: slug for slug, marker, _ in TABS if marker}
+
+
+def _slug_for_section(marker: str) -> str:
+    """Map a §-marker back to the tab slug used in URLs."""
+    return MARKER_TO_SLUG.get(marker, "triaged")
 
 
 def _resolve_active_tab(
@@ -143,10 +150,21 @@ def index(
         claude_queue.pending_feedback_for(triage_dir, active_draft.bug_id)
         if active_draft is not None else []
     )
+    # Bug → (section_slug, title) lookup used by the Queue tab to wire
+    # each row's bug-id link back to the right card.
+    bug_meta_by_id = {
+        d.bug_id: {"section_slug": _slug_for_section(d.section), "title": d.title}
+        for d in drafts
+    }
+    queue_rows = claude_queue.all_queued_actions(triage_dir)
+    queue_count = len(queue_rows)
     counts_by_slug = {
         slug: (
             len(groups.get(marker, [])) if marker
-            else (len(watch) if slug == "watching" else 0)
+            else (
+                len(watch) if slug == "watching"
+                else (queue_count if slug == "queue" else 0)
+            )
         )
         for slug, marker, _ in TABS
     }
@@ -170,8 +188,10 @@ def index(
             "active_draft": active_draft,
             "deck_nav": deck_nav,
             "counts_by_slug": counts_by_slug,
-            "queue_count": _count_queue(triage_dir),
+            "queue_count": queue_count,
             "pending_feedback": pending_feedback,
+            "queue_rows": queue_rows,
+            "bug_meta_by_id": bug_meta_by_id,
         },
     )
 

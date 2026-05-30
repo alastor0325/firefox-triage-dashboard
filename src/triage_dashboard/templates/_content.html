@@ -1,6 +1,8 @@
 {# Tab content body — returned standalone on HX-Request, otherwise embedded by index.html. #}
 {% if active_tab == 'watching' %}
   {% include "watching.html" %}
+{% elif active_tab == 'queue' %}
+  {% include "queue.html" %}
 {% else %}
   {% if not active_bucket %}
     <p class="empty">

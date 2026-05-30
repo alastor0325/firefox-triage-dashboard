@@ -1084,6 +1084,109 @@ code, kbd {
   border-color: var(--border-strong);
 }
 
+/* ───── QUEUE INSPECTOR ───── */
+.queue-inspector { padding: 0.5rem 0 1rem; }
+.queue-inspector-hint {
+  margin: 0 0 0.85rem;
+  color: var(--ink-3);
+  font-size: 0.85rem;
+}
+.queue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.queue-row {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) 2fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+.queue-row:hover {
+  border-color: var(--border-strong);
+}
+.queue-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.queue-badge--refine    { background: #e8f1ff; color: #1d4ed8; }
+.queue-badge--apply     { background: #fef3c7; color: #92400e; }
+.queue-badge--bug-start { background: #ecfccb; color: #3f6212; }
+.queue-bug-link {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+.queue-bug-link:hover .queue-bug-id { text-decoration: underline; }
+.queue-bug-id {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-1);
+}
+.queue-bug-title {
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.queue-bug-link--orphan { cursor: not-allowed; opacity: 0.7; }
+.queue-detail {
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.queue-detail code {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.04);
+}
+.queue-ts {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+.queue-remove {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-4);
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.queue-remove:hover {
+  background: var(--surface-2);
+  color: var(--danger, var(--ink-1));
+  border-color: var(--border-strong);
+}
+
 /* ───── WATCHING TAB CONTENT ───── */
 .watch-list { list-style: none; padding: 0; margin: 0; }
 .watch-item {
