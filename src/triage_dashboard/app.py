@@ -71,10 +71,10 @@ def format_sse_event(event: watch_mod.WatchEvent) -> str:
 # Tabs: (slug, section marker | None, label)
 # A None marker means the tab isn't a triage-section bucket (e.g. Watching).
 TABS = [
-    ("triaged", "§1b", "Triaged"),
+    ("triaged", "§1b", "Analyzed"),
     ("needs-info", "§1a", "Needs Info"),
-    ("close", "§1c", "Close"),
-    ("watching", None, "Watching"),
+    ("close", "§1c", "Close / Reassign"),
+    ("watching", None, "Awaiting reply"),
 ]
 SLUG_TO_MARKER = {slug: marker for slug, marker, _ in TABS}
 DRAFT_TAB_SLUGS = {slug for slug, marker, _ in TABS if marker}

@@ -2,7 +2,7 @@
    Expects: active_bucket (list[Draft]), active_draft (Draft|None), active_tab (slug). #}
 <aside class="rail">
   <div class="rail-head">
-    <span>{{ {'triaged': 'Triaged', 'needs-info': 'Needs Info', 'close': 'Close'}.get(active_tab, '') }}</span>
+    <span>{{ {'triaged': 'Analyzed', 'needs-info': 'Needs Info', 'close': 'Close / Reassign'}.get(active_tab, '') }}</span>
     <span class="count">{{ active_bucket|length }} bugs</span>
   </div>
   {% if active_bucket|length > 1 %}
