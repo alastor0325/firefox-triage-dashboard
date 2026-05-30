@@ -64,16 +64,27 @@ Procedure:
       feedback warrants. Preserve fields you weren't told to change.
    c. Write the updated JSON back to the same path.
 
-4. For each queued apply (distinct bug_ids only), run:
+4. For each queued apply (distinct bug_ids only), run the command
+   EXACTLY as written, with no flags other than the bug id and no
+   input redirection:
 
        bugzilla-cli apply <bug_id>
 
    The CLI will print the post preview and prompt the user with [y/N].
-   **SAFETY GATE — read carefully:**
-   - Do NOT auto-confirm. Do NOT pass `--yes`, `-y`, or any flag that
-     bypasses the prompt.
-   - Wait for the user to type `y` or `N` at the terminal. This is the
-     production-write gate — the user must approve each bug individually.
+   **SAFETY GATE — this is the production-write boundary. Read carefully:**
+   - Invoke the command with NO extra flags (no `--yes`, no `-y`, no
+     `--non-interactive`, no anything — just the bug id).
+   - Do NOT pipe anything into the command. The following patterns
+     are all FORBIDDEN — they would auto-confirm by feeding `y` into
+     stdin, bypassing the gate:
+       `yes | bugzilla-cli apply ...`
+       `echo y | bugzilla-cli apply ...`
+       `printf 'y\\n' | bugzilla-cli apply ...`
+       any here-string (`<<<`), here-doc (`<<`), or file redirect
+       that supplies stdin.
+   - Run the command in the user's foreground terminal so they can see
+     the preview and type `y` or `N` themselves. The user must approve
+     each bug individually — that is the entire point of this step.
    - If the user answers N (or the apply errors), stop and ask the user
      how to proceed. Do NOT charge ahead to the next apply.
    - If the user answers y, the CLI posts to Bugzilla and deletes the

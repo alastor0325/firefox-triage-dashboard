@@ -452,8 +452,14 @@ def test_drain_prompt_has_explicit_no_auto_confirm_gate(
     lo = prompt.lower()
     # Must mention [y/N] / y or N so the model knows the prompt format.
     assert "[y/n]" in lo or "y/n" in lo
-    # Must forbid auto-confirmation.
-    assert "do not auto-confirm" in lo or "do not pass --yes" in lo or "wait for the user" in lo
+    # Must forbid auto-confirmation flags AND stdin-piping bypasses.
+    # The realistic ways a model would skip the gate are (a) `--yes`
+    # or similar flag, and (b) piping `y` into stdin.
+    assert "--yes" in lo
+    assert "yes | bugzilla-cli" in lo or "echo y" in lo
+    # And it must positively assert the user runs the command in the
+    # foreground so they can see the preview.
+    assert "foreground" in lo or "wait for the user" in lo
 
 
 def test_drain_prompt_specifies_order_refines_applies_bug_starts(
