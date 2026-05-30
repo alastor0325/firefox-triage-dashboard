@@ -1,7 +1,7 @@
 # Firefox Triage Dashboard — Implementation Plan
 
 > Living document. Updated whenever phases progress or decisions change.
-> Last updated: 2026-05-30 (Phase 5.7 done — queue inspector tab)
+> Last updated: 2026-05-30 (Phase 5.8 done — Process queue dropdown)
 
 ## What this is
 
@@ -343,6 +343,35 @@ the default mock backend. That's intentional — the user has to take
   2. Click Process queue and paste the prompt into a Claude session.
   3. Type `y` at the `bugzilla-cli apply` `[y/N]` prompt for each bug.
 The CLI's `[y/N]` is the actual safety gate, not the env var.
+
+### Phase 5.8 — Process queue dropdown (replaces the modal)  ← DONE
+
+The topbar Process queue button is now a `<details>` dropdown rather
+than the (removed) modal dialog. Inline rows mirror the Queue tab's
+content but in a compact, always-one-click-away view; explicit "Copy
+prompt" button replaces the auto-copy-on-click behaviour.
+
+- [x] `GET /queue/dropdown` returns the dropdown's HTML fragment.
+- [x] Topbar uses `<details>` + `<summary>` (button) + a server-rendered
+      `_queue_dropdown.html` panel.
+- [x] Copy is explicit — clicking the dropdown no longer mutates the
+      clipboard. The footer button fetches `/queue/prepare` and copies
+      its `prompt` to the clipboard, then shows "Copied" feedback.
+- [x] SSE `queue-changed` now refreshes the dropdown contents (not just
+      the count badge) so the panel stays in sync when external tools
+      mutate the JSONL.
+- [x] Click-outside closes the dropdown.
+- [x] The modal dialog (`queue-prompt-dialog`, the prompt textarea,
+      Done/Copy-again buttons) is removed.
+
+**Rationale**:
+- Opening the dropdown ≠ intent to drain. Auto-copy clobbered the
+  clipboard for users who just wanted to peek; explicit copy respects
+  whatever the user had previously copied.
+- Inline rows make "what's queued?" answerable in one click rather than
+  requiring a tab switch.
+- The Queue tab (Phase 5.7) is retained for the bigger view, but
+  the dropdown is now the fast path.
 
 ### Phase 5.7 — Queue inspector tab  ← DONE
 
