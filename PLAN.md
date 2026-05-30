@@ -1,7 +1,7 @@
 # Firefox Triage Dashboard — Implementation Plan
 
 > Living document. Updated whenever phases progress or decisions change.
-> Last updated: 2026-05-30 (Phase 5.5 done)
+> Last updated: 2026-05-30 (Phase 5.7 done — queue inspector tab)
 
 ## What this is
 
@@ -343,6 +343,32 @@ the default mock backend. That's intentional — the user has to take
   2. Click Process queue and paste the prompt into a Claude session.
   3. Type `y` at the `bugzilla-cli apply` `[y/N]` prompt for each bug.
 The CLI's `[y/N]` is the actual safety gate, not the env var.
+
+### Phase 5.7 — Queue inspector tab  ← DONE
+
+A "Queue" tab in the topbar lists every queued action (refines, applies,
+bug-starts) in chronological order. Each row jumps to its bug's card and
+can be removed individually without draining the queue.
+
+- [x] Generalize `remove_refine` → `remove_entry(action, bug_id, ts)`;
+      keep `remove_refine` as a thin wrapper for backwards compatibility.
+- [x] `claude_queue.all_queued_actions(triage_dir)` returns structured
+      rows ({action, bug_id, ts, feedback?}) skipping unknown / malformed
+      lines.
+- [x] `POST /queue/remove` accepting form `{action, bug_id, ts}`. 400 on
+      missing fields or unknown action; 404 on no match.
+- [x] "Queue" tab in TABS; `queue.html` template; per-row action badge,
+      bug-id link to its section tab, action-specific detail, ts, ✕.
+- [x] Orphan rows (bug has no pending JSON) render without the link.
+- [x] Tab count badge mirrors the queue length.
+- [x] Tests across helper, endpoint, and template.
+
+**Notes**:
+- The per-card "Pending feedback" list (Phase 3.5 Q1) stays — it's the
+  fast path for managing refines on the card you're currently editing.
+  The Queue tab is the broad view across all bugs and all action types.
+- The ✕ button's hx-swap removes the row instantly; SSE `queue-changed`
+  also refreshes the rest of the page so counts stay in sync.
 
 ### Phase 6 — Claude orchestration  ← PENDING (scope TBD)
 
