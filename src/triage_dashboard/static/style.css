@@ -817,11 +817,22 @@ code, kbd {
   display: flex;       /* let .rail fill 100% */
 }
 
-/* ── Left rail (picker list) ── */
+/* ── Left rail (picker list) ──
+   The rail itself does NOT scroll: a non-`visible` overflow on either
+   axis forces the other axis to clip too, which would chop off the
+   info-icon tooltip that escapes from .rail-head. Only the inner
+   .rail-list-scroll wrapper scrolls. */
 .rail {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding-right: 0.2rem;
+}
+.rail-list-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   /* Reserve scrollbar gutter even when not scrolling, so items don't
      shift sideways when the list grows past the column. */
   scrollbar-gutter: stable;

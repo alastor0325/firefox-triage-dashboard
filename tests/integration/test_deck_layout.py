@@ -157,20 +157,50 @@ def test_rail_host_div_present(triage_dir: Path) -> None:
     assert 'id="rail-host"' in body
 
 
-def test_rail_reserves_scrollbar_gutter(triage_dir: Path) -> None:
-    """Rail must declare `scrollbar-gutter: stable` so list items don't
-    shift left when the rail grows past its column height."""
+def test_rail_list_scroll_container_reserves_scrollbar_gutter(
+    triage_dir: Path,
+) -> None:
+    """Whichever rail element actually scrolls must declare
+    `scrollbar-gutter: stable` so list items don't shift left when the
+    list grows past its column height.
+
+    The scroll container lives BELOW the .rail-head so the info-icon
+    tooltip can escape the rail's box (a non-`visible` overflow axis
+    forces the other axis to clip too). We assert the
+    .rail-list-scroll wrapper carries both `overflow-y: auto` and
+    `scrollbar-gutter: stable`, and that `.rail` itself does NOT
+    declare overflow-y."""
     import re
     from pathlib import Path as P
     css = (
         P(__file__).resolve().parent.parent.parent
         / "src" / "triage_dashboard" / "static" / "style.css"
     ).read_text()
-    m = re.search(r'\.rail\s*\{[^}]*\}', css)
-    assert m is not None, "no .rail rule found"
-    assert "scrollbar-gutter: stable" in m.group(0), (
-        ".rail must use `scrollbar-gutter: stable`; without it the items "
-        "shift sideways when the rail starts/stops scrolling."
+    scroll = re.search(r'\.rail-list-scroll\s*\{[^}]*\}', css)
+    assert scroll is not None, "no .rail-list-scroll rule found"
+    assert "overflow-y: auto" in scroll.group(0)
+    assert "scrollbar-gutter: stable" in scroll.group(0)
+    rail = re.search(r'\.rail\s*\{[^}]*\}', css)
+    assert rail is not None, "no .rail rule found"
+    assert "overflow-y" not in rail.group(0), (
+        ".rail must not set overflow-y — that would clip the info-icon "
+        "tooltip. Put overflow on .rail-list-scroll instead."
+    )
+
+
+def test_rail_list_scroll_wrapper_is_in_dom(triage_dir: Path) -> None:
+    """The scroll wrapper must actually wrap the <ol>, not just exist in
+    CSS — otherwise the rule does nothing."""
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    body = client.get("/?tab=needs-info").text
+    import re
+    # The wrapper exists and contains the <ol>.
+    m = re.search(
+        r'<div class="rail-list-scroll">\s*<ol>', body, re.DOTALL
+    )
+    assert m is not None, (
+        "expected <div class='rail-list-scroll'><ol> wrapping the rail list"
     )
 
 

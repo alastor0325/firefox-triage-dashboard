@@ -41,6 +41,10 @@
          placeholder="Filter by title or bug id…"
          aria-label="Filter bugs in this tab">
   {% endif %}
+  {# Scroll only the bug list. If overflow-y lived on .rail itself,
+     CSS would treat the horizontal axis as non-visible too and clip
+     the info-icon tooltip at the rail's edge. #}
+  <div class="rail-list-scroll">
   <ol>
     {% for d in active_bucket %}
       <li>
@@ -74,4 +78,5 @@
       </li>
     {% endfor %}
   </ol>
+  </div>
 </aside>
