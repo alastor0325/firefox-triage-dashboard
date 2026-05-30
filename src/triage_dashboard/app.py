@@ -28,6 +28,17 @@ templates.env.filters["filter_key_comments"] = descriptions.filter_key_comments
 templates.env.filters["level_class"] = data.level_class
 templates.env.filters["split_see_also"] = data.split_see_also
 
+# Cache-bust /static/style.css with the file's mtime captured at import
+# time. Browsers refetch when the URL changes; on the server, restarting
+# (which is how the rest of the app picks up changes anyway) is what
+# refreshes this value.
+_STYLE_CSS = STATIC_DIR / "style.css"
+try:
+    CSS_VERSION = str(int(_STYLE_CSS.stat().st_mtime))
+except OSError:
+    CSS_VERSION = "0"
+templates.env.globals["css_version"] = CSS_VERSION
+
 # Module-level broker so tests can `broker.emit(...)` to drive the SSE endpoint
 # without going through the actual filesystem watcher.
 broker = watch_mod.FileWatchBroker()

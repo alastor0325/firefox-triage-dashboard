@@ -34,6 +34,33 @@ def test_full_page_includes_htmx_script(triage_dir: Path) -> None:
     assert "htmx.org" in client.get("/").text
 
 
+def test_stylesheet_link_carries_cache_bust_version(
+    triage_dir: Path,
+) -> None:
+    """The <link> tag must include ?v=<version> so browsers refetch
+    style.css when it changes on disk."""
+    import re
+    body = client.get("/").text
+    m = re.search(
+        r'<link rel="stylesheet" href="/static/style\.css\?v=([^"]+)"',
+        body,
+    )
+    assert m is not None, "stylesheet link missing ?v= cache buster"
+    assert m.group(1), "cache-bust version is empty"
+
+
+def test_css_version_is_stable_across_requests(triage_dir: Path) -> None:
+    """The version is read once at startup, so two requests with no
+    file change must return the same query string."""
+    import re
+    pattern = re.compile(
+        r'<link rel="stylesheet" href="/static/style\.css\?v=([^"]+)"'
+    )
+    v1 = pattern.search(client.get("/").text).group(1)
+    v2 = pattern.search(client.get("/").text).group(1)
+    assert v1 == v2
+
+
 def test_full_page_opens_sse_event_source(triage_dir: Path) -> None:
     """The page wires a browser EventSource('/events') for live updates."""
     body = client.get("/").text
