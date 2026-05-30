@@ -17,6 +17,24 @@ DEFAULT_TRIAGE_DIR = Path.home() / "firefox-triage"
 
 Section = Literal["§1b", "§1a", "§1c"]
 
+# Recognised Mozilla severity/priority levels. Anything else (legacy
+# values like "critical"/"normal", empty strings, garbage) maps to the
+# "unknown" warning treatment so card-head pills are never unstyled.
+_SEVERITY_LEVELS = {"S1", "S2", "S3", "S4"}
+_PRIORITY_LEVELS = {"P1", "P2", "P3", "P4", "P5"}
+
+
+def level_class(value: str | None) -> str:
+    """Map a severity/priority level to a CSS modifier suffix used by
+    `.badge-level--<suffix>` in card.html. Unrecognised or missing
+    values map to "unknown" so the warning treatment is applied."""
+    if not value:
+        return "unknown"
+    v = str(value).strip().upper()
+    if v in _SEVERITY_LEVELS or v in _PRIORITY_LEVELS:
+        return v.lower()
+    return "unknown"
+
 
 @dataclass
 class BugContext:

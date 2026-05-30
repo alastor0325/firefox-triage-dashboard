@@ -319,3 +319,31 @@ def test_is_crash_socorro_id_in_description() -> None:
 def test_is_crash_bare_bp_dash_does_not_match() -> None:
     # 'bp-' must be followed by at least one hex/dash char to match.
     assert data.BugContext(description_excerpt="see bp- log").is_crash is False
+
+
+# ─── level_class ─────────────────────────────────────────────────────
+
+def test_level_class_recognised_severity() -> None:
+    assert data.level_class("S1") == "s1"
+    assert data.level_class("S4") == "s4"
+
+
+def test_level_class_recognised_priority() -> None:
+    assert data.level_class("P1") == "p1"
+    assert data.level_class("P5") == "p5"
+
+
+def test_level_class_missing_or_empty_is_unknown() -> None:
+    assert data.level_class("") == "unknown"
+    assert data.level_class(None) == "unknown"
+
+
+def test_level_class_legacy_strings_fall_back_to_unknown() -> None:
+    assert data.level_class("critical") == "unknown"
+    assert data.level_class("normal") == "unknown"
+    assert data.level_class("--") == "unknown"
+
+
+def test_level_class_case_insensitive_and_trimmed() -> None:
+    assert data.level_class("s3") == "s3"
+    assert data.level_class(" P2 ") == "p2"

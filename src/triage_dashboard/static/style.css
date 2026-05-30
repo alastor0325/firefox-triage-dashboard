@@ -416,11 +416,31 @@ code, kbd {
   font-size: 0.74rem;
   letter-spacing: 0.03em;
 }
-.badge-ps { background: var(--surface-2); color: var(--ink); }
-.badge-ps--pending {
-  background: transparent;
-  color: var(--ink-4);
-  border: 1px dashed var(--border-strong);
+/* ── Card-head severity / priority pills ──
+   Two adjacent pills, color-coded by Mozilla level (S1-S4 / P1-P5).
+   Same hue family across S and P so they read as a pair. Unknown /
+   missing values render in dashed amber as a "needs attention" nudge. */
+.badge-level {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.74rem;
+  letter-spacing: 0.03em;
+}
+.badge-level + .badge-level { margin-left: 0.25rem; }
+.badge-level--s1, .badge-level--p1 { background: var(--red); color: #fff; }
+.badge-level--s2, .badge-level--p2 { background: #c2410c; color: #fff; }
+.badge-level--s3, .badge-level--p3 { background: var(--amber-soft); color: var(--amber); }
+.badge-level--s4, .badge-level--p4 { background: var(--blue-soft); color: var(--blue); }
+.badge-level--p5                    { background: var(--surface-2); color: var(--ink-4); }
+.badge-level--unknown {
+  background: var(--amber-soft);
+  color: var(--amber);
+  border: 1px dashed var(--amber);
+  padding: calc(0.1rem - 1px) calc(0.45rem - 1px);
 }
 .badge-ni {
   margin-left: auto;

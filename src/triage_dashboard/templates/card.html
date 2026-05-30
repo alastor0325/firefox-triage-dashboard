@@ -6,16 +6,19 @@
     <span class="sep">·</span>
     <span class="component">{{ draft.bug_component }}</span>
     {% endif %}
-    {% if draft.severity or draft.priority %}
+    {# Card-head S/P pills reflect the bug's CURRENT Bugzilla state at
+       draft time, not what the draft will write — the "Will apply"
+       footer already shows the proposed values. Each pill is color-coded
+       by level via .badge-level--<suffix>; unrecognised or missing
+       values render as a warning-treated S? / P? placeholder. #}
+    {% set _ctx = draft.bug_context %}
+    {% set _sev = (_ctx.current_severity if _ctx else '') %}
+    {% set _pri = (_ctx.current_priority if _ctx else '') %}
+    {% set _sev_class = _sev | level_class %}
+    {% set _pri_class = _pri | level_class %}
     <span class="sep">·</span>
-    <span class="badge badge-ps">{{ draft.severity or '—' }} · {{ draft.priority or '—' }}</span>
-    {% else %}
-    <span class="sep">·</span>
-    <span class="badge badge-ps badge-ps--pending">no S/P</span>
-    {% endif %}
-    {% if draft.ni_targets %}
-    <span class="badge-ni">{{ draft.ni_targets[0] }}{% if draft.ni_targets|length > 1 %} +{{ draft.ni_targets|length - 1 }}{% endif %}</span>
-    {% endif %}
+    <span class="badge-level badge-level--{{ _sev_class }}">{{ _sev if _sev_class != 'unknown' else 'S?' }}</span>
+    <span class="badge-level badge-level--{{ _pri_class }}">{{ _pri if _pri_class != 'unknown' else 'P?' }}</span>
   </div>
 
   <h3 class="card-title">

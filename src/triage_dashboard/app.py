@@ -25,6 +25,7 @@ templates.env.filters["parse_description"] = descriptions.parse_description
 templates.env.filters["linkify"] = descriptions.linkify
 templates.env.filters["render_markdown"] = descriptions.render_markdown
 templates.env.filters["filter_key_comments"] = descriptions.filter_key_comments
+templates.env.filters["level_class"] = data.level_class
 
 # Module-level broker so tests can `broker.emit(...)` to drive the SSE endpoint
 # without going through the actual filesystem watcher.
