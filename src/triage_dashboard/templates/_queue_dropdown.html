@@ -11,26 +11,38 @@
       {% for row in queue_rows %}
       {% set meta = bug_meta_by_id.get(row.bug_id) %}
       <li class="queue-dropdown-row queue-dropdown-row--{{ row.action }}">
-        <span class="queue-badge queue-badge--{{ row.action }}">{{ row.action }}</span>
+        {# Whole-row jump target (everything except ✕). Uses htmx so
+           navigation swaps only #tab-content — the dropdown and topbar
+           stay mounted, no visual reset. #}
         {% if meta %}
-          <a class="queue-dropdown-bug"
-             href="?tab={{ meta.section_slug }}&bug={{ row.bug_id }}">
-            {{ row.bug_id }}
-          </a>
+        <a class="queue-dropdown-jump"
+           href="?tab={{ meta.section_slug }}&bug={{ row.bug_id }}"
+           hx-get="?tab={{ meta.section_slug }}&bug={{ row.bug_id }}"
+           hx-target="#tab-content"
+           hx-swap="innerHTML"
+           hx-push-url="true"
+           data-target-tab="{{ meta.section_slug }}">
         {% else %}
-          <span class="queue-dropdown-bug queue-dropdown-bug--orphan"
-                title="No pending draft for this bug">{{ row.bug_id }}</span>
+        <span class="queue-dropdown-jump queue-dropdown-jump--orphan"
+              title="No pending draft for this bug">
         {% endif %}
-        <span class="queue-dropdown-detail">
-          {% if row.action == 'refine' %}
-            {{ row.feedback }}
-          {% elif row.action == 'apply' %}
-            <em>bugzilla-cli apply</em>
-          {% elif row.action == 'bug-start' %}
-            <em>/bug-start</em>
-          {% endif %}
+          <span class="queue-badge queue-badge--{{ row.action }}">{{ row.action }}</span>
+          <span class="queue-dropdown-bug">{{ row.bug_id }}</span>
+          <span class="queue-dropdown-detail">
+            {% if row.action == 'refine' %}
+              {{ row.feedback }}
+            {% elif row.action == 'apply' %}
+              <em>bugzilla-cli apply</em>
+            {% elif row.action == 'bug-start' %}
+              <em>/bug-start</em>
+            {% endif %}
+          </span>
+          <span class="queue-dropdown-ts">{{ row.ts[11:16] }}</span>
+        {% if meta %}
+        </a>
+        {% else %}
         </span>
-        <span class="queue-dropdown-ts">{{ row.ts[11:16] }}</span>
+        {% endif %}
         <button type="button"
                 class="queue-dropdown-remove"
                 aria-label="Remove this entry"

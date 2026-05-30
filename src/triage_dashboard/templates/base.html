@@ -92,14 +92,40 @@
     document.fonts.ready.then(autosizeAll);
   }
 
-  // After a bug-click htmx swap, only the deck swaps — the rail stays
-  // mounted. Sync the rail's active-item highlight from the URL.
+  // After an htmx swap (tab click, rail click, queue-dropdown row click),
+  // only #tab-content / #deck-area changes — the topbar tabs aren't
+  // re-rendered. Sync the active tab indicator and the rail highlight
+  // from the URL so the chrome reflects where we just landed.
   document.addEventListener('htmx:afterSwap', () => {
     const params = new URLSearchParams(window.location.search);
+    const activeTab = params.get('tab');
+    if (activeTab) {
+      document.querySelectorAll('.tab').forEach(t => {
+        const slug = new URL(t.href, window.location.origin).searchParams.get('tab');
+        const isActive = slug === activeTab;
+        t.classList.toggle('tab--active', isActive);
+        t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+    }
     const activeBug = params.get('bug');
-    if (!activeBug) return;   // tab switch — rail was freshly rendered
+    if (!activeBug) return;
     document.querySelectorAll('.rail-item').forEach(el => {
       el.classList.toggle('is-active', el.dataset.bugId === activeBug);
+    });
+  });
+
+  // Snappy tab indicator update when clicking a queue-dropdown row,
+  // before the htmx response arrives. (The afterSwap handler above is
+  // the source of truth; this just removes the perceived lag.)
+  document.addEventListener('click', (e) => {
+    const jump = e.target.closest('.queue-dropdown-jump');
+    if (!jump || !jump.dataset.targetTab) return;
+    const slug = jump.dataset.targetTab;
+    document.querySelectorAll('.tab').forEach(t => {
+      const tSlug = new URL(t.href, window.location.origin).searchParams.get('tab');
+      const isActive = tSlug === slug;
+      t.classList.toggle('tab--active', isActive);
+      t.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
   });
 

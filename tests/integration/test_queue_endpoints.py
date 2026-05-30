@@ -193,9 +193,27 @@ def test_dropdown_renders_each_action_type(triage_dir: Path) -> None:
     assert "queue-badge--apply" in body
     assert "queue-badge--bug-start" in body
     assert "shorten it" in body
-    # Bug ids link to their section tabs.
+    # The whole row is a click target with htmx attributes pointing at
+    # the bug's section tab — not just the bug id.
+    assert 'class="queue-dropdown-jump"' in body
     assert 'href="?tab=triaged&bug=1"' in body
     assert 'href="?tab=needs-info&bug=2"' in body
+    # And the htmx hooks for the partial swap.
+    assert 'hx-get="?tab=triaged&bug=1"' in body
+    assert 'hx-target="#tab-content"' in body
+    assert 'hx-push-url="true"' in body
+
+
+def test_dropdown_orphan_row_not_clickable(triage_dir: Path) -> None:
+    """A queue entry whose bug has no pending JSON should NOT carry a
+    jump link — there's no card to navigate to."""
+    (triage_dir / "claude-queue.jsonl").write_text(
+        '{"action":"apply","bug_id":9999,"ts":"2026-05-30T00:00:00+00:00"}\n'
+    )
+    body = client.get("/queue/dropdown").text
+    assert "queue-dropdown-jump--orphan" in body
+    # No href for the orphan row.
+    assert 'href="?tab=' not in body or "bug=9999" not in body
 
 
 def test_dropdown_remove_button_hits_queue_remove(triage_dir: Path) -> None:
