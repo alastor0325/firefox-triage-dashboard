@@ -219,6 +219,33 @@ def _drainables(entries: list[dict]) -> list[dict]:
     ]
 
 
+def all_queued_actions(triage_dir: Path) -> list[dict]:
+    """Return every drainable queue entry in chronological file order.
+
+    Used by the queue-inspector tab. Each item has:
+      - `action`: one of `DRAINABLE_ACTIONS`
+      - `bug_id`: int
+      - `ts`: str (the original ISO timestamp — also the remove-key)
+      - `feedback`: str for refines, else None
+
+    Non-drainable / unknown / malformed lines are silently skipped, so
+    the inspector never crashes on a partially-written file or a future
+    action shape it doesn't recognise.
+    """
+    queue_path = triage_dir / QUEUE_FILE
+    if not queue_path.is_file():
+        return []
+    out: list[dict] = []
+    for e in _drainables(_read_jsonl(queue_path)):
+        out.append({
+            "action": e["action"],
+            "bug_id": int(e["bug_id"]),
+            "ts": e.get("ts", ""),
+            "feedback": e.get("feedback") if e["action"] == "refine" else None,
+        })
+    return out
+
+
 def pending_feedback_for(triage_dir: Path, bug_id: int) -> list[dict]:
     """Return all queued refine entries for `bug_id`, file order preserved.
 

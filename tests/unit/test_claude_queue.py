@@ -558,3 +558,65 @@ def test_remove_refine_wrapper_still_works(triage_dir: Path) -> None:
     assert claude_queue.remove_refine(
         triage_dir, bug_id=1, ts=entry["ts"],
     ) is True
+
+
+# ─── all_queued_actions — queue inspector listing ───────────────────
+
+def test_all_queued_actions_empty_when_no_queue(triage_dir: Path) -> None:
+    assert claude_queue.all_queued_actions(triage_dir) == []
+
+
+def test_all_queued_actions_returns_chronological_entries(
+    triage_dir: Path,
+) -> None:
+    """Returns entries in file (chronological) order with action,
+    bug_id, ts, and a `feedback` field for refines (else None)."""
+    claude_queue.append_refine(
+        triage_dir, bug_id=1, feedback="shorten",
+        now=datetime(2026, 5, 30, 14, 30, tzinfo=timezone.utc),
+    )
+    claude_queue.append_apply(
+        triage_dir, bug_id=1,
+        now=datetime(2026, 5, 30, 14, 35, tzinfo=timezone.utc),
+    )
+    claude_queue.append_bug_start(
+        triage_dir, bug_id=2,
+        now=datetime(2026, 5, 30, 15, 0, tzinfo=timezone.utc),
+    )
+
+    items = claude_queue.all_queued_actions(triage_dir)
+    assert len(items) == 3
+    assert [(i["action"], i["bug_id"]) for i in items] == [
+        ("refine", 1), ("apply", 1), ("bug-start", 2),
+    ]
+    # refine carries feedback; apply/bug-start don't.
+    assert items[0]["feedback"] == "shorten"
+    assert items[1]["feedback"] is None
+    assert items[2]["feedback"] is None
+    # Timestamps are preserved verbatim for use as remove keys.
+    assert items[0]["ts"] == "2026-05-30T14:30:00+00:00"
+
+
+def test_all_queued_actions_skips_unknown_action_types(
+    triage_dir: Path,
+) -> None:
+    """Future action shapes we don't yet know about are skipped, not
+    surfaced to the queue inspector."""
+    queue_path = triage_dir / "claude-queue.jsonl"
+    queue_path.write_text(
+        '{"action":"refine","bug_id":1,"feedback":"a","ts":"2026-05-30T00:00:00+00:00"}\n'
+        '{"action":"future-thing","bug_id":2,"ts":"2026-05-30T00:01:00+00:00"}\n'
+    )
+    items = claude_queue.all_queued_actions(triage_dir)
+    assert [i["action"] for i in items] == ["refine"]
+
+
+def test_all_queued_actions_skips_malformed_lines(triage_dir: Path) -> None:
+    queue_path = triage_dir / "claude-queue.jsonl"
+    queue_path.write_text(
+        '{"action":"refine","bug_id":1,"feedback":"a","ts":"2026-05-30T00:00:00+00:00"}\n'
+        '{not json\n'
+        '\n'
+    )
+    items = claude_queue.all_queued_actions(triage_dir)
+    assert len(items) == 1
