@@ -45,29 +45,33 @@ def test_full_page_opens_sse_event_source(triage_dir: Path) -> None:
     assert "queue-changed" in body
 
 
-def test_topbar_has_process_queue_button(triage_dir: Path) -> None:
-    """A 'Process queue' button lives in the topbar so it's always visible."""
+def test_topbar_has_process_queue_dropdown(triage_dir: Path) -> None:
+    """The Process queue control is a <details> dropdown in the topbar."""
     body = client.get("/").text
+    # The <details> wrapper and the <summary> button that triggers it.
+    assert 'id="process-queue-dropdown"' in body
     assert 'id="btn-process-queue"' in body
-    # Posts to the prepare endpoint via JS.
+    # The dropdown contains the panel that holds the queued rows + Copy.
+    assert 'id="queue-dropdown-panel"' in body
+    # Copy button wired to fetch /queue/prepare on click (the only path
+    # that calls /queue/prepare now — auto-copy on toggle is gone).
     assert "/queue/prepare" in body
+    assert "copyDrainPrompt" in body
 
 
-def test_topbar_right_groups_stats_and_button(triage_dir: Path) -> None:
-    """Stats and the Process-queue button are wrapped together in
-    .topbar-right so they stay anchored at the right edge even when the
-    window is narrow (instead of left-aligning on small viewports)."""
+def test_topbar_right_groups_stats_and_dropdown(triage_dir: Path) -> None:
+    """Stats and the Process queue dropdown live in .topbar-right so they
+    stay anchored to the right edge at any viewport width."""
     body = client.get("/").text
     import re
-    # Find the .topbar-right wrapper and verify both elements live inside it.
     m = re.search(
-        r'<div\s+class="topbar-right"[^>]*>(.*?)</div>\s*</header>',
+        r'<div\s+class="topbar-right"[^>]*>(.*?)</details>\s*</div>\s*</header>',
         body, re.DOTALL,
     )
-    assert m is not None, "missing .topbar-right wrapper"
+    assert m is not None, "missing .topbar-right wrapper around the dropdown"
     inner = m.group(1)
     assert 'class="stats"' in inner
-    assert 'id="btn-process-queue"' in inner
+    assert 'id="process-queue-dropdown"' in inner
 
 
 def test_process_queue_button_shows_count_zero_when_empty(
@@ -75,12 +79,14 @@ def test_process_queue_button_shows_count_zero_when_empty(
 ) -> None:
     body = client.get("/").text
     import re
-    m = re.search(r'id="btn-process-queue"[^>]*>(.*?)</button>', body, re.DOTALL)
+    # The summary acts as the button now.
+    m = re.search(
+        r'id="btn-process-queue"[^>]*>(.*?)</summary>', body, re.DOTALL,
+    )
     assert m is not None
-    btn_html = m.group(0)
-    # The count surfaces as a span with class queue-count.
-    assert 'class="queue-count"' in btn_html
-    assert ">0<" in btn_html
+    summary_html = m.group(0)
+    assert 'class="queue-count"' in summary_html
+    assert ">0<" in summary_html
 
 
 def test_process_queue_button_shows_live_count(triage_dir: Path) -> None:
@@ -90,9 +96,12 @@ def test_process_queue_button_shows_live_count(triage_dir: Path) -> None:
         '{"action":"refine","bug_id":3,"feedback":"c","ts":"2026-05-29T00:02:00+00:00"}\n'
     )
     body = client.get("/").text
-    # Count of 3 appears inside the queue-count span.
+    # The topbar queue-count span (the one inside the <summary>) shows 3.
     import re
-    m = re.search(r'class="queue-count"[^>]*>(\d+)<', body)
+    m = re.search(
+        r'id="btn-process-queue"[^>]*>.*?<span class="queue-count">(\d+)</span>',
+        body, re.DOTALL,
+    )
     assert m is not None
     assert m.group(1) == "3"
 
@@ -318,7 +327,9 @@ def test_card_remove_button_carries_entry_ts_via_hx_vals(
 def test_card_does_not_show_other_bugs_pending_feedback(
     triage_dir: Path,
 ) -> None:
-    """Only the active bug's feedback list is rendered."""
+    """Only the active bug's feedback shows in the per-card pending list.
+    (The topbar dropdown legitimately surfaces every bug's queue — the
+    test is scoped to the card's pending-feedback section.)"""
     write_draft(triage_dir, 1, severity="S3", priority="P3")
     write_draft(triage_dir, 2, severity="S3", priority="P3")
     queue_path = triage_dir / "claude-queue.jsonl"
@@ -326,9 +337,15 @@ def test_card_does_not_show_other_bugs_pending_feedback(
         '{"action":"refine","bug_id":2,"feedback":"for-other-bug",'
         '"ts":"2026-05-29T14:30:00+00:00"}\n'
     )
-    # Visit bug=1 — should NOT see bug 2's feedback in the active card.
     body = client.get("/?bug=1").text
-    assert "for-other-bug" not in body
+    import re
+    # Isolate the per-card pending-feedback section (if any) and check
+    # bug 2's feedback isn't there.
+    m = re.search(
+        r'<section class="pending-feedback".*?</section>', body, re.DOTALL,
+    )
+    pending_section = m.group(0) if m else ""
+    assert "for-other-bug" not in pending_section
 
 
 # ─── Queue tab (queue inspector) ────────────────────────────────────

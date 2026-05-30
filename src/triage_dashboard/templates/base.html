@@ -119,57 +119,53 @@
     // queue-changed: just update the topbar button's count, no full refresh.
     es.addEventListener('queue-changed', async () => {
       try {
+        // Refresh the topbar count span.
         const r = await fetch('/queue/count');
         const { count } = await r.json();
-        const btn = document.getElementById('btn-process-queue');
-        if (!btn) return;
-        // Sub-second race: a queue-changed event can fire while
-        // processQueue() is mid-flight, between "Preparing…" and
-        // innerHTML restore. The span is gone in that window.
-        const span = btn.querySelector('.queue-count');
+        const span = document.querySelector('#btn-process-queue .queue-count');
         if (span) span.textContent = count;
-        btn.disabled = count === 0;
+        // Refresh the dropdown contents so the open dropdown stays in
+        // sync with the JSONL (e.g. external append/remove or a drain
+        // truncating the file).
+        const panel = document.getElementById('queue-dropdown-panel');
+        if (panel) {
+          htmx.ajax('GET', '/queue/dropdown', {
+            target: '#queue-dropdown-panel', swap: 'innerHTML',
+          });
+        }
       } catch (_) { /* ignore */ }
     });
   })();
 
-  async function processQueue(btn) {
+  // Explicit copy from the Process queue dropdown.
+  async function copyDrainPrompt(btn) {
     if (!btn || btn.disabled) return;
-    // Save innerHTML (not textContent) so the .queue-count span is
-    // preserved through the transient "Preparing…" state — without it,
-    // subsequent queue-changed SSE updates can't find the span to refresh.
-    const originalHTML = btn.innerHTML;
+    const original = btn.textContent;
     btn.disabled = true;
-    btn.textContent = 'Preparing…';
+    btn.textContent = 'Copying…';
     try {
       const r = await fetch('/queue/prepare', { method: 'POST' });
       const data = await r.json();
       if (!r.ok || !data.prompt) {
         btn.textContent = 'Nothing to drain';
-        setTimeout(() => { btn.innerHTML = originalHTML; btn.disabled = false; }, 1500);
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1500);
         return;
       }
-      const dialog = document.getElementById('queue-prompt-dialog');
-      const textarea = document.getElementById('queue-prompt-text');
-      textarea.value = data.prompt;
-      try { await navigator.clipboard.writeText(data.prompt); } catch (_) {}
-      dialog.showModal();
-      textarea.focus();
-      textarea.select();
+      await navigator.clipboard.writeText(data.prompt);
+      btn.textContent = 'Copied · paste into Claude';
+      setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2000);
     } catch (e) {
       btn.textContent = 'Failed';
-      setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
-    } finally {
-      btn.innerHTML = originalHTML;
-      btn.disabled = false;
+      setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1500);
     }
   }
-  document.addEventListener('click', async (e) => {
-    if (e.target.id === 'queue-prompt-copy') {
-      const t = document.getElementById('queue-prompt-text');
-      try { await navigator.clipboard.writeText(t.value); e.target.textContent = 'Copied'; } catch (_) {}
-    } else if (e.target.id === 'queue-prompt-close') {
-      document.getElementById('queue-prompt-dialog').close();
+
+  // Close the Process queue dropdown when clicking outside it.
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('process-queue-dropdown');
+    if (!dropdown || !dropdown.open) return;
+    if (!dropdown.contains(e.target)) {
+      dropdown.open = false;
     }
   });
 </script>
