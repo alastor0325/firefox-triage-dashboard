@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -90,3 +91,80 @@ def test_prepare_response_shape_uses_bugs_affected_key(
     assert body["count"] == 3
     assert body["bugs_affected"] == 2
     assert "feedbackPath" not in body
+
+
+# ─── POST /queue/remove ─────────────────────────────────────────────
+
+def test_queue_remove_strips_matching_apply(triage_dir: Path) -> None:
+    """Removing an apply by (action, bug_id, ts) drops just that entry."""
+    queue_path = triage_dir / "claude-queue.jsonl"
+    queue_path.write_text(
+        '{"action":"refine","bug_id":1,"feedback":"a","ts":"2026-05-30T00:00:00+00:00"}\n'
+        '{"action":"apply","bug_id":1,"ts":"2026-05-30T00:01:00+00:00"}\n'
+        '{"action":"bug-start","bug_id":1,"ts":"2026-05-30T00:02:00+00:00"}\n'
+    )
+    response = client.post("/queue/remove", data={
+        "action": "apply", "bug_id": 1, "ts": "2026-05-30T00:01:00+00:00",
+    })
+    assert response.status_code == 200
+    # Only refine + bug-start remain.
+    actions = [
+        json.loads(line)["action"]
+        for line in queue_path.read_text().splitlines() if line
+    ]
+    assert actions == ["refine", "bug-start"]
+
+
+def test_queue_remove_404_when_no_match(triage_dir: Path) -> None:
+    (triage_dir / "claude-queue.jsonl").write_text(
+        '{"action":"refine","bug_id":1,"feedback":"a","ts":"2026-05-30T00:00:00+00:00"}\n'
+    )
+    response = client.post("/queue/remove", data={
+        "action": "refine", "bug_id": 1, "ts": "2099-01-01T00:00:00+00:00",
+    })
+    assert response.status_code == 404
+
+
+def test_queue_remove_400_on_missing_fields(triage_dir: Path) -> None:
+    response = client.post("/queue/remove", data={
+        "action": "refine", "bug_id": 1,  # no ts
+    })
+    assert response.status_code == 400
+    response = client.post("/queue/remove", data={
+        "bug_id": 1, "ts": "2026-05-30T00:00:00+00:00",  # no action
+    })
+    assert response.status_code == 400
+
+
+def test_queue_remove_400_on_unknown_action(triage_dir: Path) -> None:
+    """Action must be one of the known drainable types."""
+    response = client.post("/queue/remove", data={
+        "action": "future-thing", "bug_id": 1,
+        "ts": "2026-05-30T00:00:00+00:00",
+    })
+    assert response.status_code == 400
+
+
+def test_queue_remove_html_fragment_for_hx_request(triage_dir: Path) -> None:
+    entry_ts = "2026-05-30T00:00:00+00:00"
+    (triage_dir / "claude-queue.jsonl").write_text(
+        '{"action":"apply","bug_id":1,"ts":"' + entry_ts + '"}\n'
+    )
+    response = client.post(
+        "/queue/remove",
+        data={"action": "apply", "bug_id": 1, "ts": entry_ts},
+        headers={"HX-Request": "true"},
+    )
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+
+
+def test_queue_remove_json_for_non_htmx(triage_dir: Path) -> None:
+    entry_ts = "2026-05-30T00:00:00+00:00"
+    (triage_dir / "claude-queue.jsonl").write_text(
+        '{"action":"bug-start","bug_id":1,"ts":"' + entry_ts + '"}\n'
+    )
+    response = client.post("/queue/remove", data={
+        "action": "bug-start", "bug_id": 1, "ts": entry_ts,
+    })
+    assert response.json() == {"ok": True}

@@ -330,6 +330,34 @@ def queue_count() -> dict:
     return {"count": _count_queue(data.triage_dir_from_env())}
 
 
+@app.post("/queue/remove")
+def queue_remove(
+    request: Request,
+    action: str = Form(default=""),
+    bug_id: int = Form(default=0),
+    ts: str = Form(default=""),
+):
+    """Remove a single queued entry (any action type).
+
+    Generic counterpart to the per-card refine remove endpoint; powers
+    the queue-inspector tab's ✕ buttons. 404 if no entry matches;
+    400 on missing/invalid fields.
+    """
+    if not action.strip() or not ts.strip() or not bug_id:
+        raise HTTPException(status_code=400, detail="action, bug_id, and ts are required")
+    if action not in claude_queue.DRAINABLE_ACTIONS:
+        raise HTTPException(status_code=400, detail=f"unknown action: {action!r}")
+    triage_dir = data.triage_dir_from_env()
+    removed = claude_queue.remove_entry(
+        triage_dir, action=action, bug_id=bug_id, ts=ts,
+    )
+    if not removed:
+        raise HTTPException(status_code=404, detail="no matching queue entry")
+    if request.headers.get("HX-Request") == "true":
+        return HTMLResponse("")
+    return JSONResponse({"ok": True})
+
+
 @app.post("/queue/prepare")
 def queue_prepare() -> dict:
     """Return the clipboard prompt for draining the queue.
