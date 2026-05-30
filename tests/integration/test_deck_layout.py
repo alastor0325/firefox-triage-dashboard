@@ -219,6 +219,51 @@ def test_prev_next_buttons_target_deck_area(triage_dir: Path) -> None:
     assert next_ is not None and 'hx-target="#deck-area"' in next_.group(0)
 
 
+def test_deck_nav_has_exactly_one_pair_of_controls(triage_dir: Path) -> None:
+    """The deck-nav used to render two duplicate pairs of prev/next
+    controls — the .deck-nav-arrow buttons AND the .deck-kbd-btn pair.
+    The arrow buttons are removed; only the kbd pair remains."""
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    body = client.get("/?tab=needs-info&bug=1").text
+    # No more arrow buttons.
+    assert "deck-nav-arrow" not in body
+    assert "← prev" not in body
+    assert "next →" not in body
+    # Exactly one <button class="… deck-prev …"> and one deck-next button
+    # in the rendered HTML (each class also appears once in the keyboard
+    # handler JS — those are not buttons, so we count by selector).
+    import re
+    assert len(re.findall(r'<button[^>]*class="[^"]*deck-prev', body)) == 1
+    assert len(re.findall(r'<button[^>]*class="[^"]*deck-next', body)) == 1
+
+
+def test_deck_nav_kbd_buttons_use_up_down_arrows(triage_dir: Path) -> None:
+    """The kbd buttons render ↑ for prev and ↓ for next so they visually
+    match the keyboard shortcut (ArrowUp/ArrowDown, also j/k)."""
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    body = client.get("/?tab=needs-info&bug=1").text
+    import re
+    prev = re.search(r'class="[^"]*deck-prev[^"]*".*?</button>', body, re.DOTALL)
+    next_ = re.search(r'class="[^"]*deck-next[^"]*".*?</button>', body, re.DOTALL)
+    assert prev is not None and "↑" in prev.group(0)
+    assert next_ is not None and "↓" in next_.group(0)
+
+
+def test_deck_nav_kbd_buttons_target_deck_area(triage_dir: Path) -> None:
+    """The kbd buttons (now the only nav control) must htmx-target the
+    deck area so navigation is a partial swap, not a full page nav."""
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    body = client.get("/?tab=needs-info&bug=1").text
+    import re
+    next_ = re.search(r'class="[^"]*deck-next[^"]*"[^>]*', body)
+    assert next_ is not None
+    assert 'hx-target="#deck-area"' in next_.group(0)
+    assert 'hx-swap="outerHTML"' in next_.group(0)
+
+
 def test_watching_tab_does_not_use_the_rail(
     triage_dir: Path, monkeypatch
 ) -> None:

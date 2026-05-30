@@ -59,6 +59,51 @@ def test_topbar_has_process_queue_dropdown(triage_dir: Path) -> None:
     assert "copyDrainPrompt" in body
 
 
+def test_queue_tab_is_removed_from_topbar(triage_dir: Path) -> None:
+    """The standalone Queue tab is gone — the dropdown replaced it."""
+    body = client.get("/").text
+    assert 'href="?tab=queue"' not in body
+
+
+def test_queue_tab_url_does_not_render_inspector(triage_dir: Path) -> None:
+    """An old bookmark to ?tab=queue should fall back to a draft tab,
+    not 500 and not render an inspector page."""
+    write_draft(triage_dir, 1, ni_targets=["x@y"])
+    response = client.get("/?tab=queue")
+    assert response.status_code == 200
+    # No queue-inspector content (those classes are gone).
+    assert 'class="queue-inspector"' not in response.text
+    assert 'class="queue-list"' not in response.text
+
+
+def test_tab_labels_use_action_oriented_names(triage_dir: Path) -> None:
+    """The four tabs render their renamed labels and no § markers."""
+    body = client.get("/").text
+    # New labels are present.
+    assert ">Analyzed<" in body
+    assert ">Needs Info<" in body
+    assert ">Close / Reassign<" in body
+    assert ">Awaiting reply<" in body
+    # Old user-facing labels are gone.
+    assert ">Triaged<" not in body
+    assert ">Close<" not in body or ">Close / Reassign<" in body  # only the new form
+    assert ">Watching<" not in body
+
+
+def test_tab_strip_does_not_render_section_markers(triage_dir: Path) -> None:
+    """The skill-internal §1a/§1b/§1c markers are not user-facing — the
+    <span class="marker"> in the tab strip is removed."""
+    body = client.get("/").text
+    # Find the tabs nav element and confirm no .marker span lives inside.
+    import re
+    m = re.search(r'<nav class="tabs"[^>]*>(.*?)</nav>', body, re.DOTALL)
+    assert m is not None
+    assert 'class="marker"' not in m.group(1)
+    assert "§1a" not in m.group(1)
+    assert "§1b" not in m.group(1)
+    assert "§1c" not in m.group(1)
+
+
 def test_topbar_right_groups_stats_and_dropdown(triage_dir: Path) -> None:
     """Stats and the Process queue dropdown live in .topbar-right so they
     stay anchored to the right edge at any viewport width."""
