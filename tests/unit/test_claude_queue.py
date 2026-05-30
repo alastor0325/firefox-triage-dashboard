@@ -500,3 +500,61 @@ def test_drain_prompt_says_to_leave_queue_intact_on_decline(
     claude_queue.append_apply(triage_dir, bug_id=1)
     prompt = claude_queue.prepare_queue_drain(triage_dir)["prompt"].lower()
     assert "leave the queue intact" in prompt
+
+
+# ─── remove_entry — generic queue remove (queue inspector) ──────────
+
+def test_remove_entry_removes_apply(triage_dir: Path) -> None:
+    entry = claude_queue.append_apply(
+        triage_dir, bug_id=1,
+        now=datetime(2026, 5, 30, 12, 0, tzinfo=timezone.utc),
+    )
+    removed = claude_queue.remove_entry(
+        triage_dir, action="apply", bug_id=1, ts=entry["ts"],
+    )
+    assert removed is True
+    assert _read_lines(triage_dir / "claude-queue.jsonl") == []
+
+
+def test_remove_entry_removes_bug_start(triage_dir: Path) -> None:
+    entry = claude_queue.append_bug_start(triage_dir, bug_id=1)
+    removed = claude_queue.remove_entry(
+        triage_dir, action="bug-start", bug_id=1, ts=entry["ts"],
+    )
+    assert removed is True
+    assert _read_lines(triage_dir / "claude-queue.jsonl") == []
+
+
+def test_remove_entry_removes_refine(triage_dir: Path) -> None:
+    """remove_entry covers refine too — it's the unified API."""
+    entry = claude_queue.append_refine(
+        triage_dir, bug_id=1, feedback="x",
+        now=datetime(2026, 5, 30, 12, 0, tzinfo=timezone.utc),
+    )
+    removed = claude_queue.remove_entry(
+        triage_dir, action="refine", bug_id=1, ts=entry["ts"],
+    )
+    assert removed is True
+
+
+def test_remove_entry_returns_false_when_action_mismatch(
+    triage_dir: Path,
+) -> None:
+    """Asking to remove an apply when only a refine exists at that
+    (bug_id, ts) returns False — the action discriminator matters."""
+    entry = claude_queue.append_refine(
+        triage_dir, bug_id=1, feedback="x",
+    )
+    assert claude_queue.remove_entry(
+        triage_dir, action="apply", bug_id=1, ts=entry["ts"],
+    ) is False
+    # Refine entry still intact.
+    assert len(_read_lines(triage_dir / "claude-queue.jsonl")) == 1
+
+
+def test_remove_refine_wrapper_still_works(triage_dir: Path) -> None:
+    """The old remove_refine API stays — Phase 3.5 callers shouldn't break."""
+    entry = claude_queue.append_refine(triage_dir, bug_id=1, feedback="x")
+    assert claude_queue.remove_refine(
+        triage_dir, bug_id=1, ts=entry["ts"],
+    ) is True

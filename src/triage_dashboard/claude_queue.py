@@ -239,9 +239,13 @@ def pending_feedback_for(triage_dir: Path, bug_id: int) -> list[dict]:
     return out
 
 
-def remove_refine(triage_dir: Path, *, bug_id: int, ts: str) -> bool:
-    """Remove the one refine entry matching (bug_id, ts). Returns True if
-    a matching entry was removed; False if the file or entry was missing.
+def remove_entry(
+    triage_dir: Path, *, action: str, bug_id: int, ts: str,
+) -> bool:
+    """Remove the one queue entry matching (action, bug_id, ts).
+
+    Returns True if a matching entry was removed; False if the file or
+    entry was missing, or if the action discriminator didn't match.
 
     The JSONL is rewritten in place, preserving all non-matching lines
     verbatim (including malformed lines, so we don't silently destroy
@@ -249,7 +253,7 @@ def remove_refine(triage_dir: Path, *, bug_id: int, ts: str) -> bool:
 
     Concurrency: this is a non-atomic read-then-write. Callers must assume
     a single writer — the dashboard is local single-user, so concurrent
-    `append_refine` from another process is not a real risk here.
+    appends from another process are not a real risk here.
     """
     queue_path = triage_dir / QUEUE_FILE
     if not queue_path.is_file():
@@ -267,7 +271,7 @@ def remove_refine(triage_dir: Path, *, bug_id: int, ts: str) -> bool:
                     obj = None
                 if (
                     isinstance(obj, dict)
-                    and obj.get("action") == "refine"
+                    and obj.get("action") == action
                     and int(obj.get("bug_id") or 0) == int(bug_id)
                     and obj.get("ts") == ts
                 ):
@@ -278,12 +282,16 @@ def remove_refine(triage_dir: Path, *, bug_id: int, ts: str) -> bool:
     if not removed:
         return False
 
-    # Rewrite. Preserve trailing newline behaviour of append_refine.
     body = "\n".join(kept)
     if body and not body.endswith("\n"):
         body += "\n"
     queue_path.write_text(body, encoding="utf-8")
     return True
+
+
+def remove_refine(triage_dir: Path, *, bug_id: int, ts: str) -> bool:
+    """Phase 3.5 wrapper — delegates to `remove_entry` for refine."""
+    return remove_entry(triage_dir, action="refine", bug_id=bug_id, ts=ts)
 
 
 _EMPTY = {"count": 0, "prompt": None, "bugs_affected": 0}
