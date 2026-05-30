@@ -511,3 +511,36 @@ def test_info_icon_tooltip_id_includes_active_tab(triage_dir: Path) -> None:
     body_b = client.get("/?tab=triaged&bug=2").text
     assert 'id="tab-info-needs-info"' in body_a
     assert 'id="tab-info-triaged"' in body_b
+
+
+# ─── tab-label single source of truth ───────────────────────────────
+
+def test_tab_label_matches_rail_head_title(triage_dir: Path) -> None:
+    """The tab-strip label and rail-head title come from the same TAB_INFO
+    table — they must never drift. For each draft tab, the label shown in
+    the tab strip equals the title shown in the rail header."""
+    import re
+    # Write one draft per draft section so each tab has content to render.
+    write_draft(triage_dir, 1, ni_targets=["x@y"])         # §1a needs-info
+    write_draft(triage_dir, 2, severity="S3", priority="P3")  # §1b triaged
+    write_draft(triage_dir, 3, resolution="INCOMPLETE")    # §1c close
+    for slug in ("triaged", "needs-info", "close"):
+        body = client.get(f"/?tab={slug}").text
+        # Extract the rail-head title (the text node before the info-icon).
+        head = re.search(
+            r'<span class="rail-head-title">\s*([^<\n]+?)\s*<', body, re.DOTALL,
+        )
+        assert head is not None, f"no rail-head-title found for tab={slug}"
+        rail_title = head.group(1).strip()
+        # Extract the active tab's <span class="label">.
+        active = re.search(
+            r'class="tab tab--active[^"]*"[^>]*>.*?'
+            r'<span class="label">([^<]+)</span>',
+            body, re.DOTALL,
+        )
+        assert active is not None, f"no active tab label for tab={slug}"
+        tab_label = active.group(1).strip()
+        assert rail_title == tab_label, (
+            f"tab={slug}: tab strip says {tab_label!r}, rail head says "
+            f"{rail_title!r} — TAB_INFO drift"
+        )

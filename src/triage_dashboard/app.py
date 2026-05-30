@@ -68,13 +68,59 @@ def format_sse_event(event: watch_mod.WatchEvent) -> str:
     return f"event: {event.type}\ndata: {json.dumps(payload)}\n\n"
 
 
-# Tabs: (slug, section marker | None, label)
-# A None marker means the tab isn't a triage-section bucket (e.g. Watching).
+# Single source of truth for per-tab metadata. The tab strip's label
+# (in index.html) and the rail header's title + help text (in rail.html)
+# both read from here, so they can't drift apart.
+#
+# `marker` is the §-section bucket the tab represents; None means the
+# tab isn't a draft-section bucket (e.g. Watching).
+# `help` is the info-icon tooltip text; tabs without an info-icon
+# (Watching) leave it empty.
+TAB_INFO = {
+    "triaged": {
+        "marker": "§1b",
+        "title": "Analyzed",
+        "help": (
+            "Bugs you have triaged. The draft is the public Bugzilla "
+            "comment with your analysis, plus the severity/priority you "
+            "set. Apply queues bugzilla-cli apply (you confirm [y/N] at "
+            "the terminal) and a /bug-start handoff to kick off "
+            "investigation."
+        ),
+    },
+    "needs-info": {
+        "marker": "§1a",
+        "title": "Needs Info",
+        "help": (
+            "Bugs missing critical info from the reporter. The draft is "
+            "the needinfo question. Apply queues bugzilla-cli apply "
+            "(you confirm [y/N] at the terminal) to set NI on Bugzilla "
+            "and post the question."
+        ),
+    },
+    "close": {
+        "marker": "§1c",
+        "title": "Close / Reassign",
+        "help": (
+            "Bugs being closed (INCOMPLETE / INVALID / WORKSFORME) or "
+            "moved to another component. The draft is the closing or "
+            "handoff comment. Apply queues bugzilla-cli apply (you "
+            "confirm [y/N] at the terminal) to post the comment and "
+            "apply the resolution or reassignment."
+        ),
+    },
+    "watching": {
+        "marker": None,
+        "title": "Awaiting reply",
+        "help": "",
+    },
+}
+
+# Tabs: (slug, section marker | None, label) — derived from TAB_INFO so
+# the labels can't drift from the rail-head titles.
 TABS = [
-    ("triaged", "§1b", "Analyzed"),
-    ("needs-info", "§1a", "Needs Info"),
-    ("close", "§1c", "Close / Reassign"),
-    ("watching", None, "Awaiting reply"),
+    (slug, info["marker"], info["title"])
+    for slug, info in TAB_INFO.items()
 ]
 SLUG_TO_MARKER = {slug: marker for slug, marker, _ in TABS}
 DRAFT_TAB_SLUGS = {slug for slug, marker, _ in TABS if marker}
@@ -178,6 +224,7 @@ def index(
             "stats": stats,
             "dateline": data.now_local_dateline(),
             "tabs": TABS,
+            "tab_info": TAB_INFO,
             "active_tab": active_tab,
             "active_marker": active_marker,
             "active_bucket": active_bucket,

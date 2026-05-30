@@ -1,20 +1,7 @@
 {# Left rail: list of bugs in the current draft tab, click to focus.
-   Expects: active_bucket (list[Draft]), active_draft (Draft|None), active_tab (slug). #}
-{% set _tab_info = {
-  'triaged': {
-    'title': 'Analyzed',
-    'help': 'Bugs you have triaged. The draft is the public Bugzilla comment with your analysis, plus the severity/priority you set. Apply queues bugzilla-cli apply (you confirm [y/N] at the terminal) and a /bug-start handoff to kick off investigation.'
-  },
-  'needs-info': {
-    'title': 'Needs Info',
-    'help': 'Bugs missing critical info from the reporter. The draft is the needinfo question. Apply queues bugzilla-cli apply (you confirm [y/N] at the terminal) to set NI on Bugzilla and post the question.'
-  },
-  'close': {
-    'title': 'Close / Reassign',
-    'help': 'Bugs being closed (INCOMPLETE / INVALID / WORKSFORME) or moved to another component. The draft is the closing or handoff comment. Apply queues bugzilla-cli apply (you confirm [y/N] at the terminal) to post the comment and apply the resolution or reassignment.'
-  }
-} %}
-{% set _info = _tab_info.get(active_tab) %}
+   Expects: active_bucket (list[Draft]), active_draft (Draft|None),
+   active_tab (slug), tab_info (TAB_INFO from app.py). #}
+{% set _info = tab_info.get(active_tab) %}
 <aside class="rail">
   <div class="rail-head">
     <span class="rail-head-title">
