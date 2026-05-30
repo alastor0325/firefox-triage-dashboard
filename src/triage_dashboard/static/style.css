@@ -666,6 +666,23 @@ code, kbd {
   color: var(--ink-3);
   font-size: 0.78rem;
 }
+.apply-status-queued {
+  margin: 0.55rem 0 0;
+  padding: 0.45rem 0.65rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.apply-status-queued code {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.04);
+}
 
 /* empty state */
 .empty {

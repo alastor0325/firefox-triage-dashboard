@@ -210,6 +210,33 @@ def test_b1_repeat_apply_queues_one_pair_per_click(
     assert all(e["bug_id"] == 555 for e in entries)
 
 
+def test_apply_status_panel_mentions_queue_and_y_n_gate(
+    triage_dir: Path,
+) -> None:
+    """When Apply succeeds, the htmx status panel must signal that the
+    work has been queued and tell the user about the [y/N] gate."""
+    write_draft(triage_dir, 555, severity="S3", priority="P3")
+    response = client.post(
+        "/draft/555/apply", headers={"HX-Request": "true"},
+    )
+    assert response.status_code == 200
+    body = response.text
+    assert "Queued for apply" in body
+    assert "Process queue" in body
+    assert "[y/N]" in body or "y/N" in body
+
+
+def test_skip_status_panel_does_not_mention_queue(
+    triage_dir: Path,
+) -> None:
+    """Skip does not queue anything; the panel must not pretend it did."""
+    write_draft(triage_dir, 555, severity="S3", priority="P3")
+    response = client.post(
+        "/draft/555/skip", headers={"HX-Request": "true"},
+    )
+    assert "Queued for apply" not in response.text
+
+
 def test_apply_failure_queues_nothing(
     triage_dir: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

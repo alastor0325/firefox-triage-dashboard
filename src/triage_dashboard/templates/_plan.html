@@ -26,4 +26,11 @@
   {% if result.output %}
   <p class="apply-status-output">{{ result.output }}</p>
   {% endif %}
+  {% if action == 'apply' and result.ok %}
+  <p class="apply-status-queued">
+    Queued for apply via Claude — click <strong>Process queue</strong>
+    in the topbar to drain. The CLI will prompt <code>[y/N]</code>
+    before posting to Bugzilla.
+  </p>
+  {% endif %}
 </div>
