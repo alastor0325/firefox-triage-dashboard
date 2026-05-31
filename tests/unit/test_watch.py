@@ -341,6 +341,45 @@ def test_handler_without_investigation_dir_backward_compat(
     assert broker.events == [watch.WatchEvent(type="draft-changed", bug_id=7)]
 
 
+def test_handler_on_moved_investigation_atomic_rename(tmp_path: Path) -> None:
+    """Most editors save atomically by writing to a tmp file then renaming.
+    Watchdog emits an on_moved with src=<tmp> and dest=bug-N-investigation.md.
+    The src side doesn't match the bug-N pattern so no delete event fires;
+    the dest side emits an investigation-changed."""
+    inv_dir = tmp_path / "inv"
+    broker = _RecordingBroker()
+    h = watch.TriageDirEventHandler(
+        tmp_path, broker, investigation_dir=inv_dir,
+    )
+    h.on_moved(_FakeFsEvent(
+        src_path=str(inv_dir / "bug-1-investigation.md.tmp"),
+        dest_path=str(inv_dir / "bug-1-investigation.md"),
+    ))
+    assert broker.events == [
+        watch.WatchEvent(type="investigation-changed", bug_id=1)
+    ]
+
+
+def test_handler_on_moved_investigation_file_renamed_away(
+    tmp_path: Path,
+) -> None:
+    """Renaming bug-1-investigation.md → bug-1-investigation.md.bak should
+    emit investigation-changed for the src (so the card flips off the
+    investigated state); the dest doesn't match and emits nothing."""
+    inv_dir = tmp_path / "inv"
+    broker = _RecordingBroker()
+    h = watch.TriageDirEventHandler(
+        tmp_path, broker, investigation_dir=inv_dir,
+    )
+    h.on_moved(_FakeFsEvent(
+        src_path=str(inv_dir / "bug-1-investigation.md"),
+        dest_path=str(inv_dir / "bug-1-investigation.md.bak"),
+    ))
+    assert broker.events == [
+        watch.WatchEvent(type="investigation-changed", bug_id=1)
+    ]
+
+
 # ─── TriageDirWatcher (Observer lifecycle) ──────────────────────────
 
 def test_watcher_start_creates_triage_dir_if_missing(tmp_path: Path) -> None:
