@@ -80,6 +80,34 @@ def test_left_right_arrow_keys_switch_topbar_tabs(triage_dir: Path) -> None:
     assert "tab--active" in body
 
 
+def test_keyboard_shortcut_letters_present_in_handler(triage_dir: Path) -> None:
+    """The deck-nav title attribute advertises j/k/a/Esc/`/` as keyboard
+    shortcuts. The keydown handler in base.html must actually wire
+    each one — otherwise the user-facing docs in the title attribute
+    diverge from real behavior."""
+    body = client.get("/").text
+    # Each documented shortcut appears as a `case 'X':` arm in the JS.
+    assert "case 'j':" in body
+    assert "case 'k':" in body
+    assert "case 'a':" in body
+    assert "case 'Escape':" in body
+    # `/` focuses the rail search.
+    assert "case '/':" in body
+    # And the title attribute on .deck-nav advertises them so the user
+    # knows what to press.
+    import re
+    write_draft(triage_dir, 1, ni_targets=["x"])
+    write_draft(triage_dir, 2, ni_targets=["x"])
+    multi = client.get("/?tab=needs-info").text
+    m = re.search(r'<nav class="deck-nav"[^>]*title="([^"]+)"', multi)
+    assert m is not None, "deck-nav must carry a title= with the keyboard shortcuts"
+    title = m.group(1)
+    # All documented shortcuts surface to the user.
+    assert "j" in title.lower() or "↓" in title
+    assert "/" in title
+    assert "Esc" in title or "esc" in title
+
+
 def test_stylesheet_link_carries_cache_bust_version(
     triage_dir: Path,
 ) -> None:
