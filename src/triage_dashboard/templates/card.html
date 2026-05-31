@@ -271,10 +271,6 @@
                 hx-target="#apply-status-{{ draft.bug_id }}"
                 hx-swap="innerHTML">Apply</button>
       {% endif %}
-      {% if draft.section == '§1b' %}
-        <button class="btn btn-copy" type="button"
-                onclick="navigator.clipboard.writeText('/bug-start {{ draft.bug_id }}').then(() => { this.textContent='copied'; setTimeout(() => location.reload(), 800); })">/bug-start {{ draft.bug_id }}</button>
-      {% endif %}
     </div>
   </div>
   <div id="apply-status-{{ draft.bug_id }}" class="apply-status-host" aria-live="polite"></div>

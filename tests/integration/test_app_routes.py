@@ -264,19 +264,27 @@ def test_empty_state_when_no_drafts(triage_dir: Path) -> None:
 
 # ─── card rendering content ─────────────────────────────────────────
 
-def test_b1_card_has_bugstart_copy_button(triage_dir: Path) -> None:
-    """§1b cards must expose the /bug-start handoff button."""
+def test_b1_card_does_not_show_bugstart_copy_button(
+    triage_dir: Path,
+) -> None:
+    """§1b cards no longer show the /bug-start copy button — investigation
+    is auto-queued by /triage at draft time (and fallback-queued by
+    Apply via Phase 5), so the manual clipboard copy is redundant."""
     write_draft(
         triage_dir, 555, severity="S3", priority="P3",
         title="root cause found", blocks_add=[12345],
     )
     body = client.get("/").text
-    assert "/bug-start 555" in body
-    assert "navigator.clipboard.writeText" in body
+    # Neither the clipboard-writeText handler nor the button label remains.
+    # (`btn-copy-prompt` is a different class used in the queue dropdown —
+    # don't match it.)
+    assert "/bug-start 555" not in body
+    assert 'class="btn btn-copy"' not in body
+    assert "navigator.clipboard.writeText('/bug-start" not in body
 
 
 def test_a1_card_has_no_bugstart_button(triage_dir: Path) -> None:
-    """§1a cards (NI without P/S) must NOT show the /bug-start button."""
+    """§1a cards never had the button; still don't."""
     write_draft(triage_dir, 555, ni_targets=["reporter@example.com"])
     body = client.get("/?tab=needs-info").text
     assert "/bug-start" not in body

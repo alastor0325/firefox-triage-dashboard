@@ -775,15 +775,6 @@ code, kbd {
   background: var(--green); color: #fff; border-color: var(--green); font-weight: 600;
 }
 .btn-primary:hover { background: #126b34; border-color: #126b34; color: #fff; }
-.btn-copy {
-  font-family: var(--font-mono);
-  font-size: 0.8rem; font-weight: 600;
-  color: var(--accent);
-  border-color: var(--accent-soft);
-  background: var(--accent-soft);
-}
-.btn-copy::before { content: '⎘'; margin-right: 0.45em; font-family: var(--font-sans); font-size: 0.85rem; }
-.btn-copy:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 .btn-reassign { background: var(--blue); color: #fff; border-color: var(--blue); }
 .btn-reassign:hover { background: #1f3f8e; border-color: #1f3f8e; }
 
