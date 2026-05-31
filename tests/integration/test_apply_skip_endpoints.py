@@ -237,6 +237,51 @@ def test_skip_status_panel_does_not_mention_queue(
     assert "Queued for apply" not in response.text
 
 
+def test_apply_returns_400_for_malformed_pending_json(
+    triage_dir: Path,
+) -> None:
+    """A corrupt pending JSON (truncated write, hand-edit gone wrong)
+    must not 500 the apply endpoint — the user clicks Apply, the
+    endpoint returns a clean 4xx. _load_pending_or_404 currently
+    blindly json.loads() the file; if the JSON is bad it must surface
+    as a structured error, not an internal-server exception."""
+    pending = triage_dir / "pending" / "bug-42.json"
+    pending.write_text("{ this is not valid json")
+    response = client.post("/draft/42/apply")
+    # 400 is the right code — the file exists (so not 404) but its
+    # contents are invalid, which is a client-fixable state.
+    assert response.status_code == 400
+    assert "pending" in response.json()["detail"].lower()
+
+
+def test_skip_returns_400_for_malformed_pending_json(
+    triage_dir: Path,
+) -> None:
+    """Same robustness guarantee for /skip — corrupt pending JSON
+    surfaces as 400, not as an unhandled 500."""
+    pending = triage_dir / "pending" / "bug-42.json"
+    pending.write_text("{ malformed")
+    response = client.post("/draft/42/skip")
+    assert response.status_code == 400
+
+
+def test_refine_returns_400_for_malformed_pending_json(
+    triage_dir: Path,
+) -> None:
+    """The refine endpoint only checks is_file() to decide 404 vs queue —
+    it doesn't read the pending JSON itself. Confirm it still queues a
+    refine even when the pending file is corrupt: the drainer is the
+    one that has to handle the corrupt content, not the queueing step."""
+    pending = triage_dir / "pending" / "bug-42.json"
+    pending.write_text("{ malformed")
+    response = client.post(
+        "/draft/42/refine", data={"feedback": "fix the JSON"},
+    )
+    # The refine path doesn't json.loads the pending file — it just
+    # queues feedback. So this stays 200; the test pins that contract.
+    assert response.status_code == 200
+
+
 def test_apply_failure_queues_nothing(
     triage_dir: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

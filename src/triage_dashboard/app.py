@@ -359,7 +359,13 @@ def _load_pending_or_404(bug_id: int) -> dict:
     path = triage_dir / "pending" / f"bug-{bug_id}.json"
     if not path.is_file():
         raise HTTPException(status_code=404, detail="no pending draft for that bug")
-    return json.loads(path.read_text())
+    try:
+        return json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"pending draft is unreadable or malformed: {e}",
+        )
 
 
 def _backend_result_response(
