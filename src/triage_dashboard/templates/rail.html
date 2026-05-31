@@ -45,20 +45,11 @@
            hx-push-url="true">
           <div class="rail-item-row1">
             <span class="rail-bug-id">{{ d.bug_id }}</span>
-            {# Bug-state tags reflect the bug's CURRENT Bugzilla state at
-               draft time, not what the draft will write. Priority order:
-               P/S status first (informational or warning), then crash. #}
-            {% set _ctx = d.bug_context %}
-            {% set _sev = (_ctx.current_severity if _ctx else '') %}
-            {% set _pri = (_ctx.current_priority if _ctx else '') %}
-            {% if _sev and _pri %}
-              <span class="rail-tag rail-tag--ps">{{ _sev }}·{{ _pri }}</span>
-            {% else %}
-              <span class="rail-tag rail-tag--no-ps">no P/S</span>
-            {% endif %}
-            {% if _ctx and _ctx.is_crash %}
-              <span class="rail-tag rail-tag--crash">crash</span>
-            {% endif %}
+            {# Action-driving tags only. Emergency first so the more
+               severe signal reads first. Drafts without bug_context
+               (or with empty keywords) render with no tags. #}
+            {% if is_emergency(d) %}<span class="rail-tag rail-tag--emergency">emergency</span>{% endif %}
+            {% if is_regression(d) %}<span class="rail-tag rail-tag--regression">regression</span>{% endif %}
           </div>
           <div class="rail-title">{{ d.title }}</div>
         </a>

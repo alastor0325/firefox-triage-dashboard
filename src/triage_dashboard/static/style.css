@@ -1049,10 +1049,11 @@ code, kbd {
   color: var(--ink);
 }
 .rail-item.is-active .rail-bug-id { color: var(--accent); }
-/* ── Rail bug-state tags ──
-   Small pills that reflect the bug's CURRENT Bugzilla state at draft
-   time (not what the draft will write). Three variants — ps (info),
-   no-ps (warning nudge), crash (danger). */
+/* ── Rail action tags ──
+   Small pills surfacing the action-driving signals on each rail item.
+   `emergency` (sec-critical/sec-high/topcrash) outranks `regression`
+   and renders first. P/S / no-P/S / crash tags were dropped — they
+   were noise within a tab. */
 .rail-tag {
   font-family: var(--font-mono);
   font-size: 0.65rem;
@@ -1065,9 +1066,8 @@ code, kbd {
   line-height: 1.4;
 }
 .rail-tag + .rail-tag { margin-left: 0.25rem; }
-.rail-tag--ps     { background: var(--surface-2); color: var(--ink-2); }
-.rail-tag--no-ps  { background: var(--amber-soft); color: var(--amber); }
-.rail-tag--crash  { background: #fee2e2; color: var(--red); }
+.rail-tag--regression { background: var(--amber-soft); color: var(--amber); }
+.rail-tag--emergency  { background: var(--red); color: #fff; }
 .rail-title {
   font-size: 0.85rem;
   color: var(--ink-2);

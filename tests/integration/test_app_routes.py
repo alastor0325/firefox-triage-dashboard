@@ -1045,3 +1045,103 @@ def test_card_does_not_show_other_bugs_pending_feedback(
     )
     pending_section = m.group(0) if m else ""
     assert "for-other-bug" not in pending_section
+
+
+# ─── rail tags: regression / emergency replace P/S / crash ───────────
+
+def _rail_row_for(body: str, bug_id: int) -> str:
+    """Return the inner HTML of the rail <li> for the given bug_id."""
+    import re
+    m = re.search(
+        rf'<li>\s*<a class="rail-item[^>]*data-bug-id="{bug_id}"[^>]*>(.*?)</a>',
+        body, re.DOTALL,
+    )
+    assert m is not None, f"no rail item for bug {bug_id}"
+    return m.group(1)
+
+
+def test_rail_tag_regression_when_keyword_present(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"keywords": ["regression"]},
+    )
+    body = client.get("/?tab=needs-info").text
+    row = _rail_row_for(body, 1)
+    assert "rail-tag--regression" in row
+    assert ">regression<" in row
+
+
+def test_rail_tag_emergency_when_sec_critical(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"keywords": ["sec-critical"]},
+    )
+    body = client.get("/?tab=needs-info").text
+    row = _rail_row_for(body, 1)
+    assert "rail-tag--emergency" in row
+    assert ">emergency<" in row
+
+
+def test_rail_tag_emergency_when_sec_high(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"keywords": ["sec-high"]},
+    )
+    row = _rail_row_for(client.get("/?tab=needs-info").text, 1)
+    assert "rail-tag--emergency" in row
+
+
+def test_rail_tag_emergency_when_topcrash(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"keywords": ["topcrash"]},
+    )
+    row = _rail_row_for(client.get("/?tab=needs-info").text, 1)
+    assert "rail-tag--emergency" in row
+
+
+def test_rail_tag_both_emergency_and_regression_render_in_order(
+    triage_dir: Path,
+) -> None:
+    """When both apply, emergency renders BEFORE regression so the more
+    severe signal is read first."""
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"keywords": ["sec-critical", "regression"]},
+    )
+    row = _rail_row_for(client.get("/?tab=needs-info").text, 1)
+    assert "rail-tag--emergency" in row
+    assert "rail-tag--regression" in row
+    assert row.index("rail-tag--emergency") < row.index("rail-tag--regression")
+
+
+def test_rail_no_tags_when_bug_context_missing(triage_dir: Path) -> None:
+    """Legacy pending JSON with no bug_context renders cleanly — no tags,
+    no crash."""
+    write_draft(triage_dir, 1, ni_targets=["x@y"])
+    row = _rail_row_for(client.get("/?tab=needs-info").text, 1)
+    assert "rail-tag--emergency" not in row
+    assert "rail-tag--regression" not in row
+
+
+def test_rail_no_tags_when_keywords_empty(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"], bug_context={"keywords": []},
+    )
+    row = _rail_row_for(client.get("/?tab=needs-info").text, 1)
+    assert "rail-tag--emergency" not in row
+    assert "rail-tag--regression" not in row
+
+
+def test_rail_dropped_tags_no_longer_render(triage_dir: Path) -> None:
+    """The old P/S, no-P/S, and crash rail tags are gone — they're noise
+    within a tab (every §1a has no-P/S, every §1b has P/S)."""
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"current_severity": "S3", "current_priority": "P2",
+                     "keywords": ["crash"]},
+    )
+    body = client.get("/?tab=needs-info").text
+    assert 'class="rail-tag rail-tag--ps"' not in body
+    assert 'class="rail-tag rail-tag--no-ps"' not in body
+    assert 'class="rail-tag rail-tag--crash"' not in body
