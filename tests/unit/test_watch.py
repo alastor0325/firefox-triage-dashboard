@@ -149,6 +149,35 @@ def test_event_for_path_watch_tmp_ignored(tmp_path: Path) -> None:
     assert ev is None
 
 
+def test_event_for_path_pending_nested_subdir_ignored(tmp_path: Path) -> None:
+    """Files nested deeper than pending/bug-N.json (e.g.
+    pending/<editor-tmpdir>/bug-1.json) must NOT emit a draft-changed
+    event — only files directly under pending/ count. The triage skill
+    writes flat; transient nested files are atomic-write scratch."""
+    ev = watch.event_for_path(
+        tmp_path / "pending" / "scratch" / "bug-1.json",
+        deleted=False, triage_dir=tmp_path,
+    )
+    assert ev is None
+
+
+def test_event_for_path_investigation_file_in_subdir_ignored(
+    tmp_path: Path,
+) -> None:
+    """The investigation dir is watched non-recursively, but
+    event_for_path is path-driven, so it also needs to reject nested
+    paths. A bug-N file inside an investigation subdir (e.g. an editor
+    backup folder) should not register."""
+    inv_dir = tmp_path / "inv"
+    ev = watch.event_for_path(
+        inv_dir / ".backup" / "bug-1-investigation.md",
+        deleted=False,
+        triage_dir=tmp_path / "triage",
+        investigation_dir=inv_dir,
+    )
+    assert ev is None
+
+
 # ─── FileWatchBroker (pub/sub) ─────────────────────────────────────
 
 def _run(coro):
