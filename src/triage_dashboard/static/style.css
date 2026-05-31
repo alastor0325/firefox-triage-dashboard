@@ -89,6 +89,15 @@ code, kbd {
   margin: 0;
   color: var(--ink);
 }
+.brand-title a {
+  color: inherit;          /* keep the dark brand color, not the accent */
+  text-decoration: none;
+}
+.brand-title a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--accent);    /* subtle hover affordance */
+}
 .brand-sub {
   font-size: 0.86rem;
   color: var(--ink-2);

@@ -29,6 +29,28 @@ def test_get_root_returns_full_html_document(triage_dir: Path) -> None:
     assert 'class="topbar"' in body
 
 
+def test_brand_title_links_to_repo(triage_dir: Path) -> None:
+    """The "Triage" brand title in the topbar is a link to the project's
+    GitHub repo — useful entry point for anyone wanting to inspect or
+    contribute to the dashboard itself."""
+    body = client.get("/").text
+    import re
+    # An <a> with the repo href must wrap the visible "Triage" text inside
+    # the brand-title h1.
+    m = re.search(
+        r'<h1 class="brand-title">\s*'
+        r'<a [^>]*href="https://github\.com/alastor0325/firefox-triage-dashboard"'
+        r'[^>]*>\s*Triage\s*</a>\s*'
+        r'</h1>',
+        body, re.DOTALL,
+    )
+    assert m is not None, "brand title should be a link to the repo"
+    # External link best practice: opens in a new tab, no referrer leak.
+    snippet = m.group(0)
+    assert 'target="_blank"' in snippet
+    assert 'rel="noopener"' in snippet
+
+
 def test_full_page_includes_htmx_script(triage_dir: Path) -> None:
     """htmx must be loaded on the full page so tab clicks can do partial swaps."""
     assert "htmx.org" in client.get("/").text
