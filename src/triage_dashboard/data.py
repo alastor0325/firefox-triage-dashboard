@@ -7,7 +7,7 @@ import os
 import re
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Literal
 
@@ -194,6 +194,61 @@ def _parse_bug_context(raw: Any) -> BugContext | None:
         current_priority=str(raw.get("current_priority") or ""),
         keywords=[str(k) for k in (raw.get("keywords") or [])],
     )
+
+
+_EMERGENCY_KEYWORDS = frozenset({"sec-critical", "sec-high", "topcrash"})
+
+
+def is_regression(draft: "Draft") -> bool:
+    """True if the draft's bug_context.keywords contains 'regression'
+    (case-insensitive). False for drafts without a bug_context."""
+    ctx = getattr(draft, "bug_context", None)
+    if ctx is None:
+        return False
+    return any(str(k).lower() == "regression" for k in (ctx.keywords or []))
+
+
+def is_emergency(draft: "Draft") -> bool:
+    """True if the draft's bug_context.keywords contains any of
+    'sec-critical', 'sec-high', or 'topcrash' (case-insensitive).
+    False for drafts without a bug_context."""
+    ctx = getattr(draft, "bug_context", None)
+    if ctx is None:
+        return False
+    return any(str(k).lower() in _EMERGENCY_KEYWORDS for k in (ctx.keywords or []))
+
+
+# How long a watching entry can sit without a reply before it's flagged
+# as stalled on the Awaiting reply tab.
+_STALLED_AFTER_DAYS = 14
+
+
+def is_stalled(entry: "WatchEntry", now: datetime | None = None) -> bool:
+    """True if the watch entry's added_at is more than 14 days before
+    `now` (defaults to datetime.now(UTC)). Missing or unparseable
+    added_at returns False — entries with no date are not flagged.
+
+    Accepts both full ISO-8601 timestamps and bare YYYY-MM-DD dates
+    (which load_watch may surface from older ni-watch.json formats).
+    """
+    raw = getattr(entry, "added_at", "") or ""
+    if not raw:
+        return False
+    parsed: datetime | None = None
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        parsed = None
+    if parsed is None:
+        return False
+    # Normalise both sides to tz-aware UTC so we can subtract them.
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    if now is None:
+        now = datetime.now(timezone.utc)
+    elif now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return (now - parsed) > timedelta(days=_STALLED_AFTER_DAYS)
 
 
 @dataclass

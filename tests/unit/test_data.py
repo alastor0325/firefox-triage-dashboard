@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -824,3 +825,118 @@ def test_parse_affected_file_whitespace_trimmed() -> None:
     p = data.parse_affected_file("  dom/media/MediaDecoder.cpp#L42  ")
     assert p["path"] == "dom/media/MediaDecoder.cpp"
     assert p["line_start"] == 42
+
+
+# ─── is_regression / is_emergency / is_stalled (rail-tag helpers) ─────
+
+def _draft_with_context(**ctx_kwargs) -> data.Draft:
+    """Build a minimal Draft with a BugContext for tag-helper tests."""
+    return data.Draft(
+        bug_id=1, title="", comment="", ni_targets=[], priority=None,
+        severity=None, blocks_add=[], cc_add=[], resolution=None,
+        keywords_add=[], product=None, component=None, created_at="",
+        section="§1a", bug_context=data.BugContext(**ctx_kwargs),
+    )
+
+
+def _draft_without_context() -> data.Draft:
+    return data.Draft(
+        bug_id=1, title="", comment="", ni_targets=[], priority=None,
+        severity=None, blocks_add=[], cc_add=[], resolution=None,
+        keywords_add=[], product=None, component=None, created_at="",
+        section="§1a", bug_context=None,
+    )
+
+
+def test_is_regression_true_when_keyword_present() -> None:
+    assert data.is_regression(_draft_with_context(keywords=["regression"])) is True
+
+
+def test_is_regression_case_insensitive() -> None:
+    assert data.is_regression(_draft_with_context(keywords=["Regression"])) is True
+    assert data.is_regression(_draft_with_context(keywords=["REGRESSION"])) is True
+
+
+def test_is_regression_false_when_keyword_absent() -> None:
+    assert data.is_regression(_draft_with_context(keywords=["crash"])) is False
+    assert data.is_regression(_draft_with_context(keywords=[])) is False
+
+
+def test_is_regression_false_when_no_bug_context() -> None:
+    assert data.is_regression(_draft_without_context()) is False
+
+
+def test_is_emergency_true_for_sec_critical() -> None:
+    assert data.is_emergency(_draft_with_context(keywords=["sec-critical"])) is True
+
+
+def test_is_emergency_true_for_sec_high() -> None:
+    assert data.is_emergency(_draft_with_context(keywords=["sec-high"])) is True
+
+
+def test_is_emergency_true_for_topcrash() -> None:
+    assert data.is_emergency(_draft_with_context(keywords=["topcrash"])) is True
+
+
+def test_is_emergency_case_insensitive() -> None:
+    assert data.is_emergency(_draft_with_context(keywords=["Sec-Critical"])) is True
+    assert data.is_emergency(_draft_with_context(keywords=["TOPCRASH"])) is True
+
+
+def test_is_emergency_false_for_unrelated_keywords() -> None:
+    assert data.is_emergency(_draft_with_context(keywords=["regression"])) is False
+    assert data.is_emergency(_draft_with_context(keywords=["crash"])) is False
+    assert data.is_emergency(_draft_with_context(keywords=[])) is False
+
+
+def test_is_emergency_false_when_no_bug_context() -> None:
+    assert data.is_emergency(_draft_without_context()) is False
+
+
+def _watch_entry(added_at: str) -> data.WatchEntry:
+    return data.WatchEntry(bug_id=1, title="", ni_targets=[], added_at=added_at)
+
+
+def test_is_stalled_true_when_added_at_15_days_ago() -> None:
+    now = datetime(2026, 5, 30, tzinfo=timezone.utc)
+    fifteen_days_ago = (now - timedelta(days=15)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert data.is_stalled(_watch_entry(fifteen_days_ago), now=now) is True
+
+
+def test_is_stalled_false_when_added_at_13_days_ago() -> None:
+    now = datetime(2026, 5, 30, tzinfo=timezone.utc)
+    thirteen_days_ago = (now - timedelta(days=13)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert data.is_stalled(_watch_entry(thirteen_days_ago), now=now) is False
+
+
+def test_is_stalled_false_at_exactly_14_days() -> None:
+    """Boundary: exactly 14 days is not 'more than 14' — falsy."""
+    now = datetime(2026, 5, 30, tzinfo=timezone.utc)
+    fourteen_days_ago = (now - timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert data.is_stalled(_watch_entry(fourteen_days_ago), now=now) is False
+
+
+def test_is_stalled_false_when_added_at_empty() -> None:
+    now = datetime(2026, 5, 30, tzinfo=timezone.utc)
+    assert data.is_stalled(_watch_entry(""), now=now) is False
+
+
+def test_is_stalled_false_when_added_at_malformed() -> None:
+    now = datetime(2026, 5, 30, tzinfo=timezone.utc)
+    assert data.is_stalled(_watch_entry("not-a-date"), now=now) is False
+
+
+def test_is_stalled_accepts_date_only_format() -> None:
+    """`added_at` is sometimes a bare YYYY-MM-DD without a time component."""
+    now = datetime(2026, 5, 30, tzinfo=timezone.utc)
+    assert data.is_stalled(_watch_entry("2026-05-10"), now=now) is True
+    assert data.is_stalled(_watch_entry("2026-05-25"), now=now) is False
+
+
+def test_is_stalled_defaults_now_to_current_utc() -> None:
+    """Without an explicit `now`, the helper uses datetime.now(UTC).
+    A date 60 days in the past should always be stalled."""
+    sixty_days_ago = (
+        datetime.now(timezone.utc) - timedelta(days=60)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert data.is_stalled(_watch_entry(sixty_days_ago)) is True
