@@ -34,6 +34,21 @@ def test_full_page_includes_htmx_script(triage_dir: Path) -> None:
     assert "htmx.org" in client.get("/").text
 
 
+def test_left_right_arrow_keys_switch_topbar_tabs(triage_dir: Path) -> None:
+    """Bare ArrowLeft / ArrowRight switch the active topbar tab. The
+    existing typing-gate (input/textarea/select active) suppresses
+    the handler so the cursor still moves normally inside the
+    composer or the rail search."""
+    body = client.get("/").text
+    # The keydown switch arms for ArrowLeft and ArrowRight must be
+    # present in the keyboard handler block.
+    assert "'ArrowLeft'" in body or "case 'ArrowLeft'" in body
+    assert "'ArrowRight'" in body or "case 'ArrowRight'" in body
+    # The handler navigates to the prev/next .tab — the active-tab
+    # finder must look it up via the .tab--active class.
+    assert "tab--active" in body
+
+
 def test_stylesheet_link_carries_cache_bust_version(
     triage_dir: Path,
 ) -> None:

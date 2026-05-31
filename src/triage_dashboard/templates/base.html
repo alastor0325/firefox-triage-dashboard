@@ -55,6 +55,19 @@
       case 'k':
         clickIfActive('.deck-prev');
         break;
+      case 'ArrowLeft':
+      case 'ArrowRight': {
+        // Switch to prev/next topbar tab. No wrap at edges.
+        const tabs = Array.from(document.querySelectorAll('.tab'));
+        const idx = tabs.findIndex(t => t.classList.contains('tab--active'));
+        if (idx < 0) break;
+        const target = e.key === 'ArrowLeft' ? idx - 1 : idx + 1;
+        if (target >= 0 && target < tabs.length) {
+          tabs[target].click();
+          e.preventDefault();
+        }
+        break;
+      }
       case '/':
         {
           const search = document.querySelector('.rail-search');
