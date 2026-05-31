@@ -41,6 +41,22 @@ def test_full_page_links_favicon(triage_dir: Path) -> None:
     assert "/static/favicon.svg" in body
 
 
+def test_favicon_link_carries_cache_bust_version(
+    triage_dir: Path,
+) -> None:
+    """Favicons cache aggressively in browsers. The <link rel=icon> tag
+    must carry a ?v=<version> query string (reusing the css_version) so
+    a favicon change forces a refetch without manual cache-clearing."""
+    import re
+    body = client.get("/").text
+    m = re.search(
+        r'<link rel="icon"[^>]*href="/static/favicon\.svg\?v=([^"]+)"',
+        body,
+    )
+    assert m is not None, "favicon link missing ?v= cache buster"
+    assert m.group(1), "cache-bust version is empty"
+
+
 def test_favicon_endpoint_served(triage_dir: Path) -> None:
     """The favicon file must actually be served from the /static mount."""
     response = client.get("/static/favicon.svg")
