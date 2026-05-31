@@ -140,6 +140,21 @@ def test_prepare_queue_drain_prompt_describes_full_procedure(
     assert "summary" in lo or "one-line" in lo
 
 
+def test_prepare_queue_drain_prompt_invokes_apply_feedback_skill(
+    triage_dir: Path,
+) -> None:
+    """Refine step must route through the triage-apply-feedback skill so
+    the required lesson-extraction pass actually runs. Inlining the refine
+    logic in the prompt would silently lose the correction signal that
+    keeps /triage improving over time."""
+    claude_queue.append_refine(triage_dir, bug_id=1, feedback="x")
+    prompt = claude_queue.prepare_queue_drain(triage_dir)["prompt"]
+    assert "triage-apply-feedback" in prompt
+    # Should explicitly tell Claude to use the Skill tool, not just print
+    # the name as advice.
+    assert "Skill tool" in prompt or "via the Skill" in prompt
+
+
 def test_prepare_queue_drain_bugs_affected_counts_distinct_bugs(
     triage_dir: Path,
 ) -> None:

@@ -55,14 +55,12 @@ Procedure:
    - All `bug-start` entries → collect distinct bug_ids.
 
 3. Apply refines first. For each bug with refines, in ascending bug_id
-   order:
-   a. Read {pending_dir}/bug-<id>.json.
-   b. Apply all feedback entries for that bug as a single revision pass.
-      The feedback may direct you to change the comment text, adjust
-      severity/priority/resolution, add or remove blocks, ni_targets, cc,
-      or keywords, or reassign the component — apply whatever each
-      feedback warrants. Preserve fields you weren't told to change.
-   c. Write the updated JSON back to the same path.
+   order, invoke the `triage-apply-feedback` skill via the Skill tool
+   with the bug_id and the feedback list for that bug. The skill
+   handles the redraft AND the required lesson-extraction pass that
+   keeps /triage improving over time — do not inline the refine
+   logic here. Skipping the skill means future runs lose the
+   correction signal.
 
 4. For each queued apply (distinct bug_ids only), run the command
    EXACTLY as written, with no flags other than the bug id and no
