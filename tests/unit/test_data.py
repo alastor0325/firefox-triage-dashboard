@@ -331,6 +331,36 @@ def test_bug_context_malformed_falls_back_to_none(triage_dir: Path) -> None:
     assert data.load_drafts(triage_dir)[0].bug_context is None
 
 
+# ─── dupe_of (DUPLICATE resolution target) ─────────────────────────
+
+
+def test_draft_dupe_of_absent_is_none(triage_dir: Path) -> None:
+    """Drafts written before dupe_of existed (or non-DUPLICATE drafts) load with None."""
+    write_draft(triage_dir, 1, resolution="INCOMPLETE")
+    assert data.load_drafts(triage_dir)[0].dupe_of is None
+
+
+def test_draft_dupe_of_parses_int(triage_dir: Path) -> None:
+    write_draft(triage_dir, 2042320, resolution="DUPLICATE", dupe_of=1711812)
+    assert data.load_drafts(triage_dir)[0].dupe_of == 1711812
+
+
+def test_draft_dupe_of_parses_string_digits(triage_dir: Path) -> None:
+    """Some skill writers may stringify the bug number — accept either."""
+    write_draft(triage_dir, 1, resolution="DUPLICATE", dupe_of="1711812")
+    assert data.load_drafts(triage_dir)[0].dupe_of == 1711812
+
+
+def test_draft_dupe_of_malformed_falls_back_to_none(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, resolution="DUPLICATE", dupe_of="not-a-bug")
+    assert data.load_drafts(triage_dir)[0].dupe_of is None
+
+
+def test_draft_dupe_of_zero_or_negative_is_none(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, resolution="DUPLICATE", dupe_of=0)
+    assert data.load_drafts(triage_dir)[0].dupe_of is None
+
+
 # ─── bug_context.is_crash (rail tag heuristic) ─────────────────────
 
 def test_is_crash_empty_context_is_false() -> None:

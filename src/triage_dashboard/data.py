@@ -174,6 +174,16 @@ class BugContext:
         return bool(_CRASH_ID_RE.search(self.description_excerpt or ""))
 
 
+def _parse_dupe_of(raw: Any) -> int | None:
+    if raw is None or isinstance(raw, bool):
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
+
 def _parse_bug_context(raw: Any) -> BugContext | None:
     if not isinstance(raw, dict):
         return None
@@ -269,6 +279,7 @@ class Draft:
     component: str | None
     created_at: str
     section: Section
+    dupe_of: int | None = None
     bug_context: BugContext | None = None
     # Legacy enrichment fields (kept for backward-compat with prior code paths)
     bug_component: str | None = None
@@ -319,6 +330,7 @@ def load_drafts(triage_dir: Path = DEFAULT_TRIAGE_DIR) -> list[Draft]:
                 component=data.get("component"),
                 created_at=data.get("created_at") or "",
                 section=classify_section(data),
+                dupe_of=_parse_dupe_of(data.get("dupe_of")),
                 bug_context=_parse_bug_context(data.get("bug_context")),
             )
         )

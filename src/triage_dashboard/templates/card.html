@@ -252,7 +252,7 @@
     <div class="diff">
       {% if draft.severity %}<span class="pill pill-sev">{{ draft.severity }}</span>{% endif %}
       {% if draft.priority %}<span class="pill pill-pri">{{ draft.priority }}</span>{% endif %}
-      {% if draft.resolution %}<span>resolve <span class="pill pill-resolve">{{ draft.resolution }}</span></span>{% endif %}
+      {% if draft.resolution %}<span>resolve <span class="pill pill-resolve">{{ draft.resolution }}</span>{% if draft.resolution == "DUPLICATE" and draft.dupe_of %} of <a class="meta" href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ draft.dupe_of }}" target="_blank" rel="noopener">bug {{ draft.dupe_of }}</a>{% endif %}</span>{% endif %}
       {% if draft.product or draft.component %}
         <span>move to <span class="pill pill-reassign">{{ draft.product or 'Core' }} :: {{ draft.component or '?' }}</span></span>
       {% endif %}

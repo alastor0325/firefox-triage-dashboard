@@ -387,6 +387,36 @@ def test_c1_apply_close_button_when_resolving(triage_dir: Path) -> None:
     assert "Apply &amp; close" in body or "Apply &amp; Close" in body
 
 
+def test_duplicate_resolution_links_dupe_of_bug(triage_dir: Path) -> None:
+    """For DUPLICATE drafts, the Will Apply footer shows `of bug N` linked to Bugzilla."""
+    write_draft(triage_dir, 2042320, resolution="DUPLICATE", dupe_of=1711812)
+    body = client.get("/?tab=close").text
+    assert (
+        '<a class="meta" '
+        'href="https://bugzilla.mozilla.org/show_bug.cgi?id=1711812"'
+    ) in body
+    assert ">bug 1711812</a>" in body
+
+
+def test_duplicate_without_dupe_of_renders_no_link(triage_dir: Path) -> None:
+    """A DUPLICATE draft that doesn't yet carry dupe_of still renders cleanly,
+    with the pill but no `of bug ...` link."""
+    write_draft(triage_dir, 9991, resolution="DUPLICATE")
+    body = client.get("/?tab=close").text
+    assert ">DUPLICATE<" in body
+    assert " of <a class=\"meta\"" not in body
+
+
+def test_non_duplicate_with_dupe_of_does_not_link(triage_dir: Path) -> None:
+    """If the JSON has a stray dupe_of but resolution isn't DUPLICATE, ignore it —
+    the link only makes sense when the resolution is actually DUPLICATE."""
+    write_draft(
+        triage_dir, 9992, resolution="INCOMPLETE", dupe_of=1711812,
+    )
+    body = client.get("/?tab=close").text
+    assert "bug 1711812" not in body
+
+
 # ─── Apply / Skip buttons wired up ──────────────────────────────────
 
 def test_apply_button_posts_to_apply_endpoint(triage_dir: Path) -> None:
