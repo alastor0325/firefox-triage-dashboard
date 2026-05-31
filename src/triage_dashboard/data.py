@@ -374,9 +374,14 @@ def load_investigation(
     bug_id: int, investigation_dir: Path | None = None
 ) -> Investigation | None:
     """Read `bug-{id}-investigation.md` from the investigation dir and
-    parse its YAML frontmatter. Returns None when the file doesn't
-    exist or has no frontmatter. Malformed YAML is treated as "no
-    frontmatter" — we don't crash on bad data.
+    parse its YAML frontmatter.
+
+    Returns None only when the file doesn't exist (or can't be read).
+    When the file exists but its frontmatter is missing, malformed, or
+    not a YAML mapping, return a "shell" Investigation with `bug_id` and
+    `file_path` populated and all other fields at their defaults — that
+    way the card can still link to the file on GitHub even for legacy
+    pre-schema investigations.
 
     The file location defaults to $FIREFOX_INVESTIGATION_DIR (or
     ~/firefox-bug-investigation/); callers may pass an explicit
@@ -391,15 +396,16 @@ def load_investigation(
         text = path.read_text(encoding="utf-8")
     except OSError:
         return None
+    shell = Investigation(bug_id=bug_id, file_path=str(path.resolve()))
     body = _extract_frontmatter(text)
     if body is None:
-        return None
+        return shell
     try:
         parsed = yaml.load(body, Loader=_InvestigationYamlLoader)
     except yaml.YAMLError:
-        return None
+        return shell
     if not isinstance(parsed, dict):
-        return None
+        return shell
 
     raw_regression = parsed.get("regression_range")
     regression_range: str | None

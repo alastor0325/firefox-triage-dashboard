@@ -406,11 +406,25 @@ def test_load_investigation_missing_file_returns_none(tmp_path: Path) -> None:
     assert data.load_investigation(2042320, investigation_dir=tmp_path) is None
 
 
-def test_load_investigation_no_frontmatter_returns_none(tmp_path: Path) -> None:
-    _write_investigation(
+def test_load_investigation_no_frontmatter_returns_shell(tmp_path: Path) -> None:
+    """File present but no `---` frontmatter → return a shell Investigation
+    with bug_id and file_path populated so the card can still link to it."""
+    path = _write_investigation(
         tmp_path, 2042320, "# Bug 2042320 Investigation\n\nSome notes.\n"
     )
-    assert data.load_investigation(2042320, investigation_dir=tmp_path) is None
+    inv = data.load_investigation(2042320, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.bug_id == 2042320
+    assert inv.file_path == str(path.resolve())
+    # All other fields default to their empty values.
+    assert inv.investigated_at == ""
+    assert inv.status == ""
+    assert inv.root_cause == ""
+    assert inv.affected_files == []
+    assert inv.regression_range is None
+    assert inv.related_bugs == []
+    assert inv.complexity == ""
+    assert inv.notes == ""
 
 
 def test_load_investigation_full_frontmatter(tmp_path: Path) -> None:
@@ -471,8 +485,10 @@ def test_load_investigation_partial_frontmatter_defaults(tmp_path: Path) -> None
     assert inv.notes == ""
 
 
-def test_load_investigation_malformed_yaml_returns_none(tmp_path: Path) -> None:
-    _write_investigation(
+def test_load_investigation_malformed_yaml_returns_shell(tmp_path: Path) -> None:
+    """Malformed YAML between `---` markers is treated like missing
+    frontmatter: return a shell so we can still link to the file."""
+    path = _write_investigation(
         tmp_path, 42,
         "---\n"
         "bug_id: 42\n"
@@ -481,7 +497,12 @@ def test_load_investigation_malformed_yaml_returns_none(tmp_path: Path) -> None:
         "---\n"
         "# body\n"
     )
-    assert data.load_investigation(42, investigation_dir=tmp_path) is None
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.bug_id == 42
+    assert inv.file_path == str(path.resolve())
+    assert inv.status == ""
+    assert inv.affected_files == []
 
 
 def test_load_investigation_empty_lists_parse(tmp_path: Path) -> None:
@@ -523,27 +544,35 @@ def test_load_investigation_file_path_is_absolute(tmp_path: Path) -> None:
     assert Path(inv.file_path).is_absolute()
 
 
-def test_load_investigation_unclosed_frontmatter_returns_none(
+def test_load_investigation_unclosed_frontmatter_returns_shell(
     tmp_path: Path,
 ) -> None:
-    """A `---` opener without a closing fence is not valid frontmatter."""
-    _write_investigation(
+    """A `---` opener without a closing fence is treated like missing
+    frontmatter: return a shell so the GitHub link still renders."""
+    path = _write_investigation(
         tmp_path, 42,
         "---\nbug_id: 42\nstatus: investigated\n# never closed\n"
     )
-    assert data.load_investigation(42, investigation_dir=tmp_path) is None
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.bug_id == 42
+    assert inv.file_path == str(path.resolve())
+    assert inv.status == ""
 
 
-def test_load_investigation_no_opening_delim_returns_none(
+def test_load_investigation_no_opening_delim_returns_shell(
     tmp_path: Path,
 ) -> None:
-    """File must START with the `---\\n` delimiter — anything else means
-    no frontmatter."""
-    _write_investigation(
+    """File doesn't start with `---\\n` → no parseable frontmatter, but
+    the file still exists, so return a shell."""
+    path = _write_investigation(
         tmp_path, 42,
         "\n---\nbug_id: 42\n---\n"
     )
-    assert data.load_investigation(42, investigation_dir=tmp_path) is None
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.bug_id == 42
+    assert inv.file_path == str(path.resolve())
 
 
 def test_load_investigation_env_var_override(
@@ -561,14 +590,17 @@ def test_load_investigation_env_var_override(
     assert inv.status == "investigated"
 
 
-def test_load_investigation_yaml_not_dict_returns_none(tmp_path: Path) -> None:
+def test_load_investigation_yaml_not_dict_returns_shell(tmp_path: Path) -> None:
     """If the frontmatter parses to a scalar/list instead of a dict, treat
-    as malformed."""
-    _write_investigation(
+    it the same as malformed — return a shell."""
+    path = _write_investigation(
         tmp_path, 42,
         "---\njust a string\n---\n"
     )
-    assert data.load_investigation(42, investigation_dir=tmp_path) is None
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.bug_id == 42
+    assert inv.file_path == str(path.resolve())
 
 
 def test_investigation_dir_from_env_falls_back_to_default(

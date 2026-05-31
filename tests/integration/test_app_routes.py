@@ -590,6 +590,41 @@ def test_card_no_findings_element_without_investigation(
     assert 'class="findings"' not in body
 
 
+def test_card_findings_shell_renders_when_file_has_no_frontmatter(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """A pre-schema investigation file (no `---` frontmatter) still
+    exists on disk, so render a minimal Findings block with just the
+    GitHub link. The per-section `{% if %}` guards short-circuit on
+    empty fields so no status pill, no root-cause, no affected files
+    appear."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    inv_dir.mkdir()
+    (inv_dir / "bug-5551-investigation.md").write_text(
+        "# Bug 5551 Investigation\n\nOld-style file without frontmatter.\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    # Findings block still rendered.
+    assert 'class="findings"' in body
+    # GitHub link present and templated with the bug id.
+    assert (
+        'href="https://github.com/alastor0325/firefox-bug-investigation/'
+        'blob/main/bug-5551-investigation.md"'
+    ) in body
+    # No status pill, no root-cause / affected-file / regression /
+    # related / complexity / notes blocks rendered (their values are
+    # empty defaults so the `{% if %}` guards skip them).
+    assert "findings-status" not in body
+    assert "Root cause:" not in body
+    assert "findings-files" not in body
+    assert "Regression:" not in body
+    assert "Related:" not in body
+    assert "Complexity:" not in body
+
+
 def test_card_findings_related_bugs_render_as_links(
     triage_dir: Path, tmp_path: Path, monkeypatch,
 ) -> None:
