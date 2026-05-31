@@ -458,6 +458,45 @@ def test_card_remove_button_carries_entry_ts_via_hx_vals(
     assert "2026-05-29T14:30:00+00:00" in body
 
 
+def test_index_renders_when_investigation_file_present(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """The index endpoint must load and use an investigation file for
+    the active draft without crashing — wires data.load_investigation
+    into the template context."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "investigations"
+    inv_dir.mkdir()
+    (inv_dir / "bug-5551-investigation.md").write_text(
+        "---\n"
+        "bug_id: 5551\n"
+        "status: investigated\n"
+        "root_cause: HEVC mapping table mis-identifies missing MFT\n"
+        "---\n"
+        "# Bug 5551 Investigation\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    response = client.get("/")
+    assert response.status_code == 200
+    # Sanity: the card for the active draft is rendered.
+    assert 'id="card-5551"' in response.text
+
+
+def test_index_renders_when_no_investigation_file(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """No investigation file for the active draft → load returns None
+    and the page still renders cleanly."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "investigations"
+    inv_dir.mkdir()
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    response = client.get("/")
+    assert response.status_code == 200
+    assert 'id="card-5551"' in response.text
+
+
 def test_card_does_not_show_other_bugs_pending_feedback(
     triage_dir: Path,
 ) -> None:

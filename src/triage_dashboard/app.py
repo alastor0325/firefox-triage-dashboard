@@ -208,6 +208,13 @@ def index(
         claude_queue.pending_feedback_for(triage_dir, active_draft.bug_id)
         if active_draft is not None else []
     )
+    # Only load the investigation for the focused card — disk I/O per
+    # pending draft would slow page renders, and the user sees one card
+    # at a time anyway.
+    investigation = (
+        data.load_investigation(active_draft.bug_id)
+        if active_draft is not None else None
+    )
     # Bug → (section_slug, title) lookup used by the Queue tab to wire
     # each row's bug-id link back to the right card.
     bug_meta_by_id = {
@@ -248,6 +255,8 @@ def index(
             "pending_feedback": pending_feedback,
             "queue_rows": queue_rows,
             "bug_meta_by_id": bug_meta_by_id,
+            "investigation": investigation,
+            "is_stale": False,
         },
     )
 
