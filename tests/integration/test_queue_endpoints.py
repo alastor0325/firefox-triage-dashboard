@@ -40,6 +40,35 @@ def test_queue_count_ignores_unparseable_lines(triage_dir: Path) -> None:
     assert client.get("/queue/count").json() == {"count": 1}
 
 
+def test_queue_count_ignores_unknown_action_types(triage_dir: Path) -> None:
+    """Schema evolution guard: queue rows whose `action` isn't in
+    DRAINABLE_ACTIONS (e.g. a future tracking-only entry) must not bump
+    the topbar badge. The badge represents "things the drainer will
+    touch" — anything else is invisible to it."""
+    queue_path = triage_dir / "claude-queue.jsonl"
+    queue_path.write_text(
+        '{"action":"refine","bug_id":1,"feedback":"a","ts":"2026-05-30T00:00:00+00:00"}\n'
+        '{"action":"apply","bug_id":1,"ts":"2026-05-30T00:01:00+00:00"}\n'
+        '{"action":"future-thing","bug_id":2,"ts":"2026-05-30T00:02:00+00:00"}\n'
+    )
+    assert client.get("/queue/count").json() == {"count": 2}
+
+
+def test_queue_count_only_action_field_matters(triage_dir: Path) -> None:
+    """The topbar badge counts every JSONL line whose `action` is in
+    DRAINABLE_ACTIONS — regardless of bug_id. The dropdown / drain
+    prompt apply a stricter bug_id-must-be-truthy filter, but the
+    badge is intentionally lighter: it represents "the queue file is
+    not empty" to the user."""
+    queue_path = triage_dir / "claude-queue.jsonl"
+    queue_path.write_text(
+        '{"action":"refine","bug_id":1,"feedback":"a","ts":"2026-05-30T00:00:00+00:00"}\n'
+        '{"action":"apply","bug_id":0,"ts":"2026-05-30T00:01:00+00:00"}\n'
+        '{"action":"apply","ts":"2026-05-30T00:02:00+00:00"}\n'
+    )
+    assert client.get("/queue/count").json() == {"count": 3}
+
+
 # ─── POST /queue/prepare ────────────────────────────────────────────
 
 def test_prepare_empty_queue_returns_zero(triage_dir: Path) -> None:
