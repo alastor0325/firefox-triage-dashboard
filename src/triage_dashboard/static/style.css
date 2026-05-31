@@ -1169,8 +1169,15 @@ code, kbd {
 }
 
 @media (max-width: 900px) {
-  .workspace { grid-template-columns: 1fr; }
-  .rail { position: static; max-height: none; }
+  /* Stack rail on top of deck; size rail to its content so the deck
+     gets the rest of the height (otherwise the rail's `flex: 1` would
+     fill its grid row, leaving a big gap below the list). */
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .rail { position: static; max-height: none; flex: none; }
+  .rail-list-scroll { flex: none; }
   .deck-stage { padding: 0; }
   .deck-stage::before, .deck-stage::after { display: none; }
 }
