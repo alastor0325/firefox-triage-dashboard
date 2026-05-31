@@ -183,6 +183,43 @@ def test_load_watch_list_format(triage_dir: Path) -> None:
     assert len(watch) == 1 and watch[0].bug_id == 9999
 
 
+def test_load_watch_list_with_non_dict_entries_skipped(triage_dir: Path) -> None:
+    """List entries that aren't dicts (e.g. a bare int or a string left
+    over from a hand-edit) are silently skipped — the dashboard must
+    never 500 because of a stray entry."""
+    payload = [
+        {"bug_id": 9999, "title": "x", "ni_targets": [], "added_at": ""},
+        42,
+        "stringly typed",
+        None,
+        {"bug_id": 8888, "title": "y", "ni_targets": [], "added_at": ""},
+    ]
+    (triage_dir / "ni-watch.json").write_text(json.dumps(payload))
+    watch = data.load_watch(triage_dir)
+    assert [w.bug_id for w in watch] == [9999, 8888]
+
+
+def test_load_watch_dict_with_non_dict_values_skipped(triage_dir: Path) -> None:
+    """Dict format: values that aren't dicts (truncated writes, hand-edits)
+    are silently skipped — same robustness as the list path."""
+    payload = {
+        "9999": {"title": "good", "ni_targets": [], "added_at": ""},
+        "8888": "not a dict — bad hand-edit",
+        "7777": {"title": "also good", "ni_targets": [], "added_at": ""},
+    }
+    (triage_dir / "ni-watch.json").write_text(json.dumps(payload))
+    watch = data.load_watch(triage_dir)
+    bug_ids = sorted(w.bug_id for w in watch)
+    assert bug_ids == [7777, 9999]
+
+
+def test_load_watch_top_level_scalar_returns_empty(triage_dir: Path) -> None:
+    """A scalar root (e.g. a number or a bare string) is neither a list
+    nor a dict — returning empty rather than crashing keeps the page up."""
+    (triage_dir / "ni-watch.json").write_text(json.dumps(42))
+    assert data.load_watch(triage_dir) == []
+
+
 # ─── compute_stats ─────────────────────────────────────────────────
 
 def test_compute_stats_counts_everything() -> None:
