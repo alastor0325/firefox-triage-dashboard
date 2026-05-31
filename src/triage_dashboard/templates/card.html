@@ -148,13 +148,28 @@
   {% endif %}
 
   {% if investigation %}
-  <details class="findings" {% if investigation.status == 'investigated' %}open{% endif %}>
+  {% set _inv_status = investigation.status %}
+  {% set _is_investigating = _inv_status == 'investigating' %}
+  {% set _is_stalled = _inv_status == 'investigation-stalled' %}
+  <details class="findings"
+           {% if _inv_status in ('investigated', 'investigating', 'investigation-stalled') %}open{% endif %}>
     <summary>
       Findings
-      {% if investigation.status %}<span class="findings-status findings-status--{{ investigation.status }}">{{ investigation.status }}</span>{% endif %}
+      {% if _inv_status %}<span class="findings-status findings-status--{{ _inv_status }}">{{ _inv_status }}</span>{% endif %}
       {% if is_stale %}<span class="findings-stale" title="The bug has changed on Bugzilla since this investigation was written">stale</span>{% endif %}
     </summary>
     <div class="findings-body">
+      {% if _is_investigating %}
+      <p class="findings-investigating-note">
+        <span class="spinner" aria-hidden="true">⟳</span>
+        <em>/bug-start is running — findings will appear when investigation completes.</em>
+      </p>
+      {% elif _is_stalled %}
+      <p class="findings-stalled-note">
+        Investigation stalled — re-run <code>/bug-start</code> to refresh the
+        lock and continue.
+      </p>
+      {% else %}
       {% if investigation.root_cause %}
       <p class="findings-root-cause"><strong>Root cause:</strong> {{ investigation.root_cause }}</p>
       {% endif %}
@@ -184,7 +199,12 @@
       {% endif %}
       <p class="findings-link">
         <a href="https://github.com/alastor0325/firefox-bug-investigation/blob/main/bug-{{ investigation.bug_id }}-investigation.md" target="_blank" rel="noopener">Open full investigation →</a>
+        {% if investigation.depth == 'triage' %}
+        <span class="findings-depth-triage"
+              title="This investigation ran in shallow triage mode. Re-run /bug-start without the triage flag for a deeper analysis.">shallow · re-run for deep</span>
+        {% endif %}
       </p>
+      {% endif %}
     </div>
   </details>
   {% endif %}

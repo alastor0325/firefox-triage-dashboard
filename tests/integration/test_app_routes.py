@@ -775,6 +775,102 @@ def test_findings_not_stale_when_only_one_side_is_tz_aware(
     assert 'class="findings-stale"' not in response.text
 
 
+# ─── Investigating / stalled / depth pills (lock-file aware) ──────────
+
+
+def _touch_lock_path(inv_dir: Path, bug_id: int) -> Path:
+    inv_dir.mkdir(parents=True, exist_ok=True)
+    path = inv_dir / f"bug-{bug_id}-investigating.lock"
+    path.write_text("", encoding="utf-8")
+    return path
+
+
+def test_findings_investigating_pill_when_lock_fresh(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """Fresh lock → investigating pill renders; root-cause body absent."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _touch_lock_path(inv_dir, 5551)
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert 'class="findings-status findings-status--investigating"' in body
+    # No root-cause / affected-files section even if a stale md were present.
+    assert "Root cause:" not in body
+    assert "findings-files" not in body
+
+
+def test_findings_investigating_overrides_md_status(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """Fresh lock present alongside an md with status=investigated →
+    investigating wins; the stale `investigated` pill is not rendered."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\nstatus: investigated\n"
+        "root_cause: stale data from a previous run\n",
+    )
+    _touch_lock_path(inv_dir, 5551)
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert 'findings-status--investigating' in body
+    assert 'findings-status--investigated' not in body
+    assert "stale data from a previous run" not in body
+
+
+def test_findings_investigation_stalled_pill_when_lock_old(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """Lock mtime > 30 min → stalled pill + a "re-run /bug-start" affordance."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    lock = _touch_lock_path(inv_dir, 5551)
+    import os, time
+    old = time.time() - (31 * 60)
+    os.utime(lock, (old, old))
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert (
+        'class="findings-status findings-status--investigation-stalled"'
+        in body
+    )
+    # User-facing affordance to re-run.
+    assert "/bug-start" in body
+
+
+def test_findings_depth_triage_badge_renders(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """`depth: triage` frontmatter → "shallow · re-run for deep" pill
+    appears next to the GitHub link."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\nstatus: investigated\ndepth: triage\n",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert 'class="findings-depth-triage"' in body
+    assert "shallow" in body
+
+
+def test_findings_no_depth_badge_when_deep(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\nstatus: investigated\n",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert 'findings-depth-triage' not in body
+
+
 def test_card_does_not_show_other_bugs_pending_feedback(
     triage_dir: Path,
 ) -> None:

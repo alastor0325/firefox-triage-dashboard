@@ -1442,6 +1442,78 @@ code, kbd {
 .findings-status--blocked      { background: #fee2e2; color: var(--red); }
 .findings-status--needs-info   { background: var(--amber-soft); color: var(--amber); }
 .findings-status--no-repro     { background: var(--surface-2); color: var(--ink-4); border: 1px solid var(--border); }
+/* Active /bug-start run: a fresh investigating.lock file is on disk. A
+   subtle pulsing dot signals "live" without competing with the card's
+   primary content. */
+.findings-status--investigating {
+  background: var(--blue-soft);
+  color: var(--blue);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.findings-status--investigating::before {
+  content: '';
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--blue);
+  animation: findings-pulse 1.4s ease-in-out infinite;
+}
+@keyframes findings-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1.15); }
+}
+/* Stalled lock (mtime > 30 min): /bug-start was started but never
+   finished. Amber warning treatment matches "needs attention". */
+.findings-status--investigation-stalled {
+  background: var(--amber-soft);
+  color: var(--amber);
+  border: 1px dashed var(--amber);
+  padding: calc(0.12rem - 1px) calc(0.5rem - 1px);
+}
+.findings-investigating-note {
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+.findings-investigating-note .spinner {
+  display: inline-block;
+  animation: spin 1.4s linear infinite;
+  font-size: 1rem;
+}
+.findings-stalled-note {
+  color: var(--amber);
+  background: var(--amber-soft);
+  border-left: 3px solid var(--amber);
+  padding: 0.4rem 0.65rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.85rem;
+  margin: 0;
+}
+.findings-stalled-note code {
+  background: rgba(146, 64, 14, 0.10);
+  color: var(--amber);
+}
+/* "shallow" badge next to the GitHub link: shows when frontmatter
+   carries `depth: triage`. Small monospace pill to read as metadata. */
+.findings-depth-triage {
+  display: inline-block;
+  margin-left: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  border: 1px solid var(--border);
+  cursor: help;
+}
 .findings-stale {
   font-family: var(--font-mono);
   font-size: 0.7rem;
