@@ -58,6 +58,70 @@ def test_event_for_path_outside_triage_dir_returns_none(tmp_path: Path) -> None:
     assert ev is None
 
 
+def test_event_for_path_investigating_lock_file(tmp_path: Path) -> None:
+    """bug-N-investigating.lock in the investigation dir → investigation-changed."""
+    inv_dir = tmp_path / "inv"
+    ev = watch.event_for_path(
+        inv_dir / "bug-1234-investigating.lock",
+        deleted=False,
+        triage_dir=tmp_path / "triage",
+        investigation_dir=inv_dir,
+    )
+    assert ev == watch.WatchEvent(type="investigation-changed", bug_id=1234)
+
+
+def test_event_for_path_investigation_md_file(tmp_path: Path) -> None:
+    """bug-N-investigation.md in the investigation dir → investigation-changed."""
+    inv_dir = tmp_path / "inv"
+    ev = watch.event_for_path(
+        inv_dir / "bug-1234-investigation.md",
+        deleted=False,
+        triage_dir=tmp_path / "triage",
+        investigation_dir=inv_dir,
+    )
+    assert ev == watch.WatchEvent(type="investigation-changed", bug_id=1234)
+
+
+def test_event_for_path_investigation_dir_lock_deletion(tmp_path: Path) -> None:
+    """Lock removal also emits investigation-changed (so the card flips
+    back to its post-investigation state)."""
+    inv_dir = tmp_path / "inv"
+    ev = watch.event_for_path(
+        inv_dir / "bug-99-investigating.lock",
+        deleted=True,
+        triage_dir=tmp_path / "triage",
+        investigation_dir=inv_dir,
+    )
+    assert ev == watch.WatchEvent(type="investigation-changed", bug_id=99)
+
+
+def test_event_for_path_investigation_dir_unrelated_file_ignored(
+    tmp_path: Path,
+) -> None:
+    """Files in the investigation dir that don't match the bug-N pattern
+    (READMEs, scratch files, etc.) emit no event."""
+    inv_dir = tmp_path / "inv"
+    ev = watch.event_for_path(
+        inv_dir / "README.md",
+        deleted=False,
+        triage_dir=tmp_path / "triage",
+        investigation_dir=inv_dir,
+    )
+    assert ev is None
+
+
+def test_event_for_path_no_investigation_dir_arg_still_works(
+    tmp_path: Path,
+) -> None:
+    """Backward-compat: callers that don't pass investigation_dir still
+    get the triage-dir behaviour."""
+    ev = watch.event_for_path(
+        tmp_path / "pending" / "bug-7.json",
+        deleted=False, triage_dir=tmp_path,
+    )
+    assert ev == watch.WatchEvent(type="draft-changed", bug_id=7)
+
+
 def test_event_for_path_unrelated_file_returns_none(tmp_path: Path) -> None:
     """Random files in the triage dir (e.g. a stray .txt) emit no event."""
     ev = watch.event_for_path(
@@ -205,3 +269,44 @@ def test_handler_ignores_unrelated_paths(tmp_path: Path) -> None:
     h = watch.TriageDirEventHandler(tmp_path, broker)
     h.on_modified(_FakeFsEvent(str(tmp_path / "pending" / "not-a-bug.txt")))
     assert broker.events == []
+
+
+def test_handler_emits_investigation_changed_from_investigation_dir(
+    tmp_path: Path,
+) -> None:
+    """Handler constructed with both triage_dir and investigation_dir maps
+    lock-file creations under investigation_dir to investigation-changed."""
+    inv_dir = tmp_path / "inv"
+    broker = _RecordingBroker()
+    h = watch.TriageDirEventHandler(
+        tmp_path, broker, investigation_dir=inv_dir,
+    )
+    h.on_created(_FakeFsEvent(str(inv_dir / "bug-1234-investigating.lock")))
+    assert broker.events == [
+        watch.WatchEvent(type="investigation-changed", bug_id=1234)
+    ]
+
+
+def test_handler_emits_investigation_changed_on_md_change(
+    tmp_path: Path,
+) -> None:
+    inv_dir = tmp_path / "inv"
+    broker = _RecordingBroker()
+    h = watch.TriageDirEventHandler(
+        tmp_path, broker, investigation_dir=inv_dir,
+    )
+    h.on_modified(_FakeFsEvent(str(inv_dir / "bug-9-investigation.md")))
+    assert broker.events == [
+        watch.WatchEvent(type="investigation-changed", bug_id=9)
+    ]
+
+
+def test_handler_without_investigation_dir_backward_compat(
+    tmp_path: Path,
+) -> None:
+    """Constructor still accepts a single triage_dir (no investigation_dir)
+    and behaves exactly as before."""
+    broker = _RecordingBroker()
+    h = watch.TriageDirEventHandler(tmp_path, broker)
+    h.on_created(_FakeFsEvent(str(tmp_path / "pending" / "bug-7.json")))
+    assert broker.events == [watch.WatchEvent(type="draft-changed", bug_id=7)]

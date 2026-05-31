@@ -134,6 +134,35 @@ def test_stream_yields_multiple_events_in_order() -> None:
     assert '"bug_id": 3' in chunks[2]
 
 
+def test_stream_yields_investigation_changed_event() -> None:
+    """An investigation-changed WatchEvent flows through sse_event_stream
+    as `event: investigation-changed` with a bug_id payload."""
+    async def go():
+        q: asyncio.Queue = asyncio.Queue()
+        q.put_nowait(WatchEvent(type="investigation-changed", bug_id=1234))
+        chunks = []
+        async for c in app_module.sse_event_stream(
+            q, _make_disconnect_after(2), keepalive_seconds=0.5
+        ):
+            chunks.append(c)
+            if len(chunks) >= 1:
+                break
+        return chunks
+    chunks = _run(go())
+    assert len(chunks) == 1
+    assert "event: investigation-changed" in chunks[0]
+    assert '"type": "investigation-changed"' in chunks[0]
+    assert '"bug_id": 1234' in chunks[0]
+
+
+def test_format_sse_event_investigation_changed() -> None:
+    out = app_module.format_sse_event(
+        WatchEvent(type="investigation-changed", bug_id=42)
+    )
+    assert "event: investigation-changed" in out
+    assert '"bug_id": 42' in out
+
+
 def test_stream_keepalive_seconds_is_respected() -> None:
     """Tiny keepalive value means the comment fires quickly; 0.5s would
     timeout the test. We use 0.05s and bound iterations to make this fast."""

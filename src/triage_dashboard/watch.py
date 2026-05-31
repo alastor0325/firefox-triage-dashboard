@@ -25,27 +25,56 @@ from watchdog.observers import Observer
 
 
 _BUG_FILE_RE = re.compile(r"^bug-(\d+)\.json$")
+# Matches the two file shapes the dashboard cares about in the
+# investigation dir: the in-flight lock file written by /bug-start
+# section 6, and the investigation md file it eventually produces.
+_INVESTIGATION_FILE_RE = re.compile(
+    r"^bug-(\d+)-(?:investigating\.lock|investigation\.md)$"
+)
 
 
 @dataclass(frozen=True)
 class WatchEvent:
-    type: str             # "draft-changed" | "draft-deleted" | "log-changed" | "watch-changed"
+    type: str             # "draft-changed" | "draft-deleted" | "log-changed" | "watch-changed" | "investigation-changed"
     bug_id: int | None = None
 
 
 def event_for_path(
-    path: Path, *, deleted: bool, triage_dir: Path
+    path: Path,
+    *,
+    deleted: bool,
+    triage_dir: Path,
+    investigation_dir: Path | None = None,
 ) -> Optional[WatchEvent]:
     """Map a filesystem path to a WatchEvent, or None if uninteresting.
 
-    We only care about three shapes:
-      pending/bug-N.json     →  draft-changed / draft-deleted
-      triage-log.json        →  log-changed
-      ni-watch.json          →  watch-changed
+    Triage-dir shapes:
+      pending/bug-N.json              →  draft-changed / draft-deleted
+      triage-log.json                 →  log-changed
+      ni-watch.json                   →  watch-changed
+      claude-queue.jsonl              →  queue-changed
+
+    Investigation-dir shapes (when `investigation_dir` is provided):
+      bug-N-investigating.lock        →  investigation-changed
+      bug-N-investigation.md          →  investigation-changed
 
     Everything else (temp files, watch-tmp queue files, dotfiles, paths
-    outside `triage_dir`) is ignored.
+    outside both directories) is ignored.
     """
+    if investigation_dir is not None:
+        try:
+            inv_rel = path.relative_to(investigation_dir)
+        except ValueError:
+            inv_rel = None
+        if inv_rel is not None and len(inv_rel.parts) == 1:
+            m = _INVESTIGATION_FILE_RE.match(inv_rel.parts[0])
+            if m:
+                return WatchEvent(
+                    type="investigation-changed",
+                    bug_id=int(m.group(1)),
+                )
+            return None
+
     try:
         rel = path.relative_to(triage_dir)
     except ValueError:
@@ -108,12 +137,24 @@ class FileWatchBroker:
 class TriageDirEventHandler(FileSystemEventHandler):
     """Translates watchdog FS events → WatchEvents and pushes them on the broker."""
 
-    def __init__(self, triage_dir: Path, broker: FileWatchBroker) -> None:
+    def __init__(
+        self,
+        triage_dir: Path,
+        broker: FileWatchBroker,
+        *,
+        investigation_dir: Path | None = None,
+    ) -> None:
         self.triage_dir = triage_dir
+        self.investigation_dir = investigation_dir
         self.broker = broker
 
     def _emit_for(self, src_path: str, *, deleted: bool) -> None:
-        ev = event_for_path(Path(src_path), deleted=deleted, triage_dir=self.triage_dir)
+        ev = event_for_path(
+            Path(src_path),
+            deleted=deleted,
+            triage_dir=self.triage_dir,
+            investigation_dir=self.investigation_dir,
+        )
         if ev is not None:
             self.broker.emit(ev)
 
@@ -138,10 +179,19 @@ class TriageDirEventHandler(FileSystemEventHandler):
 
 
 class TriageDirWatcher:
-    """Wraps a watchdog Observer that watches `triage_dir` recursively."""
+    """Wraps a watchdog Observer that watches `triage_dir` recursively
+    (and, when supplied, the `investigation_dir` non-recursively for
+    lock-file + investigation.md changes)."""
 
-    def __init__(self, triage_dir: Path, broker: FileWatchBroker) -> None:
+    def __init__(
+        self,
+        triage_dir: Path,
+        broker: FileWatchBroker,
+        *,
+        investigation_dir: Path | None = None,
+    ) -> None:
         self.triage_dir = triage_dir
+        self.investigation_dir = investigation_dir
         self.broker = broker
         self._observer: Observer | None = None
 
@@ -149,9 +199,22 @@ class TriageDirWatcher:
         if self._observer is not None:
             return
         self.triage_dir.mkdir(parents=True, exist_ok=True)
-        handler = TriageDirEventHandler(self.triage_dir, self.broker)
+        handler = TriageDirEventHandler(
+            self.triage_dir,
+            self.broker,
+            investigation_dir=self.investigation_dir,
+        )
         self._observer = Observer()
         self._observer.schedule(handler, str(self.triage_dir), recursive=True)
+        if self.investigation_dir is not None:
+            # Investigation files live flat in the directory (no subdirs),
+            # so a non-recursive watch is enough. We also create the dir
+            # so watchdog doesn't fail on first start before /bug-start
+            # has ever run.
+            self.investigation_dir.mkdir(parents=True, exist_ok=True)
+            self._observer.schedule(
+                handler, str(self.investigation_dir), recursive=False,
+            )
         self._observer.start()
 
     def stop(self) -> None:

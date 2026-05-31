@@ -49,10 +49,15 @@ _watcher: watch_mod.TriageDirWatcher | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Bind the broker to the running event loop and start the filesystem
-    watcher on the configured triage_dir at startup; stop it on shutdown."""
+    watcher on the configured triage_dir + investigation_dir at startup;
+    stop it on shutdown."""
     global _watcher
     broker.bind_loop(asyncio.get_running_loop())
-    _watcher = watch_mod.TriageDirWatcher(data.triage_dir_from_env(), broker)
+    _watcher = watch_mod.TriageDirWatcher(
+        data.triage_dir_from_env(),
+        broker,
+        investigation_dir=data.investigation_dir_from_env(),
+    )
     _watcher.start()
     try:
         yield

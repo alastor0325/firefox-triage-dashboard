@@ -149,7 +149,8 @@
       const url = window.location.pathname + window.location.search;
       htmx.ajax('GET', url, { target: '#tab-content', swap: 'innerHTML' });
     };
-    ['draft-changed', 'draft-deleted', 'watch-changed'].forEach((evt) => {
+    ['draft-changed', 'draft-deleted', 'watch-changed',
+     'investigation-changed'].forEach((evt) => {
       es.addEventListener(evt, refresh);
     });
     // queue-changed: just update the topbar button's count, no full refresh.
