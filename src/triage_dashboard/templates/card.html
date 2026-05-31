@@ -178,7 +178,8 @@
         <strong>Affected:</strong>
         <ul>
           {% for f in investigation.affected_files %}
-          <li><a href="https://searchfox.org/firefox-main/source/{{ f }}" target="_blank" rel="noopener"><code>{{ f }}</code></a></li>
+          {% set parsed = f | parse_affected_file %}
+          <li><a href="https://searchfox.org/firefox-main/source/{{ parsed.path }}{{ parsed.url_suffix }}" target="_blank" rel="noopener"><code>{{ parsed.display }}</code></a></li>
           {% endfor %}
         </ul>
       </div>

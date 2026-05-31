@@ -735,3 +735,55 @@ def test_load_investigation_depth_default_empty(tmp_path: Path) -> None:
     inv = data.load_investigation(42, investigation_dir=tmp_path)
     assert inv is not None
     assert inv.depth == ""
+
+
+# ─── parse_affected_file (path#Lnnn line-anchor convention) ───────────
+
+def test_parse_affected_file_bare_path() -> None:
+    """Path with no `#L` suffix → bare path; URL points at the whole file."""
+    p = data.parse_affected_file("dom/media/MediaDecoder.cpp")
+    assert p == {
+        "path": "dom/media/MediaDecoder.cpp",
+        "line_start": None,
+        "line_end": None,
+        "display": "dom/media/MediaDecoder.cpp",
+        "url_suffix": "",
+    }
+
+
+def test_parse_affected_file_single_line() -> None:
+    """`path#L42` → display reads `path:42`, URL anchors at `#42`."""
+    p = data.parse_affected_file("dom/media/MediaDecoder.cpp#L42")
+    assert p["path"] == "dom/media/MediaDecoder.cpp"
+    assert p["line_start"] == 42
+    assert p["line_end"] is None
+    assert p["display"] == "dom/media/MediaDecoder.cpp:42"
+    assert p["url_suffix"] == "#42"
+
+
+def test_parse_affected_file_range() -> None:
+    """`path#L42-L50` → display reads `path:42-50`, URL anchors at the
+    start of the range (searchfox doesn't support range anchors)."""
+    p = data.parse_affected_file("dom/media/MediaDecoder.cpp#L42-L50")
+    assert p["path"] == "dom/media/MediaDecoder.cpp"
+    assert p["line_start"] == 42
+    assert p["line_end"] == 50
+    assert p["display"] == "dom/media/MediaDecoder.cpp:42-50"
+    assert p["url_suffix"] == "#42"
+
+
+def test_parse_affected_file_empty_string() -> None:
+    """Empty input is tolerated — returns a benign empty result so the
+    template doesn't 500 on bad frontmatter."""
+    p = data.parse_affected_file("")
+    assert p["path"] == ""
+    assert p["line_start"] is None
+    assert p["display"] == ""
+    assert p["url_suffix"] == ""
+
+
+def test_parse_affected_file_whitespace_trimmed() -> None:
+    """Leading/trailing whitespace is stripped — YAML lists can leak it."""
+    p = data.parse_affected_file("  dom/media/MediaDecoder.cpp#L42  ")
+    assert p["path"] == "dom/media/MediaDecoder.cpp"
+    assert p["line_start"] == 42

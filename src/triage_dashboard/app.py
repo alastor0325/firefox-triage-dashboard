@@ -28,6 +28,7 @@ templates.env.filters["render_markdown"] = descriptions.render_markdown
 templates.env.filters["filter_key_comments"] = descriptions.filter_key_comments
 templates.env.filters["level_class"] = data.level_class
 templates.env.filters["split_see_also"] = data.split_see_also
+templates.env.filters["parse_affected_file"] = data.parse_affected_file
 
 # Cache-bust /static/style.css with the file's mtime captured at import
 # time. Browsers refetch when the URL changes; on the server, restarting

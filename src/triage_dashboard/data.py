@@ -66,6 +66,59 @@ def level_class(value: str | None) -> str:
 _REGRESSOR_LABEL_RE = re.compile(r"\bregress", re.IGNORECASE)
 
 
+_AFFECTED_FILE_RE = re.compile(
+    r"^(?P<path>.*?)(?:#L(?P<l1>\d+)(?:-L(?P<l2>\d+))?)?$"
+)
+
+
+def parse_affected_file(s: str) -> dict:
+    """Split a path#L<n> (or path#L<n>-L<m>) entry from /bug-start's
+    frontmatter into its parts.
+
+    Returned shape:
+      {
+        "path": str,             # bare searchfox-relative path
+        "line_start": int|None,  # first line (or None for whole-file)
+        "line_end":   int|None,  # last line of a range (None for single)
+        "display":    str,       # `path` or `path:42` or `path:42-50`
+        "url_suffix": str,       # "" or "#42" — appended to searchfox URL
+      }
+
+    Empty / malformed inputs are tolerated — they return an entry with
+    `path=""` rather than raising, so a stray entry in YAML can't 500
+    the dashboard.
+    """
+    s = (s or "").strip()
+    m = _AFFECTED_FILE_RE.match(s)
+    if not m:
+        return {
+            "path": s, "line_start": None, "line_end": None,
+            "display": s, "url_suffix": "",
+        }
+    path = m.group("path")
+    l1 = m.group("l1")
+    l2 = m.group("l2")
+    if l1 is None:
+        return {
+            "path": path, "line_start": None, "line_end": None,
+            "display": path, "url_suffix": "",
+        }
+    line_start = int(l1)
+    line_end = int(l2) if l2 is not None else None
+    if line_end is not None:
+        display = f"{path}:{line_start}-{line_end}"
+    else:
+        display = f"{path}:{line_start}"
+    return {
+        "path": path,
+        "line_start": line_start,
+        "line_end": line_end,
+        "display": display,
+        # Searchfox doesn't support a range anchor — point at the start.
+        "url_suffix": f"#{line_start}",
+    }
+
+
 def split_see_also(entries: list[dict] | None) -> tuple[list[dict], list[dict]]:
     """Split see_also entries into (regressors, similar).
 

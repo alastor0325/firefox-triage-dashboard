@@ -559,6 +559,43 @@ def test_card_findings_links_affected_files_to_searchfox(
     assert "searchfox.org/mozilla-central/" not in body
 
 
+def test_card_findings_affected_files_with_line_anchor(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """affected_files entries can carry a #L<n> suffix that the dashboard
+    translates into a searchfox line anchor + `file:line` display text."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\nstatus: investigated\n"
+        "affected_files:\n"
+        "  - dom/media/autoplay/AutoplayPolicy.cpp#L297\n"
+        "  - dom/media/MediaDecoder.cpp\n"
+        "  - dom/media/foo.cpp#L42-L50\n",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    # Single-line anchor: href ends with #297, display reads "...:297".
+    assert (
+        'href="https://searchfox.org/firefox-main/source/'
+        'dom/media/autoplay/AutoplayPolicy.cpp#297"' in body
+    )
+    assert "<code>dom/media/autoplay/AutoplayPolicy.cpp:297</code>" in body
+    # Bare path: still works (whole-file URL, plain display).
+    assert (
+        'href="https://searchfox.org/firefox-main/source/'
+        'dom/media/MediaDecoder.cpp"' in body
+    )
+    assert "<code>dom/media/MediaDecoder.cpp</code>" in body
+    # Range: anchor uses the start line; display shows the full range.
+    assert (
+        'href="https://searchfox.org/firefox-main/source/'
+        'dom/media/foo.cpp#42"' in body
+    )
+    assert "<code>dom/media/foo.cpp:42-50</code>" in body
+
+
 def test_card_findings_no_regression_line_when_null(
     triage_dir: Path, tmp_path: Path, monkeypatch,
 ) -> None:
