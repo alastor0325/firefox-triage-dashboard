@@ -34,6 +34,21 @@ def test_full_page_includes_htmx_script(triage_dir: Path) -> None:
     assert "htmx.org" in client.get("/").text
 
 
+def test_full_page_links_favicon(triage_dir: Path) -> None:
+    """Browser tab icon — SVG favicon served from /static/."""
+    body = client.get("/").text
+    assert '<link rel="icon"' in body
+    assert "/static/favicon.svg" in body
+
+
+def test_favicon_endpoint_served(triage_dir: Path) -> None:
+    """The favicon file must actually be served from the /static mount."""
+    response = client.get("/static/favicon.svg")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/svg")
+    assert "<svg" in response.text
+
+
 def test_left_right_arrow_keys_switch_topbar_tabs(triage_dir: Path) -> None:
     """Bare ArrowLeft / ArrowRight switch the active topbar tab. The
     existing typing-gate (input/textarea/select active) suppresses
