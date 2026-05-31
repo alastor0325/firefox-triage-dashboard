@@ -310,3 +310,102 @@ def test_handler_without_investigation_dir_backward_compat(
     h = watch.TriageDirEventHandler(tmp_path, broker)
     h.on_created(_FakeFsEvent(str(tmp_path / "pending" / "bug-7.json")))
     assert broker.events == [watch.WatchEvent(type="draft-changed", bug_id=7)]
+
+
+# ─── TriageDirWatcher (Observer lifecycle) ──────────────────────────
+
+def test_watcher_start_creates_triage_dir_if_missing(tmp_path: Path) -> None:
+    """TriageDirWatcher.start() must mkdir the triage_dir so the underlying
+    watchdog observer doesn't fail on first run before /triage has ever
+    been invoked."""
+    triage = tmp_path / "never-existed"
+    assert not triage.exists()
+    w = watch.TriageDirWatcher(triage, watch.FileWatchBroker())
+    try:
+        w.start()
+        assert triage.is_dir()
+    finally:
+        w.stop()
+
+
+def test_watcher_start_creates_investigation_dir_if_missing(
+    tmp_path: Path,
+) -> None:
+    """Same for investigation_dir when it's provided — watchdog can't
+    schedule on a path that doesn't exist."""
+    triage = tmp_path / "triage"
+    inv = tmp_path / "inv"
+    assert not inv.exists()
+    w = watch.TriageDirWatcher(
+        triage, watch.FileWatchBroker(), investigation_dir=inv,
+    )
+    try:
+        w.start()
+        assert inv.is_dir()
+    finally:
+        w.stop()
+
+
+def test_watcher_start_is_idempotent(tmp_path: Path) -> None:
+    """Calling start() twice must not raise and must not stack observers —
+    the second call is a no-op when _observer is already set."""
+    w = watch.TriageDirWatcher(tmp_path / "triage", watch.FileWatchBroker())
+    try:
+        w.start()
+        first_observer = w._observer
+        w.start()
+        assert w._observer is first_observer, (
+            "start() must be idempotent — repeated calls leak observers"
+        )
+    finally:
+        w.stop()
+
+
+def test_watcher_stop_before_start_is_noop(tmp_path: Path) -> None:
+    """stop() before start() must not raise — covers the "lifespan
+    aborts before bind" code path."""
+    w = watch.TriageDirWatcher(tmp_path / "triage", watch.FileWatchBroker())
+    w.stop()
+    assert w._observer is None
+
+
+def test_watcher_stop_twice_is_noop(tmp_path: Path) -> None:
+    """Repeated stop() calls are safe — shutdown can be invoked from
+    multiple paths (lifespan exit + signal handler)."""
+    w = watch.TriageDirWatcher(tmp_path / "triage", watch.FileWatchBroker())
+    w.start()
+    w.stop()
+    w.stop()
+    assert w._observer is None
+
+
+def test_watcher_emits_on_real_file_create(tmp_path: Path) -> None:
+    """End-to-end: a real watchdog Observer scheduled on the triage_dir
+    must surface a draft-changed event when a pending/bug-N.json is
+    created. This is the smoke test that ties handler + observer +
+    broker + threading together."""
+    import time as _time
+    triage = tmp_path / "triage"
+    triage.mkdir()
+    (triage / "pending").mkdir()
+    events: list[watch.WatchEvent] = []
+
+    class _Recorder:
+        def emit(self, ev: watch.WatchEvent) -> None:
+            events.append(ev)
+
+    w = watch.TriageDirWatcher(triage, _Recorder())  # type: ignore[arg-type]
+    try:
+        w.start()
+        # Watchdog observer needs a moment to wire up before it sees events.
+        _time.sleep(0.1)
+        (triage / "pending" / "bug-42.json").write_text("{}")
+        # Poll up to 2s for the event to come through the watchdog thread.
+        deadline = _time.time() + 2.0
+        while _time.time() < deadline and not events:
+            _time.sleep(0.05)
+    finally:
+        w.stop()
+    assert any(
+        e.type == "draft-changed" and e.bug_id == 42 for e in events
+    ), f"expected draft-changed for bug 42; got {events!r}"
