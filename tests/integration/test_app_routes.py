@@ -1145,3 +1145,66 @@ def test_rail_dropped_tags_no_longer_render(triage_dir: Path) -> None:
     assert 'class="rail-tag rail-tag--ps"' not in body
     assert 'class="rail-tag rail-tag--no-ps"' not in body
     assert 'class="rail-tag rail-tag--crash"' not in body
+
+
+# ─── watching tab: stalled indicator on old entries ──────────────────
+
+def _write_watch(triage_dir: Path, entries: list[dict]) -> None:
+    import json
+    (triage_dir / "ni-watch.json").write_text(json.dumps(entries))
+
+
+def _watch_item_for(body: str, bug_id: int) -> str:
+    """Return the inner HTML of the watch-item <li> for the given bug_id."""
+    import re
+    m = re.search(
+        rf'<li class="watch-item">(.*?(?:>{bug_id}<).*?)</li>',
+        body, re.DOTALL,
+    )
+    assert m is not None, f"no watch item for bug {bug_id}"
+    return m.group(1)
+
+
+def test_watching_stalled_badge_when_added_15_days_ago(
+    triage_dir: Path,
+) -> None:
+    from datetime import datetime, timedelta, timezone
+    fifteen_days_ago = (
+        datetime.now(timezone.utc) - timedelta(days=15)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    _write_watch(triage_dir, [{
+        "bug_id": 12345, "title": "Old bug",
+        "ni_targets": ["alwu@mozilla.com"], "added_at": fifteen_days_ago,
+    }])
+    body = client.get("/?tab=watching").text
+    item = _watch_item_for(body, 12345)
+    assert "watch-stalled" in item
+    assert "stalled" in item.lower()
+
+
+def test_watching_no_stalled_badge_when_added_1_day_ago(
+    triage_dir: Path,
+) -> None:
+    from datetime import datetime, timedelta, timezone
+    one_day_ago = (
+        datetime.now(timezone.utc) - timedelta(days=1)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    _write_watch(triage_dir, [{
+        "bug_id": 12345, "title": "Fresh bug",
+        "ni_targets": ["alwu@mozilla.com"], "added_at": one_day_ago,
+    }])
+    body = client.get("/?tab=watching").text
+    item = _watch_item_for(body, 12345)
+    assert "watch-stalled" not in item
+
+
+def test_watching_no_stalled_badge_when_added_at_missing(
+    triage_dir: Path,
+) -> None:
+    _write_watch(triage_dir, [{
+        "bug_id": 12345, "title": "No timestamp",
+        "ni_targets": ["alwu@mozilla.com"], "added_at": "",
+    }])
+    body = client.get("/?tab=watching").text
+    item = _watch_item_for(body, 12345)
+    assert "watch-stalled" not in item

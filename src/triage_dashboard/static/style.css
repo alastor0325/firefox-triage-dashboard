@@ -1390,6 +1390,19 @@ code, kbd {
   font-weight: 500;
 }
 .watch-head .badge-ni { margin-left: auto; }
+.watch-stalled {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  line-height: 1.4;
+  background: var(--amber-soft);
+  color: var(--amber);
+}
 .watch-title {
   font-size: 1rem;
   font-weight: 500;

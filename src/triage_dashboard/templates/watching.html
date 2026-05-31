@@ -8,6 +8,7 @@
         <div class="watch-head">
           <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ w.bug_id }}" target="_blank" rel="noopener">{{ w.bug_id }}</a></span>
           {% if w.added_at %}<span class="timeago">{{ w.added_at[:10] }}</span>{% endif %}
+          {% if is_stalled(w) %}<span class="watch-stalled">stalled</span>{% endif %}
           {% if w.ni_targets %}<span class="badge-ni">{{ w.ni_targets|join(', ') }}</span>{% endif %}
         </div>
         {% if w.title %}<h3 class="watch-title">{{ w.title }}</h3>{% endif %}
