@@ -608,3 +608,130 @@ def test_investigation_dir_from_env_falls_back_to_default(
 ) -> None:
     monkeypatch.delenv("FIREFOX_INVESTIGATION_DIR", raising=False)
     assert data.investigation_dir_from_env() == data.DEFAULT_INVESTIGATION_DIR
+
+
+# ─── load_investigation lock-file handling (bug-start in-flight) ──────
+
+
+def _touch_lock(investigation_dir: Path, bug_id: int) -> Path:
+    """Helper: create a fresh `bug-<id>-investigating.lock` file."""
+    investigation_dir.mkdir(parents=True, exist_ok=True)
+    path = investigation_dir / f"bug-{bug_id}-investigating.lock"
+    path.write_text("", encoding="utf-8")
+    return path
+
+
+def test_load_investigation_lock_fresh_no_md_returns_investigating(
+    tmp_path: Path,
+) -> None:
+    """Lock file present, no md → status='investigating', file_path=''."""
+    _touch_lock(tmp_path, 42)
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.bug_id == 42
+    assert inv.status == "investigating"
+    assert inv.file_path == ""
+
+
+def test_load_investigation_lock_fresh_with_md_overrides_status(
+    tmp_path: Path,
+) -> None:
+    """Fresh lock overrides whatever frontmatter says; md presence ignored
+    for status, but file_path can point at the md."""
+    _write_investigation(
+        tmp_path, 42,
+        "---\nbug_id: 42\nstatus: investigated\n---\n# body\n",
+    )
+    _touch_lock(tmp_path, 42)
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.status == "investigating"
+    assert inv.bug_id == 42
+    # The actual root_cause / affected_files from the (possibly stale) md
+    # are not surfaced — we only know we're "investigating".
+    assert inv.root_cause == ""
+
+
+def test_load_investigation_lock_stale_returns_investigation_stalled(
+    tmp_path: Path,
+) -> None:
+    """Lock mtime > 30 min ago → status='investigation-stalled'."""
+    lock = _touch_lock(tmp_path, 42)
+    # Set mtime to 31 minutes ago.
+    old_ts = __import__("time").time() - (31 * 60)
+    import os as _os
+    _os.utime(lock, (old_ts, old_ts))
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.bug_id == 42
+    assert inv.status == "investigation-stalled"
+
+
+def test_load_investigation_lock_stale_file_path_md_when_present(
+    tmp_path: Path,
+) -> None:
+    """Stale lock + md present → file_path points at the md file."""
+    md_path = _write_investigation(
+        tmp_path, 42, "---\nbug_id: 42\n---\n# body\n",
+    )
+    lock = _touch_lock(tmp_path, 42)
+    old_ts = __import__("time").time() - (31 * 60)
+    import os as _os
+    _os.utime(lock, (old_ts, old_ts))
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.status == "investigation-stalled"
+    assert inv.file_path == str(md_path.resolve())
+
+
+def test_load_investigation_lock_stale_file_path_lock_when_no_md(
+    tmp_path: Path,
+) -> None:
+    """Stale lock without an md → file_path points at the lock file."""
+    lock = _touch_lock(tmp_path, 42)
+    old_ts = __import__("time").time() - (31 * 60)
+    import os as _os
+    _os.utime(lock, (old_ts, old_ts))
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.status == "investigation-stalled"
+    assert inv.file_path == str(lock.resolve())
+
+
+def test_load_investigation_no_lock_existing_behavior_with_md(
+    tmp_path: Path,
+) -> None:
+    """No lock, md present with frontmatter → frontmatter status applies."""
+    _write_investigation(
+        tmp_path, 42, "---\nbug_id: 42\nstatus: blocked\n---\n# body\n",
+    )
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.status == "blocked"
+
+
+def test_load_investigation_no_lock_no_md_returns_none(tmp_path: Path) -> None:
+    assert data.load_investigation(42, investigation_dir=tmp_path) is None
+
+
+def test_load_investigation_depth_triage_parsed(tmp_path: Path) -> None:
+    """Frontmatter `depth: triage` populates Investigation.depth."""
+    _write_investigation(
+        tmp_path, 42,
+        "---\nbug_id: 42\nstatus: investigated\ndepth: triage\n---\n",
+    )
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.depth == "triage"
+
+
+def test_load_investigation_depth_default_empty(tmp_path: Path) -> None:
+    """Frontmatter without `depth` → Investigation.depth defaults to empty
+    (i.e. deep / not set)."""
+    _write_investigation(
+        tmp_path, 42,
+        "---\nbug_id: 42\nstatus: investigated\n---\n",
+    )
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.depth == ""

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -344,6 +345,14 @@ class Investigation:
     complexity: str = ""
     notes: str = ""
     file_path: str = ""
+    # "triage" when /bug-start ran in shallow-triage mode; empty otherwise
+    # (treated as deep / not set).
+    depth: str = ""
+
+
+# How long a bug-<id>-investigating.lock file can sit before it's
+# considered abandoned (the /bug-start run died, was cancelled, etc.).
+_LOCK_STALE_SECONDS = 30 * 60
 
 
 def _extract_frontmatter(text: str) -> str | None:
@@ -376,12 +385,17 @@ def load_investigation(
     """Read `bug-{id}-investigation.md` from the investigation dir and
     parse its YAML frontmatter.
 
-    Returns None only when the file doesn't exist (or can't be read).
-    When the file exists but its frontmatter is missing, malformed, or
-    not a YAML mapping, return a "shell" Investigation with `bug_id` and
-    `file_path` populated and all other fields at their defaults — that
-    way the card can still link to the file on GitHub even for legacy
-    pre-schema investigations.
+    A `bug-{id}-investigating.lock` file in the same directory short-
+    circuits frontmatter parsing: the /bug-start run is in flight, the
+    md file may be partial / absent / stale, so we surface "investigating"
+    (fresh lock) or "investigation-stalled" (lock mtime > 30 min) instead.
+
+    Returns None only when no lock exists and the md file doesn't exist
+    (or can't be read). When the md file exists but its frontmatter is
+    missing, malformed, or not a YAML mapping, return a "shell"
+    Investigation with `bug_id` and `file_path` populated and all other
+    fields at their defaults — that way the card can still link to the
+    file on GitHub even for legacy pre-schema investigations.
 
     The file location defaults to $FIREFOX_INVESTIGATION_DIR (or
     ~/firefox-bug-investigation/); callers may pass an explicit
@@ -389,14 +403,37 @@ def load_investigation(
     """
     if investigation_dir is None:
         investigation_dir = investigation_dir_from_env()
-    path = investigation_dir / f"bug-{bug_id}-investigation.md"
-    if not path.is_file():
+    md_path = investigation_dir / f"bug-{bug_id}-investigation.md"
+    lock_path = investigation_dir / f"bug-{bug_id}-investigating.lock"
+
+    if lock_path.is_file():
+        try:
+            age = time.time() - lock_path.stat().st_mtime
+        except OSError:
+            age = 0.0
+        if age > _LOCK_STALE_SECONDS:
+            file_path = (
+                str(md_path.resolve()) if md_path.is_file()
+                else str(lock_path.resolve())
+            )
+            return Investigation(
+                bug_id=bug_id,
+                status="investigation-stalled",
+                file_path=file_path,
+            )
+        return Investigation(
+            bug_id=bug_id,
+            status="investigating",
+            file_path="",
+        )
+
+    if not md_path.is_file():
         return None
     try:
-        text = path.read_text(encoding="utf-8")
+        text = md_path.read_text(encoding="utf-8")
     except OSError:
         return None
-    shell = Investigation(bug_id=bug_id, file_path=str(path.resolve()))
+    shell = Investigation(bug_id=bug_id, file_path=str(md_path.resolve()))
     body = _extract_frontmatter(text)
     if body is None:
         return shell
@@ -427,7 +464,8 @@ def load_investigation(
         ],
         complexity=str(parsed.get("complexity") or ""),
         notes=str(parsed.get("notes") or ""),
-        file_path=str(path.resolve()),
+        file_path=str(md_path.resolve()),
+        depth=str(parsed.get("depth") or ""),
     )
 
 
