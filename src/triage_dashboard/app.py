@@ -7,6 +7,7 @@ import html as _html
 import json
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
@@ -190,6 +191,46 @@ def _deck_nav_info(
     }
 
 
+def _parse_iso8601(value: str) -> datetime | None:
+    """Best-effort ISO-8601 parse. Returns None for empty or malformed
+    strings; trailing 'Z' is treated as UTC (datetime.fromisoformat
+    accepts 'Z' in Python 3.11+)."""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _compute_is_stale(
+    active_draft: data.Draft | None,
+    investigation: data.Investigation | None,
+) -> bool:
+    """True when the bug's last_activity is more recent than the
+    investigation's timestamp — i.e. the bug has moved since the
+    investigation was written.
+
+    Falsy on any missing field or unparsable timestamp so the card never
+    crashes on bad data; "no signal" defaults to "not stale".
+    """
+    if active_draft is None or investigation is None:
+        return False
+    ctx = active_draft.bug_context
+    if ctx is None or not ctx.last_activity:
+        return False
+    inv_dt = _parse_iso8601(investigation.investigated_at)
+    act_dt = _parse_iso8601(ctx.last_activity)
+    if inv_dt is None or act_dt is None:
+        return False
+    # Comparing naive and aware datetimes raises TypeError; if the two
+    # timestamps disagree on tz-awareness, defensively report "not stale"
+    # rather than crashing on data we can't safely compare.
+    if (inv_dt.tzinfo is None) != (act_dt.tzinfo is None):
+        return False
+    return inv_dt < act_dt
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(
     request: Request, tab: str | None = None, bug: int | None = None
@@ -215,6 +256,7 @@ def index(
         data.load_investigation(active_draft.bug_id)
         if active_draft is not None else None
     )
+    is_stale = _compute_is_stale(active_draft, investigation)
     # Bug → (section_slug, title) lookup used by the Queue tab to wire
     # each row's bug-id link back to the right card.
     bug_meta_by_id = {
@@ -256,7 +298,7 @@ def index(
             "queue_rows": queue_rows,
             "bug_meta_by_id": bug_meta_by_id,
             "investigation": investigation,
-            "is_stale": False,
+            "is_stale": is_stale,
         },
     )
 

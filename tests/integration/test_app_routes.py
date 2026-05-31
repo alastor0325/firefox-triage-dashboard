@@ -619,6 +619,108 @@ def test_card_findings_open_link_uses_file_uri(
     assert f'href="file://{expected_path}"' in body
 
 
+# ─── is_stale flag (investigation older than bug activity) ────────────
+
+def test_findings_stale_pill_when_bug_activity_newer(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    write_draft(
+        triage_dir, 5551, severity="S3", priority="P3",
+        bug_context={
+            "last_activity": "2026-05-30T14:08:00Z",
+        },
+    )
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\n"
+        "investigated_at: 2026-05-29T14:08:00Z\n"
+        "status: investigated\n",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert 'class="findings-stale"' in body
+    assert ">stale<" in body
+
+
+def test_findings_not_stale_when_investigation_newer(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    write_draft(
+        triage_dir, 5551, severity="S3", priority="P3",
+        bug_context={
+            "last_activity": "2026-05-29T14:08:00Z",
+        },
+    )
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\n"
+        "investigated_at: 2026-05-30T14:08:00Z\n"
+        "status: investigated\n",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert 'class="findings-stale"' not in body
+
+
+def test_findings_not_stale_on_malformed_iso_strings(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """Unparsable timestamps default to not-stale rather than crashing."""
+    write_draft(
+        triage_dir, 5551, severity="S3", priority="P3",
+        bug_context={"last_activity": "yesterday-ish"},
+    )
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\n"
+        'investigated_at: "not a date at all"\n',
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    response = client.get("/")
+    assert response.status_code == 200
+    assert 'class="findings-stale"' not in response.text
+
+
+def test_findings_not_stale_when_no_bug_context(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """Without bug_context we can't compare timestamps — default to not stale."""
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\n"
+        "investigated_at: 2026-05-29T14:08:00Z\n",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert 'class="findings-stale"' not in body
+
+
+def test_findings_not_stale_when_only_one_side_is_tz_aware(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """Mixing naive and aware ISO strings would raise TypeError on
+    comparison — defensively report not-stale instead."""
+    write_draft(
+        triage_dir, 5551, severity="S3", priority="P3",
+        bug_context={"last_activity": "2026-05-30T14:08:00Z"},
+    )
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\n"
+        "investigated_at: 2026-05-29T14:08:00\n",  # naive (no tz)
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    response = client.get("/")
+    assert response.status_code == 200
+    assert 'class="findings-stale"' not in response.text
+
+
 def test_card_does_not_show_other_bugs_pending_feedback(
     triage_dir: Path,
 ) -> None:
