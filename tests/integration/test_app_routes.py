@@ -611,16 +611,23 @@ def test_card_findings_related_bugs_render_as_links(
     )
 
 
-def test_card_findings_open_link_uses_file_uri(
+def test_card_findings_open_link_points_at_github(
     triage_dir: Path, tmp_path: Path, monkeypatch,
 ) -> None:
-    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    """Chrome (and other browsers) block http→file:// navigation entirely,
+    so the "Open full investigation →" link must point at the canonical
+    GitHub copy of the investigation file instead."""
+    write_draft(triage_dir, 2042320, severity="S3", priority="P3")
     inv_dir = tmp_path / "inv"
-    _write_inv(inv_dir, 5551, "bug_id: 5551\n")
+    _write_inv(inv_dir, 2042320, "bug_id: 2042320\n")
     monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
-    expected_path = (inv_dir / "bug-5551-investigation.md").resolve()
-    assert f'href="file://{expected_path}"' in body
+    assert (
+        'href="https://github.com/alastor0325/firefox-bug-investigation/'
+        'blob/main/bug-2042320-investigation.md"'
+    ) in body
+    # Regression guard: no stale file:// links remain.
+    assert "file://" not in body
 
 
 # ─── is_stale flag (investigation older than bug activity) ────────────
