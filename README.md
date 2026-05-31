@@ -38,7 +38,11 @@ Bugzilla automatically.
        │
        │   Click the topbar "Process queue · N" → "Copy prompt → paste
        │   into Claude". The pasted prompt tells Claude to read the
-       │   queue and re-draft each refined bug.
+       │   queue and re-draft each refined bug. While re-drafting,
+       │   Claude also looks for a general lesson behind your feedback
+       │   (e.g. "this kind of bug shouldn't ask for that data") and,
+       │   if it finds one, asks whether to save it to the Firefox wiki
+       │   so future triage avoids the same mistake.
        ▼
 5. Apply lands in Bugzilla via the terminal
        │
