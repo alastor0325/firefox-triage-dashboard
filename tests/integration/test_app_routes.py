@@ -535,16 +535,20 @@ def test_card_findings_links_affected_files_to_searchfox(
     )
     monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
+    # Searchfox migrated mozilla-central → firefox-main (the old tree
+    # now 301-redirects). Always link to the canonical URL.
     assert (
-        '<a href="https://searchfox.org/mozilla-central/source/'
+        '<a href="https://searchfox.org/firefox-main/source/'
         'dom/media/platforms/VideoUtils.cpp"' in body
     )
     assert (
-        '<a href="https://searchfox.org/mozilla-central/source/'
+        '<a href="https://searchfox.org/firefox-main/source/'
         'dom/media/platforms/wmf/WMFDecoderModule.cpp"' in body
     )
     # Each path wrapped in <code> for monospace rendering.
     assert "<code>dom/media/platforms/VideoUtils.cpp</code>" in body
+    # Regression guard: the legacy mozilla-central tree must not appear.
+    assert "searchfox.org/mozilla-central/" not in body
 
 
 def test_card_findings_no_regression_line_when_null(
