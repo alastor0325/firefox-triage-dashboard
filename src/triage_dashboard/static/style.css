@@ -1403,3 +1403,102 @@ code, kbd {
   .card-foot { flex-direction: column-reverse; align-items: stretch; }
   .actions { justify-content: flex-end; }
 }
+
+/* ───── FINDINGS BLOCK (bug-start investigation surfacing) ─────
+   Renders the YAML frontmatter from
+   ~/firefox-bug-investigation/bug-{id}-investigation.md inside the card,
+   above the proposed comment. Defaults open when the investigation
+   status is "investigated"; collapsed otherwise so blocked / needs-info
+   states don't dominate the card. */
+.findings {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem 0.6rem;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+.findings > summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.findings > summary::-webkit-details-marker { display: none; }
+.findings > summary::before {
+  content: '▸';
+  display: inline-block;
+  transition: transform 0.12s;
+  color: var(--ink-4);
+  font-size: 0.75em;
+}
+.findings[open] > summary::before { transform: rotate(90deg); }
+.findings-status {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.12rem 0.5rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.findings-status--investigated { background: var(--green-soft); color: var(--green); }
+.findings-status--blocked      { background: #fee2e2; color: var(--red); }
+.findings-status--needs-info   { background: var(--amber-soft); color: var(--amber); }
+.findings-status--no-repro     { background: var(--surface-2); color: var(--ink-4); border: 1px solid var(--border); }
+.findings-stale {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.12rem 0.5rem;
+  border-radius: 3px;
+  background: var(--amber-soft);
+  color: var(--amber);
+  border: 1px dashed var(--amber);
+  white-space: nowrap;
+}
+.findings-body {
+  margin-top: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+.findings-body > p { margin: 0.25rem 0; }
+.findings-body strong { color: var(--ink); }
+.findings-files { margin: 0.3rem 0; }
+.findings-files ul {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.findings-files code {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+.findings-files a { text-decoration: none; color: var(--blue); }
+.findings-files a:hover code { text-decoration: underline; }
+.findings-regression code,
+.findings-related code {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+.findings-related a { color: var(--blue); text-decoration: none; }
+.findings-related a:hover { text-decoration: underline; }
+.findings-notes { color: var(--ink-3); font-style: italic; }
+.findings-link {
+  margin-top: 0.55rem !important;
+  font-size: 0.82rem;
+}
+.findings-link a { color: var(--accent); text-decoration: none; }
+.findings-link a:hover { text-decoration: underline; }

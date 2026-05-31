@@ -497,6 +497,128 @@ def test_index_renders_when_no_investigation_file(
     assert 'id="card-5551"' in response.text
 
 
+def _write_inv(inv_dir: Path, bug_id: int, frontmatter: str) -> None:
+    inv_dir.mkdir(parents=True, exist_ok=True)
+    (inv_dir / f"bug-{bug_id}-investigation.md").write_text(
+        f"---\n{frontmatter}---\n# body\n", encoding="utf-8",
+    )
+
+
+def test_card_renders_findings_root_cause(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\nstatus: investigated\n"
+        "root_cause: HEVC mapping table mis-identifies missing MFT\n",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert 'class="findings"' in body
+    assert "Root cause:" in body
+    assert "HEVC mapping table mis-identifies missing MFT" in body
+
+
+def test_card_findings_links_affected_files_to_searchfox(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\nstatus: investigated\n"
+        "affected_files:\n"
+        "  - dom/media/platforms/VideoUtils.cpp\n"
+        "  - dom/media/platforms/wmf/WMFDecoderModule.cpp\n",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert (
+        '<a href="https://searchfox.org/mozilla-central/source/'
+        'dom/media/platforms/VideoUtils.cpp"' in body
+    )
+    assert (
+        '<a href="https://searchfox.org/mozilla-central/source/'
+        'dom/media/platforms/wmf/WMFDecoderModule.cpp"' in body
+    )
+    # Each path wrapped in <code> for monospace rendering.
+    assert "<code>dom/media/platforms/VideoUtils.cpp</code>" in body
+
+
+def test_card_findings_no_regression_line_when_null(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\nstatus: investigated\nregression_range: null\n",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert "Regression:" not in body
+
+
+def test_card_findings_status_pill_blocked_modifier(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\nstatus: blocked\n",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert 'class="findings-status findings-status--blocked"' in body
+
+
+def test_card_no_findings_element_without_investigation(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    inv_dir.mkdir()
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert 'class="findings"' not in body
+
+
+def test_card_findings_related_bugs_render_as_links(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _write_inv(
+        inv_dir, 5551,
+        "bug_id: 5551\nrelated_bugs: [1992187, 2038494]\n",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    assert (
+        '<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1992187"'
+        in body
+    )
+    assert (
+        '<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2038494"'
+        in body
+    )
+
+
+def test_card_findings_open_link_uses_file_uri(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    write_draft(triage_dir, 5551, severity="S3", priority="P3")
+    inv_dir = tmp_path / "inv"
+    _write_inv(inv_dir, 5551, "bug_id: 5551\n")
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    body = client.get("/").text
+    expected_path = (inv_dir / "bug-5551-investigation.md").resolve()
+    assert f'href="file://{expected_path}"' in body
+
+
 def test_card_does_not_show_other_bugs_pending_feedback(
     triage_dir: Path,
 ) -> None:

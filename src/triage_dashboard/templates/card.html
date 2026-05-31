@@ -147,6 +147,48 @@
     {% endif %}
   {% endif %}
 
+  {% if investigation %}
+  <details class="findings" {% if investigation.status == 'investigated' %}open{% endif %}>
+    <summary>
+      Findings
+      {% if investigation.status %}<span class="findings-status findings-status--{{ investigation.status }}">{{ investigation.status }}</span>{% endif %}
+      {% if is_stale %}<span class="findings-stale" title="The bug has changed on Bugzilla since this investigation was written">stale</span>{% endif %}
+    </summary>
+    <div class="findings-body">
+      {% if investigation.root_cause %}
+      <p class="findings-root-cause"><strong>Root cause:</strong> {{ investigation.root_cause }}</p>
+      {% endif %}
+      {% if investigation.affected_files %}
+      <div class="findings-files">
+        <strong>Affected:</strong>
+        <ul>
+          {% for f in investigation.affected_files %}
+          <li><a href="https://searchfox.org/mozilla-central/source/{{ f }}" target="_blank" rel="noopener"><code>{{ f }}</code></a></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      {% if investigation.regression_range %}
+      <p class="findings-regression"><strong>Regression:</strong> <code>{{ investigation.regression_range }}</code></p>
+      {% endif %}
+      {% if investigation.related_bugs %}
+      <p class="findings-related"><strong>Related:</strong>
+        {% for b in investigation.related_bugs %}<a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ b }}" target="_blank" rel="noopener">bug {{ b }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+      </p>
+      {% endif %}
+      {% if investigation.complexity %}
+      <p class="findings-complexity"><strong>Complexity:</strong> {{ investigation.complexity }}</p>
+      {% endif %}
+      {% if investigation.notes %}
+      <p class="findings-notes">{{ investigation.notes }}</p>
+      {% endif %}
+      <p class="findings-link">
+        <a href="file://{{ investigation.file_path }}" target="_blank" rel="noopener">Open full investigation →</a>
+      </p>
+    </div>
+  </details>
+  {% endif %}
+
   <div class="card-comment md-body" aria-label="Proposed comment">{{ draft.comment | render_markdown }}</div>
 
   <form class="composer"
