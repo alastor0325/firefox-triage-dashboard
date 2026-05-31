@@ -10,10 +10,31 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Literal
 
+import yaml
+
 # Socorro crash IDs look like bp-<uuid-ish>, e.g. bp-12345678-abcd-...
 _CRASH_ID_RE = re.compile(r"bp-[a-f0-9-]+", re.IGNORECASE)
 
 DEFAULT_TRIAGE_DIR = Path.home() / "firefox-triage"
+DEFAULT_INVESTIGATION_DIR = Path.home() / "firefox-bug-investigation"
+
+# Frontmatter delimiter for investigation files; we only parse YAML when
+# the file opens with `---\n` and we can find a matching closing `---`.
+_FRONTMATTER_DELIM = "---"
+
+
+class _InvestigationYamlLoader(yaml.SafeLoader):
+    """SafeLoader variant that does NOT auto-convert ISO-8601 timestamps
+    into datetime objects. We want `investigated_at` and similar fields
+    to round-trip as the original string (e.g. '2026-05-30T20:15:00Z'),
+    so they compare cleanly against other ISO strings server-side."""
+
+
+# Strip the implicit timestamp resolver so 'YYYY-MM-DDTHH:MM:SSZ' stays a string.
+_InvestigationYamlLoader.yaml_implicit_resolvers = {
+    ch: [(tag, regexp) for tag, regexp in resolvers if tag != "tag:yaml.org,2002:timestamp"]
+    for ch, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
 
 Section = Literal["§1b", "§1a", "§1c"]
 
@@ -303,6 +324,104 @@ def compute_stats(
         pending_total=len(drafts),
         pending_by_section=by_section,
         watching=len(watch),
+    )
+
+
+@dataclass
+class Investigation:
+    """Metadata extracted from a /bug-start investigation file's YAML
+    frontmatter. All fields default to empty so partial frontmatters
+    render gracefully (old files without frontmatter return None from
+    load_investigation; callers handle the None case)."""
+
+    bug_id: int
+    investigated_at: str = ""
+    status: str = ""
+    root_cause: str = ""
+    affected_files: list[str] = field(default_factory=list)
+    regression_range: str | None = None
+    related_bugs: list[int] = field(default_factory=list)
+    complexity: str = ""
+    notes: str = ""
+    file_path: str = ""
+
+
+def _extract_frontmatter(text: str) -> str | None:
+    """Return the YAML frontmatter body (without the `---` fences), or
+    None when the file doesn't open with `---\\n` or lacks a matching
+    closing delimiter."""
+    if not text.startswith(_FRONTMATTER_DELIM):
+        return None
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != _FRONTMATTER_DELIM:
+        return None
+    for i in range(1, len(lines)):
+        if lines[i].strip() == _FRONTMATTER_DELIM:
+            return "\n".join(lines[1:i])
+    return None
+
+
+def investigation_dir_from_env() -> Path:
+    """Resolve the investigation data directory from $FIREFOX_INVESTIGATION_DIR
+    or the default ~/firefox-bug-investigation/."""
+    override = os.environ.get("FIREFOX_INVESTIGATION_DIR")
+    if override:
+        return Path(override).expanduser()
+    return DEFAULT_INVESTIGATION_DIR
+
+
+def load_investigation(
+    bug_id: int, investigation_dir: Path | None = None
+) -> Investigation | None:
+    """Read `bug-{id}-investigation.md` from the investigation dir and
+    parse its YAML frontmatter. Returns None when the file doesn't
+    exist or has no frontmatter. Malformed YAML is treated as "no
+    frontmatter" — we don't crash on bad data.
+
+    The file location defaults to $FIREFOX_INVESTIGATION_DIR (or
+    ~/firefox-bug-investigation/); callers may pass an explicit
+    directory for tests.
+    """
+    if investigation_dir is None:
+        investigation_dir = investigation_dir_from_env()
+    path = investigation_dir / f"bug-{bug_id}-investigation.md"
+    if not path.is_file():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    body = _extract_frontmatter(text)
+    if body is None:
+        return None
+    try:
+        parsed = yaml.load(body, Loader=_InvestigationYamlLoader)
+    except yaml.YAMLError:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+
+    raw_regression = parsed.get("regression_range")
+    regression_range: str | None
+    if raw_regression is None:
+        regression_range = None
+    else:
+        regression_range = str(raw_regression)
+
+    return Investigation(
+        bug_id=int(parsed.get("bug_id") or bug_id),
+        investigated_at=str(parsed.get("investigated_at") or ""),
+        status=str(parsed.get("status") or ""),
+        root_cause=str(parsed.get("root_cause") or ""),
+        affected_files=[str(f) for f in (parsed.get("affected_files") or [])],
+        regression_range=regression_range,
+        related_bugs=[
+            int(b) for b in (parsed.get("related_bugs") or [])
+            if isinstance(b, (int, str)) and str(b).strip().lstrip("-").isdigit()
+        ],
+        complexity=str(parsed.get("complexity") or ""),
+        notes=str(parsed.get("notes") or ""),
+        file_path=str(path.resolve()),
     )
 
 

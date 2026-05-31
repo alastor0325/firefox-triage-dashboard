@@ -388,3 +388,191 @@ def test_split_see_also_progression_is_not_regression() -> None:
     regressors, similar = data.split_see_also(entries)
     assert regressors == []
     assert similar == entries
+
+
+# ─── load_investigation (bug-start YAML frontmatter) ───────────────────
+
+def _write_investigation(
+    investigation_dir: Path, bug_id: int, content: str
+) -> Path:
+    """Helper: write a bug-N-investigation.md and return its path."""
+    investigation_dir.mkdir(parents=True, exist_ok=True)
+    path = investigation_dir / f"bug-{bug_id}-investigation.md"
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def test_load_investigation_missing_file_returns_none(tmp_path: Path) -> None:
+    assert data.load_investigation(2042320, investigation_dir=tmp_path) is None
+
+
+def test_load_investigation_no_frontmatter_returns_none(tmp_path: Path) -> None:
+    _write_investigation(
+        tmp_path, 2042320, "# Bug 2042320 Investigation\n\nSome notes.\n"
+    )
+    assert data.load_investigation(2042320, investigation_dir=tmp_path) is None
+
+
+def test_load_investigation_full_frontmatter(tmp_path: Path) -> None:
+    path = _write_investigation(
+        tmp_path, 2042320,
+        "---\n"
+        "bug_id: 2042320\n"
+        "investigated_at: 2026-05-30T20:15:00Z\n"
+        "status: investigated\n"
+        "root_cause: VideoUtils mis-maps HEVC lack-of-extension state\n"
+        "affected_files:\n"
+        "  - dom/media/platforms/VideoUtils.cpp\n"
+        "  - dom/media/platforms/wmf/WMFDecoderModule.cpp\n"
+        "regression_range: abc12345-def67890\n"
+        "related_bugs: [1992187, 2038494]\n"
+        "complexity: medium\n"
+        'notes: "needs WPT update"\n'
+        "---\n"
+        "# Bug 2042320 Investigation\n"
+        "Body content here.\n"
+    )
+    inv = data.load_investigation(2042320, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.bug_id == 2042320
+    assert inv.investigated_at == "2026-05-30T20:15:00Z"
+    assert inv.status == "investigated"
+    assert inv.root_cause == "VideoUtils mis-maps HEVC lack-of-extension state"
+    assert inv.affected_files == [
+        "dom/media/platforms/VideoUtils.cpp",
+        "dom/media/platforms/wmf/WMFDecoderModule.cpp",
+    ]
+    assert inv.regression_range == "abc12345-def67890"
+    assert inv.related_bugs == [1992187, 2038494]
+    assert inv.complexity == "medium"
+    assert inv.notes == "needs WPT update"
+    assert inv.file_path == str(path.resolve())
+
+
+def test_load_investigation_partial_frontmatter_defaults(tmp_path: Path) -> None:
+    """Frontmatter missing most fields still loads — defaults apply."""
+    _write_investigation(
+        tmp_path, 42,
+        "---\n"
+        "bug_id: 42\n"
+        "status: blocked\n"
+        "---\n"
+        "# body\n"
+    )
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.bug_id == 42
+    assert inv.status == "blocked"
+    assert inv.root_cause == ""
+    assert inv.affected_files == []
+    assert inv.related_bugs == []
+    assert inv.regression_range is None
+    assert inv.complexity == ""
+    assert inv.notes == ""
+
+
+def test_load_investigation_malformed_yaml_returns_none(tmp_path: Path) -> None:
+    _write_investigation(
+        tmp_path, 42,
+        "---\n"
+        "bug_id: 42\n"
+        "  not: valid: yaml: at: all: : :\n"
+        " - broken\n"
+        "---\n"
+        "# body\n"
+    )
+    assert data.load_investigation(42, investigation_dir=tmp_path) is None
+
+
+def test_load_investigation_empty_lists_parse(tmp_path: Path) -> None:
+    _write_investigation(
+        tmp_path, 42,
+        "---\n"
+        "bug_id: 42\n"
+        "affected_files: []\n"
+        "related_bugs: []\n"
+        "---\n"
+    )
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.affected_files == []
+    assert inv.related_bugs == []
+
+
+def test_load_investigation_regression_null_is_none(tmp_path: Path) -> None:
+    _write_investigation(
+        tmp_path, 42,
+        "---\n"
+        "bug_id: 42\n"
+        "regression_range: null\n"
+        "---\n"
+    )
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.regression_range is None
+
+
+def test_load_investigation_file_path_is_absolute(tmp_path: Path) -> None:
+    path = _write_investigation(
+        tmp_path, 42,
+        "---\nbug_id: 42\n---\n"
+    )
+    inv = data.load_investigation(42, investigation_dir=tmp_path)
+    assert inv is not None
+    assert inv.file_path == str(path.resolve())
+    assert Path(inv.file_path).is_absolute()
+
+
+def test_load_investigation_unclosed_frontmatter_returns_none(
+    tmp_path: Path,
+) -> None:
+    """A `---` opener without a closing fence is not valid frontmatter."""
+    _write_investigation(
+        tmp_path, 42,
+        "---\nbug_id: 42\nstatus: investigated\n# never closed\n"
+    )
+    assert data.load_investigation(42, investigation_dir=tmp_path) is None
+
+
+def test_load_investigation_no_opening_delim_returns_none(
+    tmp_path: Path,
+) -> None:
+    """File must START with the `---\\n` delimiter — anything else means
+    no frontmatter."""
+    _write_investigation(
+        tmp_path, 42,
+        "\n---\nbug_id: 42\n---\n"
+    )
+    assert data.load_investigation(42, investigation_dir=tmp_path) is None
+
+
+def test_load_investigation_env_var_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FIREFOX_INVESTIGATION_DIR overrides the default location when no
+    explicit directory is passed."""
+    _write_investigation(
+        tmp_path, 42,
+        "---\nbug_id: 42\nstatus: investigated\n---\n"
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(tmp_path))
+    inv = data.load_investigation(42)
+    assert inv is not None
+    assert inv.status == "investigated"
+
+
+def test_load_investigation_yaml_not_dict_returns_none(tmp_path: Path) -> None:
+    """If the frontmatter parses to a scalar/list instead of a dict, treat
+    as malformed."""
+    _write_investigation(
+        tmp_path, 42,
+        "---\njust a string\n---\n"
+    )
+    assert data.load_investigation(42, investigation_dir=tmp_path) is None
+
+
+def test_investigation_dir_from_env_falls_back_to_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("FIREFOX_INVESTIGATION_DIR", raising=False)
+    assert data.investigation_dir_from_env() == data.DEFAULT_INVESTIGATION_DIR
