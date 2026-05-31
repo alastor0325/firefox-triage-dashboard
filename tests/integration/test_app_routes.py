@@ -939,6 +939,40 @@ def test_findings_no_depth_badge_when_deep(
     assert 'findings-depth-triage' not in body
 
 
+def test_card_pending_feedback_escapes_html(triage_dir: Path) -> None:
+    """Refine feedback is user input. When rendered in the pending-feedback
+    list (card.html), it must be HTML-escaped — otherwise a crafted
+    feedback could inject scripts into the page on subsequent loads.
+
+    The refine endpoint's htmx fragment escape is already tested elsewhere;
+    this guards the same input flowing through pending_feedback_for →
+    card.html on every page render."""
+    write_draft(triage_dir, 1, severity="S3", priority="P3")
+    (triage_dir / "claude-queue.jsonl").write_text(
+        '{"action":"refine","bug_id":1,"feedback":"<script>alert(1)</script>",'
+        '"ts":"2026-05-29T14:30:00+00:00"}\n'
+    )
+    body = client.get("/").text
+    # The pending-feedback section renders, but the raw <script> must not be live.
+    assert 'class="pending-feedback"' in body
+    assert "<script>alert(1)</script>" not in body
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in body
+
+
+def test_queue_dropdown_feedback_escapes_html(triage_dir: Path) -> None:
+    """The Process-queue dropdown also renders refine feedback. Same XSS
+    invariant as the card's pending-feedback list — escape user input."""
+    write_draft(triage_dir, 1, severity="S3", priority="P3")
+    (triage_dir / "claude-queue.jsonl").write_text(
+        '{"action":"refine","bug_id":1,"feedback":"<img src=x onerror=alert(1)>",'
+        '"ts":"2026-05-29T14:30:00+00:00"}\n'
+    )
+    body = client.get("/queue/dropdown").text
+    assert "<img src=x onerror=alert(1)>" not in body
+    # The Jinja autoescape replaces `<` and `>` with their entity forms.
+    assert "&lt;img" in body
+
+
 def test_card_does_not_show_other_bugs_pending_feedback(
     triage_dir: Path,
 ) -> None:
