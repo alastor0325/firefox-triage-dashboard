@@ -1045,6 +1045,18 @@ def test_bug_context_parses_filed(triage_dir: Path) -> None:
     assert drafts[0].bug_context.filed == "2026-05-30T12:00:00Z"
 
 
+def test_version_only_strips_channel_and_noise() -> None:
+    assert data.version_only("Nightly 153.0a1 (2026-05-30); UA shows 152.0") == "153.0a1"
+    assert data.version_only("Firefox 150.0") == "150.0"
+    assert data.version_only("150") == "150"
+    assert data.version_only("Beta 151.0b3") == "151.0b3"
+
+
+def test_version_only_empty_and_no_digits() -> None:
+    assert data.version_only("") == ""
+    assert data.version_only("unknown") == "unknown"
+
+
 def test_bug_context_parses_affected_versions(triage_dir: Path) -> None:
     write_draft(triage_dir, 1, bug_context={"affected_versions": "151+"})
     drafts = data.load_drafts(triage_dir)

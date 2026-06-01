@@ -644,6 +644,21 @@ def triage_dir_from_env() -> Path:
     return DEFAULT_TRIAGE_DIR
 
 
+_VERSION_RE = re.compile(r"\d+(?:\.\d+)*(?:[ab]\d+)?")
+
+
+def version_only(raw: str) -> str:
+    """Extract just the version number from a freeform reported-version
+    string, dropping the channel word and any trailing noise. E.g.
+    'Nightly 153.0a1 (2026-05-30); UA shows 152.0' -> '153.0a1',
+    'Firefox 150.0' -> '150.0', '150' -> '150'. Returns the original
+    (stripped) string if it contains no version-like token."""
+    if not raw:
+        return ""
+    m = _VERSION_RE.search(raw)
+    return m.group(0) if m else raw.strip()
+
+
 def now_local_dateline() -> str:
     """Human-friendly date for the top bar (e.g. 'Thursday, May 28')."""
     now = datetime.now()

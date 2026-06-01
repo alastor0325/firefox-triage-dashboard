@@ -46,7 +46,7 @@
     {% endif %}
     {% if ctx.firefox_version or ctx.affected_versions %}
     <p class="card-version">
-      {% if ctx.firefox_version %}<span class="ver-chip"><span class="ver-chip-key">Found</span>{{ ctx.firefox_version }}</span>{% endif %}
+      {% if ctx.firefox_version %}<span class="ver-chip"><span class="ver-chip-key">Found</span>{{ ctx.firefox_version | version_only }}</span>{% endif %}
       {% if ctx.affected_versions %}<span class="ver-chip"><span class="ver-chip-key">Affected</span>{{ ctx.affected_versions }}</span>{% endif %}
     </p>
     {% endif %}
