@@ -29,3 +29,6 @@ build/
 
 # Node (for any future frontend tooling)
 node_modules/
+
+# dashboard runtime (PID + log)
+.run/

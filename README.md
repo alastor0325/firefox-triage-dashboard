@@ -209,8 +209,16 @@ cd firefox-triage-dashboard
 python3 -m venv .venv
 .venv/bin/pip install -e .
 
-# Each session
+# Each session — foreground (blocks the terminal, opens a browser)
 .venv/bin/triage-dashboard          # opens http://127.0.0.1:8765
+
+# Or run it in the background with the control script
+scripts/serve.sh start              # launch (no browser pop), health-checked
+scripts/serve.sh status             # is it up? PID + HTTP check
+scripts/serve.sh restart            # stop + start
+scripts/serve.sh logs               # tail the server log
+scripts/serve.sh stop               # stop it
+# env overrides: HOST=0.0.0.0 PORT=9000 scripts/serve.sh start
 ```
 
 The dashboard reads from `~/firefox-triage/` by default (or
