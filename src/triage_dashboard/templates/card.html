@@ -31,7 +31,7 @@
     {% if ctx.reporter_name or ctx.reporter_email %}
       {% set _ = _by_parts.append('reporter') %}
     {% endif %}
-    {% if ctx.platform or ctx.firefox_version or ctx.filed or ctx.last_activity %}
+    {% if ctx.filed or ctx.last_activity %}
       {% set _ = _by_parts.append('env') %}
     {% endif %}
     {% if _by_parts %}
@@ -39,15 +39,15 @@
       {% if ctx.reporter_name or ctx.reporter_email %}
         Reported by <strong>{{ ctx.reporter_name or ctx.reporter_email }}</strong>
       {% endif %}
-      {% if ctx.platform %} <span class="dot">·</span> <strong>{{ ctx.platform }}</strong>{% endif %}
       {% if ctx.filed %} <span class="dot">·</span> filed {{ ctx.filed[:10] }}{% endif %}
       {% if ctx.last_activity %} <span class="dot">·</span> last activity {{ ctx.last_activity[:10] }}{% endif %}
     </p>
     {% endif %}
-    {% if ctx.firefox_version or ctx.affected_versions %}
+    {% if ctx.platform or ctx.firefox_version or ctx.affected_versions %}
     <p class="card-version">
-      {% if ctx.firefox_version %}<span class="ver-chip"><span class="ver-chip-key">Found</span>{{ ctx.firefox_version | version_only }}</span>{% endif %}
-      {% if ctx.affected_versions %}<span class="ver-chip"><span class="ver-chip-key">Affected</span>{{ ctx.affected_versions }}</span>{% endif %}
+      {% if ctx.platform %}<span class="ver-chip ver-chip--platform"><span class="ver-chip-key">Platform</span>{{ ctx.platform }}</span>{% endif %}
+      {% if ctx.firefox_version %}<span class="ver-chip ver-chip--found"><span class="ver-chip-key">Found</span>{{ ctx.firefox_version | version_only }}</span>{% endif %}
+      {% if ctx.affected_versions %}<span class="ver-chip ver-chip--affected"><span class="ver-chip-key">Affected</span>{{ ctx.affected_versions }}</span>{% endif %}
     </p>
     {% endif %}
 

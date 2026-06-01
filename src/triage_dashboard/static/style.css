@@ -547,6 +547,12 @@ code, kbd {
   letter-spacing: 0.04em;
   color: var(--ink-4);
 }
+/* Per-chip colors: Platform = blue (environment), Found = neutral
+   (factual reference), Affected = amber (impact scope worth noticing). */
+.ver-chip--platform { background: var(--blue-soft); border-color: #dbeafe; }
+.ver-chip--platform .ver-chip-key { color: var(--blue); }
+.ver-chip--affected { background: var(--amber-soft); border-color: #fde68a; }
+.ver-chip--affected .ver-chip-key { color: var(--amber); }
 
 /* ── Regression tag block ──
    Entries from bug_context.see_also whose label matches `\bregress`
