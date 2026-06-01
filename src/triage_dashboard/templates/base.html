@@ -76,7 +76,7 @@
       }
       case '/':
         {
-          const search = document.querySelector('.rail-search');
+          const search = document.querySelector('.global-search');
           if (search) { search.focus(); search.select(); e.preventDefault(); }
         }
         break;
@@ -84,6 +84,17 @@
         clickIfActive('.deck-stage .btn-primary, .deck-stage .btn-reassign');
         break;
       case 'Escape':
+        {
+          const search = document.querySelector('.global-search');
+          // Esc in the search box clears it and returns to the tab view.
+          if (search && document.activeElement === search && search.value) {
+            search.value = '';
+            search.dispatchEvent(new Event('search', { bubbles: true }));
+            search.blur();
+            e.preventDefault();
+            break;
+          }
+        }
         if (document.activeElement && 'blur' in document.activeElement) {
           document.activeElement.blur();
         }
@@ -114,15 +125,20 @@
   // from the URL so the chrome reflects where we just landed.
   document.addEventListener('htmx:afterSwap', () => {
     const params = new URLSearchParams(window.location.search);
-    const activeTab = params.get('tab');
-    if (activeTab) {
-      document.querySelectorAll('.tab').forEach(t => {
-        const slug = new URL(t.href, window.location.origin).searchParams.get('tab');
-        const isActive = slug === activeTab;
-        t.classList.toggle('tab--active', isActive);
-        t.setAttribute('aria-selected', isActive ? 'true' : 'false');
-      });
+    const searching = !!params.get('q');
+    // Keep the search box value in sync (e.g. after back/forward nav).
+    const search = document.querySelector('.global-search');
+    if (search && document.activeElement !== search) {
+      search.value = params.get('q') || '';
     }
+    const activeTab = params.get('tab');
+    // In search mode no tab is active; otherwise reflect the URL's tab.
+    document.querySelectorAll('.tab').forEach(t => {
+      const slug = new URL(t.href, window.location.origin).searchParams.get('tab');
+      const isActive = !searching && slug === activeTab;
+      t.classList.toggle('tab--active', isActive);
+      t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
     const activeBug = params.get('bug');
     if (!activeBug) return;
     document.querySelectorAll('.rail-item').forEach(el => {

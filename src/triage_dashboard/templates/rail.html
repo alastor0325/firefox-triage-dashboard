@@ -1,17 +1,20 @@
-{# Left rail: list of bugs in the current draft tab, click to focus.
-   Expects: active_bucket (list[Draft]), active_draft (Draft|None),
-   active_tab (slug), tab_info (TAB_INFO from app.py). #}
+{# Left rail: list of bugs to pick from, click to focus.
+   Normal mode: bugs in the current draft tab.
+   Search mode (search_active): flat matches across ALL sections, each
+   badged with its section. Link targets use {{ nav_base }} so the deck
+   stays in the current view. #}
 {% set _info = tab_info.get(active_tab) %}
 <aside class="rail">
   <div class="rail-head">
+    {% if search_active %}
+    <span class="rail-head-title">Results</span>
+    <span class="count">{{ active_bucket|length }} found</span>
+    {% else %}
     <span class="rail-head-title">
       {{ _info.title if _info else '' }}
       {% if _info %}
       {# Render the tooltip body as a real DOM node and reference it via
-         aria-describedby so screen readers can announce the help text.
-         CSS-generated ::after content is not announced. The trigger is
-         not a button — a tooltip doesn't activate anything — so we drop
-         role="button" but keep tabindex for keyboard focus. #}
+         aria-describedby so screen readers can announce the help text. #}
       <span class="info-icon"
             tabindex="0"
             aria-label="About this tab"
@@ -22,12 +25,8 @@
       {% endif %}
     </span>
     <span class="count">{{ active_bucket|length }} bugs</span>
+    {% endif %}
   </div>
-  {% if active_bucket|length > 1 %}
-  <input type="search" class="rail-search"
-         placeholder="Filter by title or bug id…"
-         aria-label="Filter bugs in this tab">
-  {% endif %}
   {# Scroll only the bug list. If overflow-y lived on .rail itself,
      CSS would treat the horizontal axis as non-visible too and clip
      the info-icon tooltip at the rail's edge. #}
@@ -37,21 +36,26 @@
       <li>
         <a class="rail-item{% if active_draft and d.bug_id == active_draft.bug_id %} is-active{% endif %}"
            data-bug-id="{{ d.bug_id }}"
-           href="?tab={{ active_tab }}&bug={{ d.bug_id }}"
-           hx-get="?tab={{ active_tab }}&bug={{ d.bug_id }}"
+           href="?{{ nav_base }}&bug={{ d.bug_id }}"
+           hx-get="?{{ nav_base }}&bug={{ d.bug_id }}"
            hx-target="#deck-area"
            hx-select="#deck-area"
            hx-swap="outerHTML"
            hx-push-url="true">
           <div class="rail-item-row1">
-            <span class="rail-bug-id">{{ d.bug_id }}</span>
-            {# Action-driving tags only. 'New' is recomputed every render
-               from bug_context.filed, so it drops once the bug ages past a
-               week. Emergency next so the more severe signal reads early.
-               Drafts without bug_context render with no tags. #}
-            {% if is_new_this_week(d) %}<span class="rail-tag rail-tag--new">New</span>{% endif %}
-            {% if is_emergency(d) %}<span class="rail-tag rail-tag--emergency">emergency</span>{% endif %}
-            {% if is_regression(d) %}<span class="rail-tag rail-tag--regression">regression</span>{% endif %}
+            <span class="rail-id-group">
+              <span class="rail-bug-id">{{ d.bug_id }}</span>
+              {# In search mode a section badge shows which tab the match
+                 lives in. #}
+              {% if search_active %}<span class="rail-badge">{{ marker_label.get(d.section, '') }}</span>{% endif %}
+            </span>
+            {# Action-driving tags. 'New' is recomputed every render from
+               bug_context.filed, so it drops once the bug ages past a week. #}
+            <span class="rail-tag-group">
+              {% if is_new_this_week(d) %}<span class="rail-tag rail-tag--new">New</span>{% endif %}
+              {% if is_emergency(d) %}<span class="rail-tag rail-tag--emergency">emergency</span>{% endif %}
+              {% if is_regression(d) %}<span class="rail-tag rail-tag--regression">regression</span>{% endif %}
+            </span>
           </div>
           <div class="rail-title">{{ d.title }}</div>
         </a>

@@ -391,6 +391,22 @@ def group_by_section(drafts: Iterable[Draft]) -> dict[Section, list[Draft]]:
     return groups
 
 
+def search_drafts(drafts: Iterable[Draft], query: str) -> list[Draft]:
+    """Global search across ALL sections: match drafts whose bug_id contains
+    the query (as a substring) or whose title contains it (case-insensitive).
+    Returns newest-filed-first. Empty/whitespace query → empty list."""
+    q = (query or "").strip()
+    if not q:
+        return []
+    ql = q.lower()
+    matches = [
+        d for d in drafts
+        if ql in (d.title or "").lower() or q in str(d.bug_id)
+    ]
+    matches.sort(key=_newest_first_key, reverse=True)
+    return matches
+
+
 @dataclass
 class LogEntry:
     bug_id: int

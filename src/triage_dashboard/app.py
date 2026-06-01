@@ -9,6 +9,7 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote_plus
 
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -164,6 +165,8 @@ TABS = [
 SLUG_TO_MARKER = {slug: marker for slug, marker, _ in TABS}
 DRAFT_TAB_SLUGS = {slug for slug, marker, _ in TABS if marker}
 MARKER_TO_SLUG = {marker: slug for slug, marker, _ in TABS if marker}
+# §-marker → short label, for the section badge in global search results.
+MARKER_LABEL = {marker: label for slug, marker, label in TABS if marker}
 
 
 def _slug_for_section(marker: str) -> str:
@@ -258,7 +261,8 @@ def _compute_is_stale(
 
 @app.get("/", response_class=HTMLResponse)
 def index(
-    request: Request, tab: str | None = None, bug: int | None = None
+    request: Request, tab: str | None = None, bug: int | None = None,
+    q: str | None = None,
 ) -> HTMLResponse:
     triage_dir = data.triage_dir_from_env()
     drafts = data.load_drafts(triage_dir)
@@ -267,7 +271,16 @@ def index(
     stats = data.compute_stats(drafts, watch)
     active_tab = _resolve_active_tab(tab, groups)
     active_marker = SLUG_TO_MARKER[active_tab]
-    active_bucket = groups.get(active_marker, []) if active_marker else []
+    # Global search (Option B): when q is present the rail+deck show a flat
+    # list of matches across ALL sections, each badged with its section.
+    query = (q or "").strip()
+    search_active = bool(query)
+    if search_active:
+        active_bucket = data.search_drafts(drafts, query)
+        nav_base = "q=" + quote_plus(query)
+    else:
+        active_bucket = groups.get(active_marker, []) if active_marker else []
+        nav_base = "tab=" + active_tab
     active_draft = _resolve_active_draft(active_bucket, bug)
     deck_nav = _deck_nav_info(active_bucket, active_draft)
     pending_feedback = (
@@ -317,6 +330,10 @@ def index(
             "active_bucket": active_bucket,
             "active_draft": active_draft,
             "deck_nav": deck_nav,
+            "search_active": search_active,
+            "search_query": query,
+            "nav_base": nav_base,
+            "marker_label": MARKER_LABEL,
             "counts_by_slug": counts_by_slug,
             "queue_count": queue_count,
             "pending_feedback": pending_feedback,

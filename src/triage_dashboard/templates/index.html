@@ -26,23 +26,38 @@
 
 <div class="layout">
   <main>
-    <nav class="tabs" role="tablist">
-      {% for slug, marker, label in tabs %}
-        {% set count = counts_by_slug[slug] %}
-        <a class="tab {% if slug == active_tab %}tab--active{% endif %} {% if count == 0 %}tab--empty{% endif %}"
-           href="?tab={{ slug }}"
-           role="tab"
-           aria-selected="{{ 'true' if slug == active_tab else 'false' }}"
-           hx-get="?tab={{ slug }}"
-           hx-target="#tab-content"
-           hx-swap="innerHTML"
-           hx-push-url="true"
-           hx-sync="closest nav:replace">
-          <span class="label">{{ label }}</span>
-          <span class="count">{{ count }}</span>
-        </a>
-      {% endfor %}
-    </nav>
+    <div class="tabbar">
+      <nav class="tabs" role="tablist">
+        {% for slug, marker, label in tabs %}
+          {% set count = counts_by_slug[slug] %}
+          <a class="tab {% if slug == active_tab and not search_active %}tab--active{% endif %} {% if count == 0 %}tab--empty{% endif %}"
+             href="?tab={{ slug }}"
+             role="tab"
+             aria-selected="{{ 'true' if slug == active_tab and not search_active else 'false' }}"
+             hx-get="?tab={{ slug }}"
+             hx-target="#tab-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             hx-sync="closest nav:replace">
+            <span class="label">{{ label }}</span>
+            <span class="count">{{ count }}</span>
+          </a>
+        {% endfor %}
+      </nav>
+      {# Global search: filters across ALL sections; results show in the
+         rail badged with their section. Native clear (✕) or empty input
+         returns to the tab view. #}
+      <input class="global-search" type="search" name="q"
+             value="{{ search_query }}"
+             placeholder="Search all bugs by id or title…"
+             aria-label="Search all bugs by id or title"
+             hx-get="/"
+             hx-trigger="input changed delay:200ms, search"
+             hx-target="#tab-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             hx-sync="this:replace">
+    </div>
 
     <div id="tab-content">
       {% include "_content.html" %}

@@ -333,15 +333,42 @@ code, kbd {
 }
 
 /* ───── TABS ───── */
-.tabs {
+/* Row holding the tabs (left) and the global search (right); the bottom
+   border spans both. */
+.tabbar {
   display: flex;
-  gap: 1.5rem;
+  align-items: flex-end;
+  gap: 1rem;
   border-bottom: 1px solid var(--border);
   margin-bottom: 0.75rem;
   background: var(--bg);
-  padding-top: 0.2rem;
-  flex-shrink: 0;
 }
+.tabs {
+  display: flex;
+  gap: 1.5rem;
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  padding-top: 0.2rem;
+  flex-shrink: 1;
+}
+.global-search {
+  flex: 0 0 auto;
+  width: 240px;
+  max-width: 38vw;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-bottom: 0.45rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.7rem;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+.global-search::placeholder { color: var(--ink-4); }
+.global-search:focus { outline: none; border-color: var(--accent); }
 .tab {
   padding: 0.5rem 0 0.55rem;
   font-family: var(--font-sans);
@@ -1082,6 +1109,24 @@ code, kbd {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: 0.4rem;
   margin-bottom: 0.1rem;
+}
+.rail-id-group, .rail-tag-group {
+  display: inline-flex; align-items: baseline; gap: 0.3rem;
+  min-width: 0;
+}
+/* Section badge shown in global-search results so each match's tab is clear. */
+.rail-badge {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  white-space: nowrap;
 }
 .rail-bug-id {
   font-family: var(--font-mono);

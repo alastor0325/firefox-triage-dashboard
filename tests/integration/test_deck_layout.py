@@ -365,18 +365,46 @@ def test_deck_nav_hidden_when_bucket_is_single(triage_dir: Path) -> None:
 
 # ─── rail filter input ──────────────────────────────────────────────
 
-def test_rail_filter_input_present_with_multiple_bugs(triage_dir: Path) -> None:
+def test_global_search_input_in_topbar(triage_dir: Path) -> None:
     write_draft(triage_dir, 1, ni_targets=["x"])
-    write_draft(triage_dir, 2, ni_targets=["x"])
-    body = client.get("/?tab=needs-info").text
-    assert 'class="rail-search"' in body
+    body = client.get("/").text
+    assert 'class="global-search"' in body
 
 
-def test_rail_filter_input_hidden_with_single_bug(triage_dir: Path) -> None:
-    """No point filtering a single-item list."""
-    write_draft(triage_dir, 1, ni_targets=["x"])
-    body = client.get("/?tab=needs-info").text
-    assert 'class="rail-search"' not in body
+def test_global_search_matches_across_all_sections(triage_dir: Path) -> None:
+    write_draft(triage_dir, 100, severity="S3", title="alpha dxva failure")      # §1b
+    write_draft(triage_dir, 200, ni_targets=["x"], title="beta dxva question")   # §1a
+    write_draft(triage_dir, 300, resolution="INVALID", title="gamma unrelated")  # §1c
+    body = client.get("/?q=dxva").text
+    # both dxva bugs match, across two different sections; the non-match is absent
+    assert 'data-bug-id="100"' in body
+    assert 'data-bug-id="200"' in body
+    assert 'data-bug-id="300"' not in body
+    # results are badged with their section
+    assert 'rail-badge' in body
+    assert 'Analyzed' in body and 'Needs Info' in body
+
+
+def test_global_search_matches_by_bug_id(triage_dir: Path) -> None:
+    write_draft(triage_dir, 2043895, ni_targets=["x"], title="something")
+    write_draft(triage_dir, 100, ni_targets=["x"], title="other")
+    body = client.get("/?q=2043895").text
+    assert 'data-bug-id="2043895"' in body
+    assert 'data-bug-id="100"' not in body
+
+
+def test_global_search_no_matches_message(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, ni_targets=["x"], title="hello")
+    body = client.get("/?q=zzznotfound").text
+    assert "No bugs match" in body
+
+
+def test_empty_query_returns_normal_tab_view(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, ni_targets=["x"], title="hello")
+    body = client.get("/?q=").text
+    # not in search mode: no results badge, the normal tab rail shows
+    assert 'rail-badge' not in body
+    assert 'data-bug-id="1"' in body
 
 
 # ─── rail bug-state tags ────────────────────────────────────────────
