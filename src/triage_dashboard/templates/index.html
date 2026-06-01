@@ -49,8 +49,8 @@
          returns to the tab view. #}
       <input class="global-search" type="search" name="q"
              value="{{ search_query }}"
-             placeholder="Search all bugs by id or title…"
-             aria-label="Search all bugs by id or title"
+             placeholder="Search id, title, or tag (e.g. new)…"
+             aria-label="Search all bugs by id, title, or tag"
              hx-get="/"
              hx-trigger="input changed delay:200ms, search"
              hx-target="#tab-content"

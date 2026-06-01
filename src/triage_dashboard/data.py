@@ -391,9 +391,28 @@ def group_by_section(drafts: Iterable[Draft]) -> dict[Section, list[Draft]]:
     return groups
 
 
-def search_drafts(drafts: Iterable[Draft], query: str) -> list[Draft]:
-    """Global search across ALL sections: match drafts whose bug_id contains
-    the query (as a substring) or whose title contains it (case-insensitive).
+def _active_tags(draft: "Draft", now: datetime | None = None) -> list[str]:
+    """The render-time tag names a draft currently carries (new / emergency /
+    regression) — the same ones shown on the rail. Used so search can match
+    them (e.g. 'new' surfaces every New-tagged bug)."""
+    tags: list[str] = []
+    if is_new_this_week(draft, now):
+        tags.append("new")
+    if is_emergency(draft):
+        tags.append("emergency")
+    if is_regression(draft):
+        tags.append("regression")
+    return tags
+
+
+def search_drafts(
+    drafts: Iterable[Draft], query: str, now: datetime | None = None
+) -> list[Draft]:
+    """Global search across ALL sections. A draft matches when the query is:
+      - a substring of its bug_id, or
+      - a (case-insensitive) substring of its title, or
+      - a prefix of one of its active tag names (new / emergency /
+        regression) — so 'new' surfaces every New-tagged bug.
     Returns newest-filed-first. Empty/whitespace query → empty list."""
     q = (query or "").strip()
     if not q:
@@ -401,7 +420,9 @@ def search_drafts(drafts: Iterable[Draft], query: str) -> list[Draft]:
     ql = q.lower()
     matches = [
         d for d in drafts
-        if ql in (d.title or "").lower() or q in str(d.bug_id)
+        if ql in (d.title or "").lower()
+        or q in str(d.bug_id)
+        or any(tag.startswith(ql) for tag in _active_tags(d, now))
     ]
     matches.sort(key=_newest_first_key, reverse=True)
     return matches

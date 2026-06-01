@@ -1045,6 +1045,35 @@ def test_bug_context_parses_filed(triage_dir: Path) -> None:
     assert drafts[0].bug_context.filed == "2026-05-30T12:00:00Z"
 
 
+def test_search_matches_new_tag() -> None:
+    now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    new_bug = _draft_with_context(filed="2026-05-30T00:00:00Z")        # New
+    new_bug.bug_id = 1
+    old_bug = _draft_with_context(filed="2026-01-01T00:00:00Z")        # not New
+    old_bug.bug_id = 2
+    res = data.search_drafts([new_bug, old_bug], "new", now=now)
+    assert [d.bug_id for d in res] == [1]
+
+
+def test_search_matches_regression_and_emergency_tags() -> None:
+    reg = _draft_with_context(keywords=["regression"]); reg.bug_id = 1
+    emg = _draft_with_context(keywords=["sec-high"]); emg.bug_id = 2
+    plain = _draft_with_context(keywords=[]); plain.bug_id = 3
+    assert [d.bug_id for d in data.search_drafts([reg, emg, plain], "regression")] == [1]
+    assert [d.bug_id for d in data.search_drafts([reg, emg, plain], "emerg")] == [2]
+
+
+def test_search_tag_prefix_does_not_overmatch_title() -> None:
+    # 'new' as a tag shouldn't pull in a non-New bug just because nothing
+    # else matches; but a title containing 'new' still matches (union).
+    now = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    titled = _draft_with_context(filed="2026-01-01T00:00:00Z")  # old, title has 'new'
+    titled.bug_id = 5
+    titled.title = "newtab regression"
+    res = data.search_drafts([titled], "new", now=now)
+    assert [d.bug_id for d in res] == [5]   # matched via title, not tag
+
+
 def test_version_only_strips_channel_and_noise() -> None:
     assert data.version_only("Nightly 153.0a1 (2026-05-30); UA shows 152.0") == "153.0a1"
     assert data.version_only("Firefox 150.0") == "150.0"
