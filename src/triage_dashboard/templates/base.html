@@ -58,14 +58,19 @@
         break;
       case 'ArrowLeft':
       case 'ArrowRight': {
-        // Switch to prev/next topbar tab. No wrap at edges.
+        // Switch to prev/next topbar tab. No wrap at edges. We own the key
+        // whenever a tab is active, so preventDefault even at the edges so
+        // the arrow never scrolls the page instead. hx-sync on the tabs
+        // makes a new request abort any in-flight one, so rapid presses
+        // can't land out of order (which made selection skip / feel
+        // unstable).
         const tabs = Array.from(document.querySelectorAll('.tab'));
         const idx = tabs.findIndex(t => t.classList.contains('tab--active'));
         if (idx < 0) break;
+        e.preventDefault();
         const target = e.key === 'ArrowLeft' ? idx - 1 : idx + 1;
         if (target >= 0 && target < tabs.length) {
           tabs[target].click();
-          e.preventDefault();
         }
         break;
       }

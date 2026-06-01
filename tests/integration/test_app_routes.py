@@ -102,6 +102,16 @@ def test_left_right_arrow_keys_switch_topbar_tabs(triage_dir: Path) -> None:
     assert "tab--active" in body
 
 
+def test_tabs_have_hx_sync_to_prevent_out_of_order_swaps(triage_dir: Path) -> None:
+    """Rapid arrow/click tab switching fires several htmx GETs; without
+    hx-sync an earlier response can settle after a later one and overwrite
+    the content+highlight with a stale tab (selection 'skips'). Each tab
+    must carry hx-sync with the replace strategy so a new request aborts
+    the in-flight one and only the latest selection wins."""
+    body = client.get("/").text
+    assert 'hx-sync="closest nav:replace"' in body
+
+
 def test_keyboard_shortcut_letters_present_in_handler(triage_dir: Path) -> None:
     """The deck-nav title attribute advertises j/k/a/Esc/`/` as keyboard
     shortcuts. The keydown handler in base.html must actually wire

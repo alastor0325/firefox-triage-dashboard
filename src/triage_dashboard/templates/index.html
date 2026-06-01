@@ -36,7 +36,8 @@
            hx-get="?tab={{ slug }}"
            hx-target="#tab-content"
            hx-swap="innerHTML"
-           hx-push-url="true">
+           hx-push-url="true"
+           hx-sync="closest nav:replace">
           <span class="label">{{ label }}</span>
           <span class="count">{{ count }}</span>
         </a>
