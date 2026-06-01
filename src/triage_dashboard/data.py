@@ -601,3 +601,33 @@ def now_local_dateline() -> str:
     """Human-friendly date for the top bar (e.g. 'Thursday, May 28')."""
     now = datetime.now()
     return now.strftime("%A, %B %-d")
+
+
+def last_updated_dateline(drafts: list["Draft"]) -> str:
+    """Precise 'last updated' string for the top bar, derived from the most
+    recent draft ``created_at`` (when /triage last produced a draft).
+
+    Returns a local-time, year-qualified, minute-precise string such as
+    ``'Jun 1, 2026 14:32 PDT'`` so it's unambiguous which run the cards
+    came from. Falls back to ``'no drafts yet'`` when there are no drafts
+    (or none with a parseable ``created_at``). This is NOT today's date —
+    it reflects the data on screen.
+    """
+    latest: datetime | None = None
+    for d in drafts:
+        raw = getattr(d, "created_at", "") or ""
+        if not raw:
+            continue
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        if latest is None or parsed > latest:
+            latest = parsed
+    if latest is None:
+        return "no drafts yet"
+    local = latest.astimezone()
+    # %-d (no leading zero) is POSIX; %Z gives the local tz abbreviation.
+    return local.strftime("%b %-d, %Y %H:%M %Z").strip()

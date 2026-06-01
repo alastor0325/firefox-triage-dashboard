@@ -83,6 +83,52 @@ def test_load_drafts_sorted_by_bug_id(triage_dir: Path) -> None:
 
 # ─── group_by_section ──────────────────────────────────────────────
 
+def _draft(created_at: str, bug_id: int = 1) -> "data.Draft":
+    return data.Draft(
+        bug_id=bug_id, title="t", comment="", ni_targets=[], priority=None,
+        severity=None, blocks_add=[], cc_add=[], resolution=None,
+        keywords_add=[], product=None, component=None,
+        created_at=created_at, section="§1a",
+    )
+
+
+def _expected_dateline(created_at: str) -> str:
+    dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    return dt.astimezone().strftime("%b %-d, %Y %H:%M %Z").strip()
+
+
+def test_last_updated_dateline_empty_list() -> None:
+    assert data.last_updated_dateline([]) == "no drafts yet"
+
+
+def test_last_updated_dateline_all_unparseable() -> None:
+    drafts = [_draft(""), _draft("not-a-date")]
+    assert data.last_updated_dateline(drafts) == "no drafts yet"
+
+
+def test_last_updated_dateline_picks_the_most_recent() -> None:
+    early = "2026-04-01T00:00:00Z"
+    late = "2026-06-01T12:00:00Z"
+    drafts = [_draft(early, 1), _draft(late, 2), _draft(early, 3)]
+    result = data.last_updated_dateline(drafts)
+    assert result == _expected_dateline(late)
+    assert result != _expected_dateline(early)
+
+
+def test_last_updated_dateline_skips_unparseable_uses_valid() -> None:
+    good = "2026-05-20T09:15:00Z"
+    drafts = [_draft("", 1), _draft("garbage", 2), _draft(good, 3)]
+    assert data.last_updated_dateline(drafts) == _expected_dateline(good)
+
+
+def test_last_updated_dateline_is_precise_not_todays_date() -> None:
+    # Must contain a year and a HH:MM time — i.e. it's a real timestamp,
+    # not the old 'Weekday, Month Day' today's-date string.
+    result = data.last_updated_dateline([_draft("2026-05-20T09:15:00Z")])
+    assert "2026" in result
+    assert ":" in result
+
+
 def test_group_by_section_buckets_all_three() -> None:
     drafts = [
         data.Draft(
