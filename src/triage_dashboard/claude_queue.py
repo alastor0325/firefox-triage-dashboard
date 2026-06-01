@@ -73,12 +73,14 @@ Procedure:
       the redraft AND the required lesson-extraction pass that keeps
       /triage improving over time — do not inline the refine logic here.
       Skipping the skill means future runs lose the correction signal.
-   c. Batch the wiki-lesson approval gates. Do NOT block on a separate
-      AskUserQuestion per bug. Collect every proposed wiki lesson across
-      all refined bugs and present them in ONE multiSelect
-      AskUserQuestion at the end, then add the approved ones. (The skill
-      drafts each lesson and writes its decisions-log entry as usual; the
-      orchestrator just defers and merges the approval prompts.)
+   c. Wiki lessons: decide autonomously, do NOT ask the user to confirm.
+      The skill drafts each lesson and applies its step-4 criteria (add a
+      cited, generalizable, durable fact to the wiki; route process /
+      drafting rules to the /triage skill; skip one-offs, unsourced
+      claims, and security-bug details). Add the worthwhile ones yourself
+      and record each decision (added / skipped / skill-updated, with the
+      reason) in the decisions-log — that log is the audit trail and the
+      user can veto via a later refine. No AskUserQuestion gate.
    d. SAFETY: if a refine requires downloading a file (e.g. a bug
       attachment) to investigate, you MUST ask the user for explicit
       confirmation before downloading — never auto-download. Such a bug
