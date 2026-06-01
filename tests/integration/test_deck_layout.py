@@ -97,8 +97,9 @@ def test_active_card_defaults_to_first_in_bucket(triage_dir: Path) -> None:
     write_draft(triage_dir, 20, ni_targets=["a@b"])
     write_draft(triage_dir, 30, ni_targets=["a@b"])
     body = client.get("/?tab=needs-info").text
-    # Without an explicit ?bug=, the lowest-numbered bug is active (sort order).
-    assert 'id="card-10"' in body
+    # Without an explicit ?bug=, the newest bug is active. No filed dates here,
+    # so order falls back to bug_id descending → 30 is first.
+    assert 'id="card-30"' in body
     assert 'id="card-20"' not in body
 
 
@@ -106,8 +107,8 @@ def test_invalid_bug_param_falls_back_to_first(triage_dir: Path) -> None:
     write_draft(triage_dir, 10, ni_targets=["a@b"])
     write_draft(triage_dir, 20, ni_targets=["a@b"])
     body = client.get("/?tab=needs-info&bug=999999").text
-    # 999999 is not in the bucket — fall back to first.
-    assert 'id="card-10"' in body
+    # 999999 is not in the bucket — fall back to first (newest = bug_id desc → 20).
+    assert 'id="card-20"' in body
 
 
 def test_bug_param_for_wrong_tab_falls_back(triage_dir: Path) -> None:
@@ -286,7 +287,9 @@ def test_deck_nav_kbd_buttons_target_deck_area(triage_dir: Path) -> None:
     deck area so navigation is a partial swap, not a full page nav."""
     write_draft(triage_dir, 1, ni_targets=["x"])
     write_draft(triage_dir, 2, ni_targets=["x"])
-    body = client.get("/?tab=needs-info&bug=1").text
+    # bug 2 is first (newest-first; no filed → bug_id desc), so it has an
+    # enabled next button to inspect.
+    body = client.get("/?tab=needs-info&bug=2").text
     import re
     next_ = re.search(r'class="[^"]*deck-next[^"]*"[^>]*', body)
     assert next_ is not None
@@ -326,7 +329,8 @@ def test_deck_nav_shows_position_of_active_bug(triage_dir: Path) -> None:
 def test_deck_nav_prev_disabled_on_first_bug(triage_dir: Path) -> None:
     write_draft(triage_dir, 1, ni_targets=["x"])
     write_draft(triage_dir, 2, ni_targets=["x"])
-    body = client.get("/?tab=needs-info&bug=1").text
+    # Newest-first: bug 2 is the first card, so Prev is disabled on it.
+    body = client.get("/?tab=needs-info&bug=2").text
     # Prev should be present but disabled (so layout stays stable).
     # We look for the prev button with a disabled attribute.
     import re
@@ -336,7 +340,8 @@ def test_deck_nav_prev_disabled_on_first_bug(triage_dir: Path) -> None:
 def test_deck_nav_next_disabled_on_last_bug(triage_dir: Path) -> None:
     write_draft(triage_dir, 1, ni_targets=["x"])
     write_draft(triage_dir, 2, ni_targets=["x"])
-    body = client.get("/?tab=needs-info&bug=2").text
+    # Newest-first: bug 1 is the last card, so Next is disabled on it.
+    body = client.get("/?tab=needs-info&bug=1").text
     import re
     assert re.search(r'class="[^"]*deck-next[^"]*"[^>]*disabled', body)
 

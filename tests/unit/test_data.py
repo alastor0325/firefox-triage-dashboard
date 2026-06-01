@@ -159,6 +159,41 @@ def test_group_by_section_buckets_all_three() -> None:
     assert [d.bug_id for d in groups["§1c"]] == [3]
 
 
+def test_group_by_section_sorts_newest_filed_first() -> None:
+    def mk(bug_id, filed):
+        return data.Draft(
+            bug_id=bug_id, title="", comment="", ni_targets=[], priority="P3",
+            severity="S3", blocks_add=[], cc_add=[], resolution=None,
+            keywords_add=[], product=None, component=None, created_at="",
+            section="§1b", bug_context=data.BugContext(filed=filed),
+        )
+    # deliberately out of order; newest filed should come first
+    drafts = [
+        mk(1, "2026-05-10T00:00:00Z"),   # oldest
+        mk(2, "2026-05-31T00:00:00Z"),   # newest
+        mk(3, "2026-05-20T00:00:00Z"),   # middle
+    ]
+    groups = data.group_by_section(drafts)
+    assert [d.bug_id for d in groups["§1b"]] == [2, 3, 1]
+
+
+def test_group_by_section_missing_filed_sorts_last() -> None:
+    def mk(bug_id, filed):
+        return data.Draft(
+            bug_id=bug_id, title="", comment="", ni_targets=[], priority="P3",
+            severity="S3", blocks_add=[], cc_add=[], resolution=None,
+            keywords_add=[], product=None, component=None, created_at="",
+            section="§1b", bug_context=data.BugContext(filed=filed),
+        )
+    drafts = [
+        mk(10, ""),                       # no filed → last
+        mk(11, "2026-05-15T00:00:00Z"),   # has filed → first
+        mk(12, ""),                       # no filed → after 11, by bug_id desc
+    ]
+    groups = data.group_by_section(drafts)
+    assert [d.bug_id for d in groups["§1b"]] == [11, 12, 10]
+
+
 def test_group_by_section_always_has_all_three_keys() -> None:
     """Empty input still returns all three keys with empty lists."""
     groups = data.group_by_section([])

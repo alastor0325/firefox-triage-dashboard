@@ -367,10 +367,25 @@ def load_drafts(triage_dir: Path = DEFAULT_TRIAGE_DIR) -> list[Draft]:
     return drafts
 
 
+def _newest_first_key(d: "Draft") -> tuple[str, int]:
+    """Sort key: by bug filed-date (creation_time) then bug_id, both
+    descending when used with reverse=True. Drafts without a filed date sort
+    last (empty string is lowest), tie-broken by bug_id descending."""
+    filed = ""
+    ctx = getattr(d, "bug_context", None)
+    if ctx is not None and ctx.filed:
+        filed = ctx.filed
+    return (filed, d.bug_id)
+
+
 def group_by_section(drafts: Iterable[Draft]) -> dict[Section, list[Draft]]:
+    """Bucket drafts by section, each bucket sorted newest-filed-first so the
+    most recently created bugs appear at the top of the rail and deck."""
     groups: dict[Section, list[Draft]] = {"§1b": [], "§1a": [], "§1c": []}
     for d in drafts:
         groups[d.section].append(d)
+    for section in groups:
+        groups[section].sort(key=_newest_first_key, reverse=True)
     return groups
 
 
