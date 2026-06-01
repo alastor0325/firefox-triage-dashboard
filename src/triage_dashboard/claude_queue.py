@@ -54,13 +54,36 @@ Procedure:
    - All `apply` entries → collect distinct bug_ids.
    - All `bug-start` entries → collect distinct bug_ids.
 
-3. Apply refines first. For each bug with refines, in ascending bug_id
-   order, invoke the `triage-apply-feedback` skill via the Skill tool
-   with the bug_id and the feedback list for that bug. The skill
-   handles the redraft AND the required lesson-extraction pass that
-   keeps /triage improving over time — do not inline the refine
-   logic here. Skipping the skill means future runs lose the
-   correction signal.
+3. Apply refines first. Process the bugs with refines CONCURRENTLY, not
+   one-at-a-time — the bugs are independent and serial processing wastes
+   time. Bug-id order does not matter.
+
+   a. Fan out investigations in parallel. Many refines ask for a "deeper
+      investigation" (code navigation, profile analysis, bug/email
+      lookups). These are the slow part and they are independent, so
+      launch them as parallel background subagents (`Agent` with
+      `run_in_background: true`) in a single batch up front — one per
+      bug that needs investigation. Pick the right agent type per task
+      (e.g. `gecko-navigator` for Gecko code questions). Refines that are
+      purely directive (reword, change S/P, add a blocker) need no
+      subagent.
+   b. As each investigation returns, invoke the `triage-apply-feedback`
+      skill via the Skill tool with the bug_id and that bug's feedback
+      list, passing along the investigation findings. The skill handles
+      the redraft AND the required lesson-extraction pass that keeps
+      /triage improving over time — do not inline the refine logic here.
+      Skipping the skill means future runs lose the correction signal.
+   c. Batch the wiki-lesson approval gates. Do NOT block on a separate
+      AskUserQuestion per bug. Collect every proposed wiki lesson across
+      all refined bugs and present them in ONE multiSelect
+      AskUserQuestion at the end, then add the approved ones. (The skill
+      drafts each lesson and writes its decisions-log entry as usual; the
+      orchestrator just defers and merges the approval prompts.)
+   d. SAFETY: if a refine requires downloading a file (e.g. a bug
+      attachment) to investigate, you MUST ask the user for explicit
+      confirmation before downloading — never auto-download. Such a bug
+      stays blocked until the user approves; process the others in
+      parallel meanwhile.
 
 4. For each queued apply (distinct bug_ids only), run the command
    EXACTLY as written, with no flags other than the bug id and no
