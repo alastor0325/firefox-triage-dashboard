@@ -962,6 +962,54 @@ def test_is_emergency_case_insensitive() -> None:
     assert data.is_emergency(_draft_with_context(keywords=["TOPCRASH"])) is True
 
 
+_NOW = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+
+def test_is_new_this_week_true_when_filed_recently() -> None:
+    d = _draft_with_context(filed="2026-05-30T12:00:00Z")  # 2 days ago
+    assert data.is_new_this_week(d, now=_NOW) is True
+
+
+def test_is_new_this_week_true_at_7_day_boundary() -> None:
+    d = _draft_with_context(filed="2026-05-25T12:00:00Z")  # exactly 7 days
+    assert data.is_new_this_week(d, now=_NOW) is True
+
+
+def test_is_new_this_week_false_when_older_than_7_days() -> None:
+    d = _draft_with_context(filed="2026-05-20T12:00:00Z")  # 12 days ago
+    assert data.is_new_this_week(d, now=_NOW) is False
+
+
+def test_is_new_this_week_false_when_filed_missing() -> None:
+    assert data.is_new_this_week(_draft_with_context(filed=""), now=_NOW) is False
+    # filed not provided at all → defaults to ""
+    assert data.is_new_this_week(_draft_with_context(keywords=[]), now=_NOW) is False
+
+
+def test_is_new_this_week_false_when_filed_unparseable() -> None:
+    d = _draft_with_context(filed="not-a-date")
+    assert data.is_new_this_week(d, now=_NOW) is False
+
+
+def test_is_new_this_week_false_when_no_bug_context() -> None:
+    assert data.is_new_this_week(_draft_without_context(), now=_NOW) is False
+
+
+def test_is_new_this_week_drops_when_now_advances() -> None:
+    # Same draft, two different 'now's: the tag is purely render-time —
+    # new today, not new two weeks later.
+    d = _draft_with_context(filed="2026-05-30T12:00:00Z")
+    assert data.is_new_this_week(d, now=_NOW) is True
+    later = datetime(2026, 6, 15, 12, 0, 0, tzinfo=timezone.utc)
+    assert data.is_new_this_week(d, now=later) is False
+
+
+def test_bug_context_parses_filed(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, bug_context={"filed": "2026-05-30T12:00:00Z"})
+    drafts = data.load_drafts(triage_dir)
+    assert drafts[0].bug_context.filed == "2026-05-30T12:00:00Z"
+
+
 def test_is_emergency_false_for_unrelated_keywords() -> None:
     assert data.is_emergency(_draft_with_context(keywords=["regression"])) is False
     assert data.is_emergency(_draft_with_context(keywords=["crash"])) is False

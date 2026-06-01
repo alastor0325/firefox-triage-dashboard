@@ -32,6 +32,7 @@ templates.env.filters["parse_affected_file"] = data.parse_affected_file
 templates.env.globals["is_regression"] = data.is_regression
 templates.env.globals["is_emergency"] = data.is_emergency
 templates.env.globals["is_stalled"] = data.is_stalled
+templates.env.globals["is_new_this_week"] = data.is_new_this_week
 
 # Cache-bust /static/style.css with the file's mtime captured at import
 # time. Browsers refetch when the URL changes; on the server, restarting

@@ -45,9 +45,11 @@
            hx-push-url="true">
           <div class="rail-item-row1">
             <span class="rail-bug-id">{{ d.bug_id }}</span>
-            {# Action-driving tags only. Emergency first so the more
-               severe signal reads first. Drafts without bug_context
-               (or with empty keywords) render with no tags. #}
+            {# Action-driving tags only. 'New' is recomputed every render
+               from bug_context.filed, so it drops once the bug ages past a
+               week. Emergency next so the more severe signal reads early.
+               Drafts without bug_context render with no tags. #}
+            {% if is_new_this_week(d) %}<span class="rail-tag rail-tag--new">New</span>{% endif %}
             {% if is_emergency(d) %}<span class="rail-tag rail-tag--emergency">emergency</span>{% endif %}
             {% if is_regression(d) %}<span class="rail-tag rail-tag--regression">regression</span>{% endif %}
           </div>

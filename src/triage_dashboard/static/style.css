@@ -1068,6 +1068,7 @@ code, kbd {
 .rail-tag + .rail-tag { margin-left: 0.25rem; }
 .rail-tag--regression { background: var(--amber-soft); color: var(--amber); }
 .rail-tag--emergency  { background: var(--red); color: #fff; }
+.rail-tag--new        { background: var(--green-soft); color: var(--green); }
 .rail-title {
   font-size: 0.85rem;
   color: var(--ink-2);

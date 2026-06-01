@@ -150,6 +150,7 @@ class BugContext:
     firefox_version: str = ""
     reporter_email: str = ""
     reporter_name: str = ""
+    filed: str = ""
     last_activity: str = ""
     inventory_present: list[str] = field(default_factory=list)
     inventory_missing: list[str] = field(default_factory=list)
@@ -193,6 +194,7 @@ def _parse_bug_context(raw: Any) -> BugContext | None:
         firefox_version=str(raw.get("firefox_version") or ""),
         reporter_email=str(raw.get("reporter_email") or ""),
         reporter_name=str(raw.get("reporter_name") or ""),
+        filed=str(raw.get("filed") or ""),
         last_activity=str(raw.get("last_activity") or ""),
         inventory_present=list(raw.get("inventory_present") or []),
         inventory_missing=list(raw.get("inventory_missing") or []),
@@ -226,6 +228,34 @@ def is_emergency(draft: "Draft") -> bool:
     if ctx is None:
         return False
     return any(str(k).lower() in _EMERGENCY_KEYWORDS for k in (ctx.keywords or []))
+
+
+# A bug is "New" on the deck while it was filed within this many days. This
+# is recomputed every render from bug_context.filed (never stored), so the
+# tag drops automatically once the bug ages out — including on the next
+# /triage run.
+_NEW_WITHIN_DAYS = 7
+
+
+def is_new_this_week(draft: "Draft", now: datetime | None = None) -> bool:
+    """True if the bug was filed within the last _NEW_WITHIN_DAYS days,
+    derived at render time from bug_context.filed. False when there's no
+    bug_context, no filed date, or filed is unparseable."""
+    ctx = getattr(draft, "bug_context", None)
+    if ctx is None:
+        return False
+    raw = (ctx.filed or "").strip()
+    if not raw:
+        return False
+    try:
+        filed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if filed.tzinfo is None:
+        filed = filed.replace(tzinfo=timezone.utc)
+    if now is None:
+        now = datetime.now(timezone.utc)
+    return timedelta(0) <= (now - filed) <= timedelta(days=_NEW_WITHIN_DAYS)
 
 
 # How long a watching entry can sit without a reply before it's flagged

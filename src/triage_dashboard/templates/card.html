@@ -31,7 +31,7 @@
     {% if ctx.reporter_name or ctx.reporter_email %}
       {% set _ = _by_parts.append('reporter') %}
     {% endif %}
-    {% if ctx.platform or ctx.firefox_version or ctx.last_activity %}
+    {% if ctx.platform or ctx.firefox_version or ctx.filed or ctx.last_activity %}
       {% set _ = _by_parts.append('env') %}
     {% endif %}
     {% if _by_parts %}
@@ -41,6 +41,7 @@
       {% endif %}
       {% if ctx.platform %} <span class="dot">·</span> <strong>{{ ctx.platform }}</strong>{% endif %}
       {% if ctx.firefox_version %} <span class="dot">·</span> Firefox <strong>{{ ctx.firefox_version }}</strong>{% endif %}
+      {% if ctx.filed %} <span class="dot">·</span> filed {{ ctx.filed[:10] }}{% endif %}
       {% if ctx.last_activity %} <span class="dot">·</span> last activity {{ ctx.last_activity[:10] }}{% endif %}
     </p>
     {% endif %}
