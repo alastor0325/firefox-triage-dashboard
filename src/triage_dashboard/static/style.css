@@ -492,6 +492,25 @@ code, kbd {
 .card-byline strong { font-weight: 600; color: var(--ink); }
 .card-byline .dot { color: var(--ink-5); margin: 0 0.1rem; }
 
+/* Dedicated version line: where the bug was reported and which versions
+   are affected (triage judgment). Its own line so it reads clearly. */
+.card-version {
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  margin: -0.3rem 0 0.7rem;
+  line-height: 1.45;
+}
+.card-version strong { font-weight: 600; color: var(--ink); }
+.card-version .dot { color: var(--ink-5); margin: 0 0.1rem; }
+.card-version-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-4);
+  margin-right: 0.4rem;
+}
+
 /* ── Regression tag block ──
    Entries from bug_context.see_also whose label matches `\bregress`
    (regressor / regressed by / regression …) are pulled out of the

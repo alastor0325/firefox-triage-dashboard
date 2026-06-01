@@ -1045,6 +1045,18 @@ def test_bug_context_parses_filed(triage_dir: Path) -> None:
     assert drafts[0].bug_context.filed == "2026-05-30T12:00:00Z"
 
 
+def test_bug_context_parses_affected_versions(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, bug_context={"affected_versions": "151+"})
+    drafts = data.load_drafts(triage_dir)
+    assert drafts[0].bug_context.affected_versions == "151+"
+
+
+def test_bug_context_affected_versions_defaults_empty(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, bug_context={"firefox_version": "150.0"})
+    drafts = data.load_drafts(triage_dir)
+    assert drafts[0].bug_context.affected_versions == ""
+
+
 def test_is_emergency_false_for_unrelated_keywords() -> None:
     assert data.is_emergency(_draft_with_context(keywords=["regression"])) is False
     assert data.is_emergency(_draft_with_context(keywords=["crash"])) is False

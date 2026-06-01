@@ -152,6 +152,7 @@ class BugContext:
     reporter_name: str = ""
     filed: str = ""
     last_activity: str = ""
+    affected_versions: str = ""  # triage judgment: "all", "151+", a specific version, …
     inventory_present: list[str] = field(default_factory=list)
     inventory_missing: list[str] = field(default_factory=list)
     see_also: list[dict] = field(default_factory=list)
@@ -196,6 +197,7 @@ def _parse_bug_context(raw: Any) -> BugContext | None:
         reporter_name=str(raw.get("reporter_name") or ""),
         filed=str(raw.get("filed") or ""),
         last_activity=str(raw.get("last_activity") or ""),
+        affected_versions=str(raw.get("affected_versions") or ""),
         inventory_present=list(raw.get("inventory_present") or []),
         inventory_missing=list(raw.get("inventory_missing") or []),
         see_also=[e for e in (raw.get("see_also") or []) if isinstance(e, dict)],

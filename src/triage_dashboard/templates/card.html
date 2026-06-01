@@ -40,9 +40,15 @@
         Reported by <strong>{{ ctx.reporter_name or ctx.reporter_email }}</strong>
       {% endif %}
       {% if ctx.platform %} <span class="dot">·</span> <strong>{{ ctx.platform }}</strong>{% endif %}
-      {% if ctx.firefox_version %} <span class="dot">·</span> Firefox <strong>{{ ctx.firefox_version }}</strong>{% endif %}
       {% if ctx.filed %} <span class="dot">·</span> filed {{ ctx.filed[:10] }}{% endif %}
       {% if ctx.last_activity %} <span class="dot">·</span> last activity {{ ctx.last_activity[:10] }}{% endif %}
+    </p>
+    {% endif %}
+    {% if ctx.firefox_version or ctx.affected_versions %}
+    <p class="card-version">
+      <span class="card-version-label">Version</span>
+      {% if ctx.firefox_version %}found in <strong>Firefox {{ ctx.firefox_version }}</strong>{% endif %}
+      {% if ctx.affected_versions %} <span class="dot">·</span> affects <strong>{{ ctx.affected_versions }}</strong>{% endif %}
     </p>
     {% endif %}
 
