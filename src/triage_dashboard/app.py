@@ -293,7 +293,7 @@ def index(
             "groups": groups,
             "watch": watch,
             "stats": stats,
-            "dateline": data.last_updated_dateline(drafts),
+            "dateline": data.last_updated_dateline(triage_dir),
             "tabs": TABS,
             "tab_info": TAB_INFO,
             "active_tab": active_tab,

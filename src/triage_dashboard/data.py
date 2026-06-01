@@ -603,31 +603,27 @@ def now_local_dateline() -> str:
     return now.strftime("%A, %B %-d")
 
 
-def last_updated_dateline(drafts: list["Draft"]) -> str:
-    """Precise 'last updated' string for the top bar, derived from the most
-    recent draft ``created_at`` (when /triage last produced a draft).
+def last_updated_dateline(triage_dir: Path) -> str:
+    """Precise 'last updated' string for the top bar — the newest write time
+    across the pending draft files.
+
+    Uses each pending file's filesystem **mtime** (the real moment /triage or
+    a refine last wrote it), NOT the draft's ``created_at`` field. created_at
+    is written by the triage agent and is often a fabricated placeholder
+    (e.g. midnight UTC), so it can't be trusted for a freshness indicator;
+    mtime is ground truth.
 
     Returns a local-time, year-qualified, minute-precise string such as
-    ``'Jun 1, 2026 14:32 PDT'`` so it's unambiguous which run the cards
-    came from. Falls back to ``'no drafts yet'`` when there are no drafts
-    (or none with a parseable ``created_at``). This is NOT today's date —
-    it reflects the data on screen.
+    ``'Jun 1, 2026 10:22 PDT'``. Falls back to ``'no drafts yet'`` when the
+    pending directory is missing or empty.
     """
-    latest: datetime | None = None
-    for d in drafts:
-        raw = getattr(d, "created_at", "") or ""
-        if not raw:
-            continue
-        try:
-            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        except ValueError:
-            continue
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-        if latest is None or parsed > latest:
-            latest = parsed
-    if latest is None:
+    pending = Path(triage_dir) / "pending"
+    if not pending.is_dir():
         return "no drafts yet"
-    local = latest.astimezone()
-    # %-d (no leading zero) is POSIX; %Z gives the local tz abbreviation.
+    mtimes = [p.stat().st_mtime for p in pending.glob("bug-*.json")]
+    if not mtimes:
+        return "no drafts yet"
+    # fromtimestamp(naive local) → .astimezone() makes it aware-local so %Z
+    # renders the local tz abbreviation.
+    local = datetime.fromtimestamp(max(mtimes)).astimezone()
     return local.strftime("%b %-d, %Y %H:%M %Z").strip()

@@ -83,50 +83,53 @@ def test_load_drafts_sorted_by_bug_id(triage_dir: Path) -> None:
 
 # ─── group_by_section ──────────────────────────────────────────────
 
-def _draft(created_at: str, bug_id: int = 1) -> "data.Draft":
-    return data.Draft(
-        bug_id=bug_id, title="t", comment="", ni_targets=[], priority=None,
-        severity=None, blocks_add=[], cc_add=[], resolution=None,
-        keywords_add=[], product=None, component=None,
-        created_at=created_at, section="§1a",
-    )
+def _expected_from_mtime(mtime: float) -> str:
+    from datetime import datetime as _dt
+    return _dt.fromtimestamp(mtime).astimezone().strftime(
+        "%b %-d, %Y %H:%M %Z").strip()
 
 
-def _expected_dateline(created_at: str) -> str:
-    dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-    return dt.astimezone().strftime("%b %-d, %Y %H:%M %Z").strip()
+def test_last_updated_dateline_no_pending_dir(tmp_path: Path) -> None:
+    # tmp_path has no pending/ subdir.
+    assert data.last_updated_dateline(tmp_path) == "no drafts yet"
 
 
-def test_last_updated_dateline_empty_list() -> None:
-    assert data.last_updated_dateline([]) == "no drafts yet"
+def test_last_updated_dateline_empty_pending(triage_dir: Path) -> None:
+    # triage_dir fixture creates an empty pending/.
+    assert data.last_updated_dateline(triage_dir) == "no drafts yet"
 
 
-def test_last_updated_dateline_all_unparseable() -> None:
-    drafts = [_draft(""), _draft("not-a-date")]
-    assert data.last_updated_dateline(drafts) == "no drafts yet"
+def test_last_updated_dateline_uses_newest_file_mtime(triage_dir: Path) -> None:
+    import os
+    p1 = write_draft(triage_dir, 1)
+    p2 = write_draft(triage_dir, 2)
+    # Force known, distinct mtimes: p1 older, p2 newer.
+    old = 1_700_000_000.0   # 2023-11-14
+    new = 1_780_000_000.0   # 2026-05-29
+    os.utime(p1, (old, old))
+    os.utime(p2, (new, new))
+    result = data.last_updated_dateline(triage_dir)
+    assert result == _expected_from_mtime(new)
+    assert result != _expected_from_mtime(old)
 
 
-def test_last_updated_dateline_picks_the_most_recent() -> None:
-    early = "2026-04-01T00:00:00Z"
-    late = "2026-06-01T12:00:00Z"
-    drafts = [_draft(early, 1), _draft(late, 2), _draft(early, 3)]
-    result = data.last_updated_dateline(drafts)
-    assert result == _expected_dateline(late)
-    assert result != _expected_dateline(early)
+def test_last_updated_dateline_ignores_created_at_field(triage_dir: Path) -> None:
+    import os
+    # A fabricated midnight created_at must NOT be what's shown — mtime wins.
+    p = write_draft(triage_dir, 7, created_at="2020-01-01T00:00:00Z")
+    mt = 1_780_000_000.0
+    os.utime(p, (mt, mt))
+    result = data.last_updated_dateline(triage_dir)
+    assert result == _expected_from_mtime(mt)
+    assert "2020" not in result   # the bogus created_at year never appears
 
 
-def test_last_updated_dateline_skips_unparseable_uses_valid() -> None:
-    good = "2026-05-20T09:15:00Z"
-    drafts = [_draft("", 1), _draft("garbage", 2), _draft(good, 3)]
-    assert data.last_updated_dateline(drafts) == _expected_dateline(good)
-
-
-def test_last_updated_dateline_is_precise_not_todays_date() -> None:
-    # Must contain a year and a HH:MM time — i.e. it's a real timestamp,
-    # not the old 'Weekday, Month Day' today's-date string.
-    result = data.last_updated_dateline([_draft("2026-05-20T09:15:00Z")])
-    assert "2026" in result
+def test_last_updated_dateline_is_precise(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1)
+    result = data.last_updated_dateline(triage_dir)
+    # A real timestamp: has a year and an HH:MM time, not 'Weekday, Month Day'.
     assert ":" in result
+    assert any(ch.isdigit() for ch in result)
 
 
 def test_group_by_section_buckets_all_three() -> None:
