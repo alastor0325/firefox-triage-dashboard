@@ -30,6 +30,25 @@ def test_byline_renders_reporter_platform_version(triage_dir: Path) -> None:
     assert "150.0" in body
 
 
+def test_found_chip_omitted_when_no_version_number(triage_dir: Path) -> None:
+    # firefox_version with no actual version number → no 'Found' chip,
+    # but the platform chip still renders the version line.
+    write_draft(
+        triage_dir, 1,
+        bug_context={"platform": "Windows 11", "firefox_version": "unspecified"},
+    )
+    body = client.get("/").text
+    assert "Platform" in body
+    assert "Found" not in body
+
+
+def test_found_chip_shown_when_version_number_present(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, bug_context={"firefox_version": "Nightly 153.0a1"})
+    body = client.get("/").text
+    assert "Found" in body
+    assert "153.0a1" in body
+
+
 def test_byline_falls_back_to_email_when_no_name(triage_dir: Path) -> None:
     write_draft(
         triage_dir, 1,

@@ -1082,8 +1082,11 @@ def test_version_only_strips_channel_and_noise() -> None:
 
 
 def test_version_only_empty_and_no_digits() -> None:
+    # No real version number → "" so the 'Found' chip is omitted entirely.
     assert data.version_only("") == ""
-    assert data.version_only("unknown") == "unknown"
+    assert data.version_only("unknown") == ""
+    assert data.version_only("unspecified") == ""
+    assert data.version_only("Windows (inferred from profile)") == ""
 
 
 def test_bug_context_parses_affected_versions(triage_dir: Path) -> None:

@@ -688,12 +688,13 @@ def version_only(raw: str) -> str:
     """Extract just the version number from a freeform reported-version
     string, dropping the channel word and any trailing noise. E.g.
     'Nightly 153.0a1 (2026-05-30); UA shows 152.0' -> '153.0a1',
-    'Firefox 150.0' -> '150.0', '150' -> '150'. Returns the original
-    (stripped) string if it contains no version-like token."""
+    'Firefox 150.0' -> '150.0', '150' -> '150'. Returns '' when there is
+    no actual version NUMBER (e.g. 'unspecified', 'unknown', '') so the
+    caller can omit the 'Found' chip rather than show a non-version."""
     if not raw:
         return ""
     m = _VERSION_RE.search(raw)
-    return m.group(0) if m else raw.strip()
+    return m.group(0) if m else ""
 
 
 def now_local_dateline() -> str:

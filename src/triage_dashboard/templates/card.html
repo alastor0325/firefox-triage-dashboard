@@ -43,10 +43,11 @@
       {% if ctx.last_activity %} <span class="dot">·</span> last activity {{ ctx.last_activity[:10] }}{% endif %}
     </p>
     {% endif %}
-    {% if ctx.platform or ctx.firefox_version or ctx.affected_versions %}
+    {% set fx = ctx.firefox_version | version_only %}
+    {% if ctx.platform or fx or ctx.affected_versions %}
     <p class="card-version">
       {% if ctx.platform %}<span class="ver-chip ver-chip--platform"><span class="ver-chip-key">Platform</span>{{ ctx.platform }}</span>{% endif %}
-      {% if ctx.firefox_version %}<span class="ver-chip ver-chip--found"><span class="ver-chip-key">Found</span>{{ ctx.firefox_version | version_only }}</span>{% endif %}
+      {% if fx %}<span class="ver-chip ver-chip--found"><span class="ver-chip-key">Found</span>{{ fx }}</span>{% endif %}
       {% if ctx.affected_versions %}<span class="ver-chip ver-chip--affected"><span class="ver-chip-key">Affected</span>{{ ctx.affected_versions }}</span>{% endif %}
     </p>
     {% endif %}
