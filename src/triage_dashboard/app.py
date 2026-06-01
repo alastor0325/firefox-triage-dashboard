@@ -76,6 +76,20 @@ app = FastAPI(title="Triage Dashboard", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+@app.middleware("http")
+async def no_store_dynamic_html(request, call_next):
+    """Never let the browser cache the dynamic HTML. Tab switches are htmx
+    GETs; without this the browser heuristically caches them and serves a
+    stale partial after a feature changes (e.g. a tab missing the 'New'
+    tag). Static assets (text/css under /static, version-busted with ?v=)
+    keep their cacheability — only text/html gets no-store."""
+    response = await call_next(request)
+    ctype = response.headers.get("content-type", "")
+    if ctype.startswith("text/html"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 def format_sse_event(event: watch_mod.WatchEvent) -> str:
     """Format a `WatchEvent` as a single SSE message:
 

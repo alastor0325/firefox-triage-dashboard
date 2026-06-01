@@ -492,23 +492,33 @@ code, kbd {
 .card-byline strong { font-weight: 600; color: var(--ink); }
 .card-byline .dot { color: var(--ink-5); margin: 0 0.1rem; }
 
-/* Dedicated version line: where the bug was reported and which versions
-   are affected (triage judgment). Its own line so it reads clearly. */
+/* Dedicated version line: two labelled chips — where the bug was reported
+   ("Found") and which versions are affected ("Affected", a triage
+   judgment). Its own line so it reads clearly. */
 .card-version {
-  font-size: 0.9rem;
-  color: var(--ink-2);
   margin: -0.3rem 0 0.7rem;
-  line-height: 1.45;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
-.card-version strong { font-weight: 600; color: var(--ink); }
-.card-version .dot { color: var(--ink-5); margin: 0 0.1rem; }
-.card-version-label {
+.ver-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+}
+.ver-chip-key {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--ink-4);
-  margin-right: 0.4rem;
 }
 
 /* ── Regression tag block ──

@@ -102,6 +102,18 @@ def test_left_right_arrow_keys_switch_topbar_tabs(triage_dir: Path) -> None:
     assert "tab--active" in body
 
 
+def test_dynamic_html_is_not_cached(triage_dir: Path) -> None:
+    """Tab switches are htmx GETs; the browser must not cache the dynamic
+    HTML or it serves a stale partial after the markup changes (a tab
+    losing its 'New' tag). The HTML responses must carry Cache-Control:
+    no-store."""
+    resp = client.get("/")
+    assert resp.headers.get("cache-control") == "no-store"
+    # htmx partial too
+    resp2 = client.get("/?tab=analyzed", headers={"HX-Request": "true"})
+    assert resp2.headers.get("cache-control") == "no-store"
+
+
 def test_tabs_have_hx_sync_to_prevent_out_of_order_swaps(triage_dir: Path) -> None:
     """Rapid arrow/click tab switching fires several htmx GETs; without
     hx-sync an earlier response can settle after a later one and overwrite
