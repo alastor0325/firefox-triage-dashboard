@@ -924,6 +924,10 @@ code, kbd {
 }
 #rail-host {
   min-height: 0;
+  min-width: 0;        /* grid items default to min-width:auto (min-content);
+                          without this, wide deck content blows the shared
+                          narrow-layout column past the viewport and drags
+                          the rail's right-aligned tags off-screen. */
   overflow: hidden;
   display: flex;       /* let .rail fill 100% */
 }
@@ -936,6 +940,10 @@ code, kbd {
 .rail {
   flex: 1;
   min-height: 0;
+  min-width: 0;        /* flex item: without this it grows to its content's
+                          min-content and overflows #rail-host (clipped),
+                          dragging right-aligned rail tags off-screen in the
+                          narrow stacked layout. */
   display: flex;
   flex-direction: column;
   padding-right: 0.2rem;
@@ -1033,6 +1041,10 @@ code, kbd {
 }
 .rail-search {
   width: 100%;
+  min-width: 0;   /* inputs default to a non-shrinking intrinsic min-width;
+                     without this the search box won't shrink below it and
+                     expands the rail past its column in the narrow layout. */
+  box-sizing: border-box;
   border: 1px solid var(--border);
   background: var(--surface);
   border-radius: var(--radius-sm);
@@ -1178,6 +1190,8 @@ code, kbd {
    tall card (scrollbar visible) and a short card (no scrollbar). */
 #deck-area {
   min-height: 0;
+  min-width: 0;        /* see #rail-host: keep wide card content from
+                          expanding the shared narrow-layout column. */
   overflow-y: auto;
   padding-right: 0.25rem;
   scrollbar-gutter: stable;
@@ -1228,7 +1242,12 @@ code, kbd {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
   }
-  .rail { position: static; max-height: none; flex: none; }
+  /* flex:none stops the rail from growing to fill the grid row's height
+     (which left a gap), but #rail-host is a flex ROW, so flex:none also
+     makes .rail size to its content WIDTH and overflow the column —
+     dragging right-aligned rail tags off-screen. width:100% pins it back
+     to the column width. */
+  .rail { position: static; max-height: none; flex: none; width: 100%; min-width: 0; }
   .rail-list-scroll { flex: none; }
   .deck-stage { padding: 0; }
   .deck-stage::before, .deck-stage::after { display: none; }
