@@ -276,6 +276,7 @@ def index(
         applied = data.load_applied_draft(triage_dir, w.bug_id)
         inv = data.load_investigation(w.bug_id)
         watch_reports[w.bug_id] = {
+            "draft": applied,
             "report": applied.bug_context if applied else None,
             "investigation": inv,
             "is_stale": _compute_is_stale(applied, inv),

@@ -1588,6 +1588,25 @@ code, kbd {
 .watch-report > summary:hover { color: var(--ink); }
 .watch-report-body { margin-top: 0.5rem; }
 
+/* Component + current S/P pills shown inline in the always-visible Awaiting
+   head, mirroring the card-head metadata so the collapsed row reflects the
+   bug's current Bugzilla state without expanding. */
+.watch-head .component {
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.watch-head .sep { color: var(--ink-5); }
+
+/* Applied-changes diff surfaced inside the Awaiting fold. Reuses the card's
+   .card-foot/.diff styling; only the leading label is relabelled since these
+   changes were already applied rather than pending. */
+.watch-applied {
+  margin-top: 0.5rem;
+}
+.watch-applied .diff::before {
+  content: 'Applied';
+}
+
 /* ───── RESPONSIVE ───── */
 @media (max-width: 1080px) {
   .topbar { gap: 0.7rem; padding: 0.9rem 1rem; }

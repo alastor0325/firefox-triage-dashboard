@@ -355,6 +355,7 @@ def draft_from_pending(data: dict) -> Draft:
         section=classify_section(data),
         dupe_of=_parse_dupe_of(data.get("dupe_of")),
         bug_context=_parse_bug_context(data.get("bug_context")),
+        bug_component=data.get("bug_component"),
     )
 
 

@@ -5,15 +5,32 @@
 {% else %}
   <ol class="watch-list">
     {% for w in watch %}
+      {% set _detail = watch_reports[w.bug_id] %}
+      {% set _draft = _detail.draft if _detail else None %}
       <li class="watch-item">
         <div class="watch-head">
           <span class="bug-id"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ w.bug_id }}" target="_blank" rel="noopener">{{ w.bug_id }}</a></span>
+          {% if _draft %}
+            {% if _draft.bug_component %}
+            <span class="sep">·</span>
+            <span class="component">{{ _draft.bug_component }}</span>
+            {% endif %}
+            {# Current Bugzilla severity/priority at archive time, mirroring the
+               card-head pills; missing/unknown values fall back to S? / P?. #}
+            {% set _ctx = _draft.bug_context %}
+            {% set _sev = (_ctx.current_severity if _ctx else '') %}
+            {% set _pri = (_ctx.current_priority if _ctx else '') %}
+            {% set _sev_class = _sev | level_class %}
+            {% set _pri_class = _pri | level_class %}
+            <span class="sep">·</span>
+            <span class="badge-level badge-level--{{ _sev_class }}">{{ _sev if _sev_class != 'unknown' else 'S?' }}</span>
+            <span class="badge-level badge-level--{{ _pri_class }}">{{ _pri if _pri_class != 'unknown' else 'P?' }}</span>
+          {% endif %}
           {% if w.added_at %}<span class="timeago">{{ w.added_at[:10] }}</span>{% endif %}
           {% if is_stalled(w) %}<span class="watch-stalled">stalled</span>{% endif %}
           {% if w.ni_targets %}<span class="badge-ni">{{ w.ni_targets|join(', ') }}</span>{% endif %}
         </div>
         {% if w.title %}<h3 class="watch-title">{{ w.title }}</h3>{% endif %}
-        {% set _detail = watch_reports[w.bug_id] %}
         {% if _detail and (_detail.report or _detail.investigation) %}
         <details class="watch-report">
           <summary>Details</summary>
@@ -21,6 +38,14 @@
             {% if _detail.report %}
               {% set ctx = _detail.report %}
               {% include "_bug_report.html" %}
+            {% endif %}
+            {% if _draft %}
+            <div class="card-foot watch-applied">
+              <div class="diff">
+                {% set draft = _draft %}
+                {% include "_applied_diff.html" %}
+              </div>
+            </div>
             {% endif %}
             {% if _detail.investigation %}
               {% set investigation = _detail.investigation %}

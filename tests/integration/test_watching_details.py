@@ -90,6 +90,48 @@ def test_draft_comment_not_rendered(
     assert "SECRET-DRAFT-COMMENT-do-not-show" not in body
 
 
+def test_applied_diff_and_current_sp_render(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    inv_dir = tmp_path / "inv"
+    inv_dir.mkdir()
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    _write_watch(triage_dir, {"bug_id": 12345, "title": "Tracked bug"})
+    write_applied_draft(
+        triage_dir, 12345,
+        comment="please do not show this comment",
+        severity="S3",
+        priority="P2",
+        resolution="DUPLICATE",
+        dupe_of=999,
+        ni_targets=["dev@example.com"],
+        blocks_add=[424242],
+        bug_component="Audio/Video: Playback",
+        bug_context={
+            "platform": "Windows 11 x64",
+            "current_severity": "S2",
+            "current_priority": "P1",
+        },
+    )
+    item = _watch_item(client.get("/?tab=watching").text, 12345)
+    # Applied-diff content inside the fold.
+    assert "S3" in item
+    assert "dev@example.com" in item
+    assert "DUPLICATE" in item
+    assert "424242" in item
+    # Component and current S/P (from bug_context) surfaced in the head.
+    assert "Audio/Video: Playback" in item
+    assert "badge-level" in item
+    assert "S2" in item
+    assert "P1" in item
+    # Still collapsed by default and no interactive controls.
+    m = re.search(r'<details class="watch-report"([^>]*)>', item)
+    assert m and "open" not in m.group(1)
+    assert "composer" not in item
+    assert "Apply" not in item
+    assert "please do not show this comment" not in item
+
+
 def test_minimal_entry_without_archive_or_investigation(
     triage_dir: Path, tmp_path: Path, monkeypatch,
 ) -> None:

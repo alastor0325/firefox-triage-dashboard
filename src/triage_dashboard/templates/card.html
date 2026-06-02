@@ -74,30 +74,7 @@
 
   <div class="card-foot">
     <div class="diff">
-      {% if draft.severity %}<span class="pill pill-sev">{{ draft.severity }}</span>{% endif %}
-      {% if draft.priority %}<span class="pill pill-pri">{{ draft.priority }}</span>{% endif %}
-      {% if draft.resolution %}<span>resolve <span class="pill pill-resolve">{{ draft.resolution }}</span>{% if draft.resolution == "DUPLICATE" and draft.dupe_of %} of <a class="meta" href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ draft.dupe_of }}" target="_blank" rel="noopener">bug {{ draft.dupe_of }}</a>{% endif %}</span>{% endif %}
-      {% if draft.product or draft.component %}
-        <span>move to <span class="pill pill-reassign">{{ draft.product or 'Core' }} :: {{ draft.component or '?' }}</span></span>
-      {% endif %}
-      {% if draft.blocks_add %}
-        <span class="sep">·</span>
-        <span><span class="plus">+</span>blocks
-          {% for b in draft.blocks_add %}<a class="meta" href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ b }}" target="_blank" rel="noopener">{{ b }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
-        </span>
-      {% endif %}
-      {% if draft.ni_targets %}
-        <span class="sep">·</span>
-        <span><span class="plus">+</span>ni {{ draft.ni_targets|join(', ') }}</span>
-      {% endif %}
-      {% if draft.cc_add %}
-        <span class="sep">·</span>
-        <span><span class="plus">+</span>cc {{ draft.cc_add|join(', ') }}</span>
-      {% endif %}
-      {% if draft.keywords_add %}
-        <span class="sep">·</span>
-        <span><span class="plus">+</span>keyword {{ draft.keywords_add|join(', ') }}</span>
-      {% endif %}
+{% include "_applied_diff.html" %}
     </div>
     <div class="actions">
       {% include "_apply_button.html" %}
