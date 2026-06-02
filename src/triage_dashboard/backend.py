@@ -3,8 +3,8 @@
 Default is `MockBackend`, which computes the plan but never touches
 Bugzilla or local triage state. `BugzillaCLIBackend` is the slot reserved
 for real `bugzilla-cli` invocation — its methods raise
-`NotImplementedError` until Phase 4.5 is explicitly implemented (see
-PLAN.md). Two gates between us and real Bugzilla writes:
+`NotImplementedError` until it is explicitly implemented. Two gates
+between us and real Bugzilla writes:
 
   1. `TRIAGE_DASHBOARD_LIVE=1` env var (selects the real backend).
   2. `BugzillaCLIBackend.apply/skip` actually have implementations.
@@ -76,7 +76,7 @@ class BugzillaCLIBackend(TriageBackend):
 
     _NOT_IMPL_MSG = (
         "real-mode bugzilla-cli backend is not yet wired up; "
-        "implementation requires explicit user approval (PLAN.md Phase 4.5)"
+        "implementation requires explicit user approval"
     )
 
     def apply(self, bug_id: int, pending: dict) -> BackendResult:

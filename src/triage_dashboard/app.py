@@ -516,8 +516,8 @@ def apply_draft(request: Request, bug_id: int):
 
     Default backend is the mock, which only computes the plan. Real
     Bugzilla writes require `TRIAGE_DASHBOARD_LIVE=1` AND a real
-    implementation of `BugzillaCLIBackend` (see PLAN.md Phase 4.5).
-    If LIVE=1 but the implementation isn't there, this returns 501.
+    implementation of `BugzillaCLIBackend`. If LIVE=1 but the
+    implementation isn't there, this returns 501.
 
     On apply, a single `apply` action is appended to `claude-queue.jsonl`
     (every section). The drain prompt runs `bugzilla-cli apply <id>`; the
@@ -546,7 +546,8 @@ def apply_draft(request: Request, bug_id: int):
 def skip_draft(request: Request, bug_id: int):
     """Skip the pending draft via the configured backend.
 
-    Default is the mock; real impl is gated, see PLAN.md Phase 4.5.
+    Default is the mock; real impl is gated behind TRIAGE_DASHBOARD_LIVE=1
+    plus a real BugzillaCLIBackend.
     """
     pending = _load_pending_or_404(bug_id)
     try:
