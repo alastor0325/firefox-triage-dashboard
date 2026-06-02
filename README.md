@@ -21,23 +21,23 @@ Bugzilla — and only after a per-bug approval.
 
 ```
         ┌──────────────────────────────────────────────────────────┐
-        │  /triage  (full)            READ-ONLY on Bugzilla         │
+        │  /triage  (full)            READ-ONLY on Bugzilla        │
         │ ───────────────────────────────────────────────────────  │
-        │  1. watch-poll  → replies on NI'd bugs                    │
-        │       (replied / ni_cleared / stale / auto_removed / …)   │
-        │  2. fetch new bugs (last 14 days)                         │
-        │  3. analyze each (parallel sub-agents;                    │
-        │       /bug-start investigation for §1b)                   │
+        │  1. watch-poll  → replies on NI'd bugs                   │
+        │       (replied / ni_cleared / stale / auto_removed / …)  │
+        │  2. fetch new bugs (last 14 days)                        │
+        │  3. analyze each (parallel sub-agents;                   │
+        │       /bug-start investigation for §1b)                  │
         └───────────────────────────┬──────────────────────────────┘
-                                     │ writes (local files only)
-                                     ▼
+                                    │ writes (local files only)
+                                    ▼
       pending/bug-<id>.json  +  ni-watch.json  +  investigation .md
                                      │
                                      ▼
         ┌──────────────────────────────────────────────────────────┐
-        │  DASHBOARD            reads those files; never writes BMO  │
-        │  tabs: Analyzed · Needs Info · Close/Reassign · Awaiting   │
-        │  you review each draft →                                  │
+        │  DASHBOARD            reads those files; never writes BMO│
+        │  tabs: Analyzed · Needs Info · Close/Reassign · Awaiting │
+        │  you review each draft →                                 │
         └────┬───────────────────┬───────────────────┬─────────────┘
              │ Revise            │ Apply (toggle)    │ Skip
              ▼                   ▼                   ▼
@@ -47,26 +47,26 @@ Bugzilla — and only after a per-bug approval.
                                      │
                                      ▼
         ┌──────────────────────────────────────────────────────────┐
-        │  PROCESS QUEUE  (drain prompt) — partitions by action     │
+        │  PROCESS QUEUE  (drain prompt) — partitions by action    │
         │ ───────────────────────────────────────────────────────  │
-        │  refine    → /triage-apply-feedback                       │
-        │               (re-draft JSON + capture wiki lesson)       │
-        │  apply     → AskUserQuestion per bug  (yes / no)          │
-        │               └─ yes → bugzilla-cli apply   ◄── ONLY      │
-        │                        • posts comment/NI/fields to BMO   │
-        │                        • archives draft → applied/        │
-        │                        • adds bug to ni-watch             │
-        │  bug-start → /bug-start                                   │
+        │  refine    → /triage-apply-feedback                      │
+        │               (re-draft JSON + capture wiki lesson)      │
+        │  apply     → AskUserQuestion per bug  (yes / no)         │
+        │               └─ yes → bugzilla-cli apply   ◄── ONLY     │
+        │                        • posts comment/NI/fields to BMO  │
+        │                        • archives draft → applied/       │
+        │                        • adds bug to ni-watch            │
+        │  bug-start → /bug-start                                  │
         └───────────────────────────┬──────────────────────────────┘
-                                     │ applied bug
-                                     ▼
+                                    │ applied bug
+                                    ▼
         Awaiting reply tab  ◄── folded report (applied/ + investigation),
                                      │          no AI draft comment
                                      │  reporter answers the NI on Bugzilla
                                      ▼
         next  /triage  → watch-poll sees the reply ──────┐
-                                                          │
-        ◄──────────────────────────────────────────────  ┘  loop
+                                                         │
+        ◄────────────────────────────────────────────────┘  loop
 ```
 
 **Second round?** Just run full `/triage` again (no arguments). One run
