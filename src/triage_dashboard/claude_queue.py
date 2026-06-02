@@ -87,31 +87,31 @@ Procedure:
       stays blocked until the user approves; process the others in
       parallel meanwhile.
 
-4. For each queued apply (distinct bug_ids only), run the command
-   EXACTLY as written, with no flags other than the bug id and no
-   input redirection:
+4. For each queued apply (distinct bug_ids only), confirm with the user
+   via the AskUserQuestion tool BEFORE applying — one yes/no question
+   per bug. In the question, summarize exactly what the apply will write
+   (the draft's `comment` and the field changes from the pending JSON:
+   severity/priority, resolution, ni_targets, blocks_add, keywords_add,
+   cc_add, component/product, dupe_of) so the user can decide.
 
-       bugzilla-cli apply <bug_id>
-
-   The CLI will print the post preview and prompt the user with [y/N].
    **SAFETY GATE — this is the production-write boundary. Read carefully:**
-   - Invoke the command with NO extra flags (no `--yes`, no `-y`, no
-     `--non-interactive`, no anything — just the bug id).
-   - Do NOT pipe anything into the command. The following patterns
-     are all FORBIDDEN — they would auto-confirm by feeding `y` into
-     stdin, bypassing the gate:
-       `yes | bugzilla-cli apply ...`
-       `echo y | bugzilla-cli apply ...`
-       `printf 'y\\n' | bugzilla-cli apply ...`
-       any here-string (`<<<`), here-doc (`<<`), or file redirect
-       that supplies stdin.
-   - Run the command in the user's foreground terminal so they can see
-     the preview and type `y` or `N` themselves. The user must approve
-     each bug individually — that is the entire point of this step.
-   - If the user answers N (or the apply errors), stop and ask the user
-     how to proceed. Do NOT charge ahead to the next apply.
-   - If the user answers y, the CLI posts to Bugzilla and deletes the
-     pending JSON. Move on to the next apply.
+   - Ask ONE AskUserQuestion per bug, with a clear Yes (apply) / No
+     (skip) choice. The user's answer to that question IS the approval —
+     there is no separate terminal [y/N] step.
+   - If the user chooses No (or dismisses the question): do NOT apply
+     that bug, and leave its queue entry intact.
+   - If the user chooses Yes: run the apply, exactly:
+
+         bugzilla-cli apply <bug_id>
+
+     The CLI prompts its own [y/N]; supply the approval the user just
+     gave by feeding `y` on stdin (e.g.
+     `printf 'y\\n' | bugzilla-cli apply <bug_id>`). NEVER apply a bug
+     the user did not explicitly approve in its question.
+   - If the apply errors, stop and ask the user how to proceed. Do NOT
+     charge ahead to the next apply.
+   - On a successful apply the CLI posts to Bugzilla and deletes the
+     pending JSON. Move on to the next bug.
 
 5. For each bug-start entry, invoke the `bug-start` skill via the Skill
    tool with the bug_id as its argument — do not just print the slash

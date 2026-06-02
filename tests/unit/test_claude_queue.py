@@ -457,24 +457,22 @@ def test_drain_prompt_describes_apply_action(triage_dir: Path) -> None:
     assert "bugzilla-cli apply" in prompt
 
 
-def test_drain_prompt_has_explicit_no_auto_confirm_gate(
+def test_drain_prompt_gates_each_apply_behind_a_question(
     triage_dir: Path,
 ) -> None:
-    """The prompt MUST forbid auto-confirming the [y/N]. This is the
-    production-write safety gate."""
+    """The prompt MUST gate every apply behind an explicit per-bug yes/no
+    confirmation asked via AskUserQuestion. The user's answer is the
+    approval — no apply happens for a bug the user did not approve."""
     claude_queue.append_apply(triage_dir, bug_id=1)
     prompt = claude_queue.prepare_queue_drain(triage_dir)["prompt"]
     lo = prompt.lower()
-    # Must mention [y/N] / y or N so the model knows the prompt format.
-    assert "[y/n]" in lo or "y/n" in lo
-    # Must forbid auto-confirmation flags AND stdin-piping bypasses.
-    # The realistic ways a model would skip the gate are (a) `--yes`
-    # or similar flag, and (b) piping `y` into stdin.
-    assert "--yes" in lo
-    assert "yes | bugzilla-cli" in lo or "echo y" in lo
-    # And it must positively assert the user runs the command in the
-    # foreground so they can see the preview.
-    assert "foreground" in lo or "wait for the user" in lo
+    # The confirmation mechanism is the AskUserQuestion tool, one per bug.
+    assert "askuserquestion" in lo
+    assert "one yes/no question\n   per bug" in lo or "yes/no question" in lo
+    # The user's answer is the gate; nothing is applied without approval.
+    assert "did not explicitly approve" in lo
+    # On No, the bug is left queued (not applied, not dropped).
+    assert "leave its queue entry intact" in lo
 
 
 def test_drain_prompt_specifies_order_refines_applies_bug_starts(
