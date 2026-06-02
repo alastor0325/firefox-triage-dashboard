@@ -1209,7 +1209,7 @@ def test_rail_tag_taken_when_assigned(triage_dir: Path) -> None:
     )
     row = _rail_row_for(client.get("/?tab=needs-info").text, 1)
     assert "rail-tag--taken" in row
-    assert ">taken<" in row
+    assert ">Assigned<" in row
 
 
 def test_rail_tag_taken_renders_after_other_tags(triage_dir: Path) -> None:
