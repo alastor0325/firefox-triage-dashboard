@@ -18,6 +18,8 @@
   --blue:       #1d4ed8;
   --blue-soft:  #eff6ff;
   --red:        #b91c1c;
+  --violet:     #6d28d9;
+  --violet-soft:#f5f3ff;
 
   --font-display: "Fraunces", Georgia, serif;
   --font-sans:    "Geist", system-ui, -apple-system, sans-serif;
@@ -563,8 +565,8 @@ code, kbd {
 .ver-chip--affected { background: var(--amber-soft); border-color: #fde68a; }
 .ver-chip--affected .ver-chip-key { color: var(--amber); }
 /* Assigned = amber, signalling someone is already on it (don't double up). */
-.ver-chip--taken { background: var(--amber-soft); border-color: #fde68a; }
-.ver-chip--taken .ver-chip-key { color: var(--amber); }
+.ver-chip--taken { background: var(--violet-soft); border-color: #ddd6fe; }
+.ver-chip--taken .ver-chip-key { color: var(--violet); }
 
 /* ── Regression tag block ──
    Entries from bug_context.see_also whose label matches `\bregress`
@@ -1198,7 +1200,7 @@ code, kbd {
 .rail-tag--regression { background: var(--amber-soft); color: var(--amber); }
 .rail-tag--emergency  { background: var(--red); color: #fff; }
 /* Muted neutral — informational ("someone's already on it"), not actionable. */
-.rail-tag--taken { background: var(--surface-2); color: var(--ink-4); }
+.rail-tag--taken { background: var(--violet-soft); color: var(--violet); }
 .rail-tag--new {
   background: var(--green-soft);
   color: var(--green);
