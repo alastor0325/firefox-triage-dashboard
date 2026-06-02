@@ -14,46 +14,65 @@ Bugzilla automatically.
 
 ## The triage loop, end to end
 
+Three actors share the work: **`/triage`** analyzes bugs and writes
+drafts (read-only on Bugzilla), the **dashboard** is where you review and
+decide, and the **Process queue** drain is the *only* thing that writes to
+Bugzilla — and only after a per-bug approval.
+
 ```
-1. Run /triage in a Claude session
-       │
-       │   Claude reads each new A/V bug from the last 14 days,
-       │   classifies it, drafts the comment + actions, writes a
-       │   pending JSON. For Analyzed bugs it also kicks off a
-       │   shallow /bug-start investigation in parallel.
-       ▼
-2. Open the dashboard (http://127.0.0.1:8765)
-       │
-       │   Each draft renders as a card. The rail on the left lists
-       │   every bug in the active tab; the focused card on the right
-       │   shows the full draft + investigation findings + the exact
-       │   set of Bugzilla actions that will fire on Apply.
-       ▼
-3. Review each card
-       │   • Revise the draft  →  feedback queued for Claude
-       │   • Skip               →  draft dismissed, no Bugzilla write
-       │   • Apply              →  queued for a real bugzilla-cli apply
-       ▼
-4. Drain refines via the Process queue dropdown
-       │
-       │   Click the topbar "Process queue · N" → "Copy prompt → paste
-       │   into Claude". The pasted prompt tells Claude to read the
-       │   queue and re-draft each refined bug. While re-drafting,
-       │   Claude also looks for a general lesson behind your feedback
-       │   (e.g. "this kind of bug shouldn't ask for that data") and,
-       │   if it finds one, asks whether to save it to the Firefox wiki
-       │   so future triage avoids the same mistake.
-       ▼
-5. Apply lands in Bugzilla via the terminal
-       │
-       │   Each queued apply runs `bugzilla-cli apply <bug_id>`, which
-       │   prints the preview of what's about to change and waits for
-       │   your [y/N]. That terminal prompt is the safety gate — no
-       │   write happens without it.
-       ▼
-6. For Analyzed bugs, /bug-start fires automatically
-           (already ran in parallel during step 1)
+        ┌──────────────────────────────────────────────────────────┐
+        │  /triage  (full)            READ-ONLY on Bugzilla         │
+        │ ───────────────────────────────────────────────────────  │
+        │  1. watch-poll  → replies on NI'd bugs                    │
+        │       (replied / ni_cleared / stale / auto_removed / …)   │
+        │  2. fetch new bugs (last 14 days)                         │
+        │  3. analyze each (parallel sub-agents;                    │
+        │       /bug-start investigation for §1b)                   │
+        └───────────────────────────┬──────────────────────────────┘
+                                     │ writes (local files only)
+                                     ▼
+      pending/bug-<id>.json  +  ni-watch.json  +  investigation .md
+                                     │
+                                     ▼
+        ┌──────────────────────────────────────────────────────────┐
+        │  DASHBOARD            reads those files; never writes BMO  │
+        │  tabs: Analyzed · Needs Info · Close/Reassign · Awaiting   │
+        │  you review each draft →                                  │
+        └────┬───────────────────┬───────────────────┬─────────────┘
+             │ Revise            │ Apply (toggle)    │ Skip
+             ▼                   ▼                   ▼
+        queue: refine       queue: apply       delete draft
+        (+feedback)              │              (no queue)
+             └───────────────────┴──── append → claude-queue.jsonl
+                                     │
+                                     ▼
+        ┌──────────────────────────────────────────────────────────┐
+        │  PROCESS QUEUE  (drain prompt) — partitions by action     │
+        │ ───────────────────────────────────────────────────────  │
+        │  refine    → /triage-apply-feedback                       │
+        │               (re-draft JSON + capture wiki lesson)       │
+        │  apply     → AskUserQuestion per bug  (yes / no)          │
+        │               └─ yes → bugzilla-cli apply   ◄── ONLY      │
+        │                        • posts comment/NI/fields to BMO   │
+        │                        • archives draft → applied/        │
+        │                        • adds bug to ni-watch             │
+        │  bug-start → /bug-start                                   │
+        └───────────────────────────┬──────────────────────────────┘
+                                     │ applied bug
+                                     ▼
+        Awaiting reply tab  ◄── folded report (applied/ + investigation),
+                                     │          no AI draft comment
+                                     │  reporter answers the NI on Bugzilla
+                                     ▼
+        next  /triage  → watch-poll sees the reply ──────┐
+                                                          │
+        ◄──────────────────────────────────────────────  ┘  loop
 ```
+
+**Second round?** Just run full `/triage` again (no arguments). One run
+both re-polls the NI watch list for replies (`watch-poll`) and fetches
+any new bugs from the last 14 days. `/triage <id>` single-bug mode skips
+*both*, so use bare `/triage` to close the loop.
 
 ---
 
@@ -116,6 +135,14 @@ read-only — there's no Apply action because we're not the actors
 right now. A `stalled` indicator surfaces when the NI is more than
 14 days old, so we know which ones need a follow-up or an
 INCOMPLETE resolution.
+
+Each entry keeps the bug's full context from when it was applied —
+component and current S/P in the collapsed row, and a folded **Details**
+disclosure with the report (platform, reporter, `ai_reasoning`), the
+applied changes, and any investigation findings. The AI draft comment is
+the only thing dropped. The detail is restored from the archived draft
+(`~/firefox-triage/applied/bug-<id>.json`, written by `bugzilla-cli
+apply`) plus the investigation file.
 
 ---
 
@@ -182,18 +209,21 @@ While reading a card, watch for these:
 
 ## Drain queue
 
-Two kinds of actions queue to `~/firefox-triage/claude-queue.jsonl`:
+Actions queue to `~/firefox-triage/claude-queue.jsonl`:
 
 - **Refines** — when you click "Revise draft" with feedback, the next
-  Claude session will re-draft that bug
-- **Apply / bug-start** — when you click Apply, the `bugzilla-cli
-  apply` and (for Analyzed bugs) `/bug-start` calls get queued
+  Claude session re-drafts that bug via `/triage-apply-feedback`
+- **Apply** — clicking Apply queues a single `apply` action and the
+  button flips to **Applied**; clicking Applied again removes it (the
+  toggle is reversible). `/bug-start` is **not** chained onto Apply — it
+  already runs during `/triage` for Analyzed bugs.
 
 The topbar dropdown shows everything queued. Clicking "Copy prompt"
 copies a short instruction set that you paste into a Claude session,
-which then reads the JSONL and executes each entry. Real Bugzilla
-writes still pause at `bugzilla-cli apply`'s `[y/N]` confirmation —
-the prompt explicitly tells Claude not to auto-confirm.
+which then reads the JSONL and processes each entry. For every queued
+apply, the drain asks you **per bug** (a yes/no question) before posting;
+on yes it runs `bugzilla-cli apply <id>` with your approval. That per-bug
+confirmation is the safety gate — no Bugzilla write happens without it.
 
 You can remove queued items individually (✕ in the dropdown) without
 draining the whole queue.
