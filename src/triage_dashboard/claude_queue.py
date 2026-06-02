@@ -84,9 +84,10 @@ Procedure:
    d. SAFETY: if a refine requires downloading a file (e.g. a bug
       attachment, media sample, or fixture) to investigate, follow the
       `/download-guard` rule — never auto-download. It presents a Yes/No
-      AskUserQuestion per file and, on Yes, fetches into the transient
-      `~/firefox-triage/downloads/` temp folder. Such a bug stays blocked
-      until the user approves; process the others in parallel meanwhile.
+      AskUserQuestion per file and, on Yes, fetches into the one shared
+      `~/.cache/firefox-download-guard/` temp folder. Such a bug stays
+      blocked until the user approves; process the others in parallel
+      meanwhile.
 
 4. For each queued apply (distinct bug_ids only), confirm with the user
    via the AskUserQuestion tool BEFORE applying — one yes/no question
