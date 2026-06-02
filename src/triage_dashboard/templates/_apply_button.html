@@ -1,0 +1,26 @@
+{# The Apply action button, rendered as a reversible toggle. Expects
+   `draft` and `apply_queued` (bool). When already queued it shows
+   "Applied" and a second click reverts (un-queues) the apply. Targets
+   itself (outerHTML) so the endpoint can swap it between states. #}
+{% if apply_queued %}
+<button class="btn btn-applied"
+        hx-post="/draft/{{ draft.bug_id }}/apply"
+        hx-target="this"
+        hx-swap="outerHTML"
+        title="Queued for apply — click to undo">Applied</button>
+{% elif draft.product or draft.component %}
+<button class="btn btn-reassign"
+        hx-post="/draft/{{ draft.bug_id }}/apply"
+        hx-target="this"
+        hx-swap="outerHTML">Reassign</button>
+{% elif draft.resolution %}
+<button class="btn btn-primary"
+        hx-post="/draft/{{ draft.bug_id }}/apply"
+        hx-target="this"
+        hx-swap="outerHTML">Apply &amp; close</button>
+{% else %}
+<button class="btn btn-primary"
+        hx-post="/draft/{{ draft.bug_id }}/apply"
+        hx-target="this"
+        hx-swap="outerHTML">Apply</button>
+{% endif %}

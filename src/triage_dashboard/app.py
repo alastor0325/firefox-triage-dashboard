@@ -124,8 +124,7 @@ TAB_INFO = {
             "Bugs you have triaged. The draft is the public Bugzilla "
             "comment with your analysis, plus the severity/priority you "
             "set. Apply queues bugzilla-cli apply (you confirm [y/N] at "
-            "the terminal) and a /bug-start handoff to kick off "
-            "investigation."
+            "the terminal); click Applied again to undo."
         ),
     },
     "needs-info": {
@@ -295,6 +294,12 @@ def index(
         if active_draft is not None else None
     )
     is_stale = _compute_is_stale(active_draft, investigation)
+    # Whether the focused card's apply is already sitting in the queue —
+    # drives the Apply/Applied toggle so the state survives a reload.
+    apply_queued = (
+        claude_queue.is_apply_queued(triage_dir, active_draft.bug_id)
+        if active_draft is not None else False
+    )
     # Bug → (section_slug, title) lookup used by the Queue tab to wire
     # each row's bug-id link back to the right card.
     bug_meta_by_id = {
@@ -341,6 +346,7 @@ def index(
             "bug_meta_by_id": bug_meta_by_id,
             "investigation": investigation,
             "is_stale": is_stale,
+            "apply_queued": apply_queued,
         },
     )
 
@@ -435,33 +441,91 @@ def _backend_result_response(
     })
 
 
+def _apply_toggle_response(
+    request: Request,
+    *,
+    bug_id: int,
+    pending: dict,
+    queued: bool,
+    result: backend.BackendResult | None,
+):
+    """Render the Apply/Applied toggle for htmx; JSON for everything else.
+
+    The htmx fragment swaps the button into its new state and, out-of-band,
+    refreshes the status host (the plan + queued note on apply; empty on
+    revert). `result` is None on a revert (no backend plan is computed).
+    """
+    if request.headers.get("HX-Request") == "true":
+        return templates.TemplateResponse(
+            request=request,
+            name="_apply_toggle.html",
+            context={
+                "draft": data.draft_from_pending(pending),
+                "apply_queued": queued,
+                "action": "apply",
+                "bug_id": bug_id,
+                "result": result,
+                "is_live": os.environ.get(backend.LIVE_ENV_VAR) == "1",
+            },
+        )
+    if result is not None:
+        return JSONResponse({
+            "action": "apply",
+            "bug_id": bug_id,
+            "ok": result.ok,
+            "queued": queued,
+            "output": result.output,
+            "side_effects": result.side_effects,
+            "actions": [
+                {"kind": a.kind, "description": a.description}
+                for a in result.actions
+            ],
+        })
+    return JSONResponse({
+        "action": "apply",
+        "bug_id": bug_id,
+        "ok": True,
+        "queued": False,
+        "reverted": True,
+        "actions": [],
+    })
+
+
 @app.post("/draft/{bug_id}/apply")
 def apply_draft(request: Request, bug_id: int):
-    """Apply the pending draft via the configured backend.
+    """Toggle the pending draft's apply via the configured backend.
+
+    Apply is reversible. If the draft's `apply` action is already in the
+    queue, this click reverts it (removes the queued apply) and the button
+    flips back to "Apply". Otherwise it computes the plan and queues the
+    apply, and the button flips to "Applied".
 
     Default backend is the mock, which only computes the plan. Real
     Bugzilla writes require `TRIAGE_DASHBOARD_LIVE=1` AND a real
     implementation of `BugzillaCLIBackend` (see PLAN.md Phase 4.5).
     If LIVE=1 but the implementation isn't there, this returns 501.
 
-    Side effects on success (Phase 5 / 5.5):
-    - Append an `apply` action to `claude-queue.jsonl` (every section).
-      The drain prompt runs `bugzilla-cli apply <id>`; the CLI's [y/N]
-      prompt is the production-write gate.
-    - For §1b drafts, also append a `bug-start` action so the next
-      drain invokes the bug-start skill after the apply lands.
+    On apply, a single `apply` action is appended to `claude-queue.jsonl`
+    (every section). The drain prompt runs `bugzilla-cli apply <id>`; the
+    CLI's [y/N] prompt is the production-write gate. `/bug-start` is no
+    longer queued here — it runs during triage.
     """
     pending = _load_pending_or_404(bug_id)
+    triage_dir = data.triage_dir_from_env()
+    if claude_queue.is_apply_queued(triage_dir, bug_id):
+        claude_queue.remove_apply(triage_dir, bug_id)
+        return _apply_toggle_response(
+            request, bug_id=bug_id, pending=pending, queued=False, result=None
+        )
     try:
         result = backend.get_backend().apply(bug_id, pending)
     except NotImplementedError as e:
         raise HTTPException(status_code=501, detail=str(e))
     if result.ok:
-        triage_dir = data.triage_dir_from_env()
         claude_queue.append_apply(triage_dir, bug_id=bug_id)
-        if data.classify_section(pending) == "§1b":
-            claude_queue.append_bug_start(triage_dir, bug_id=bug_id)
-    return _backend_result_response(request, "apply", bug_id, result)
+    return _apply_toggle_response(
+        request, bug_id=bug_id, pending=pending, queued=result.ok, result=result
+    )
 
 
 @app.post("/draft/{bug_id}/skip")

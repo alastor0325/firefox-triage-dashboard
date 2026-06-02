@@ -858,6 +858,19 @@ code, kbd {
 .btn-reassign { background: var(--blue); color: #fff; border-color: var(--blue); }
 .btn-reassign:hover { background: #1f3f8e; border-color: #1f3f8e; }
 
+/* Applied = the apply is queued. Calm "done" look; hover hints at undo. */
+.btn-applied {
+  background: var(--green-soft);
+  color: var(--green);
+  border-color: var(--green);
+  font-weight: 600;
+}
+.btn-applied:hover {
+  background: #fbeaea;
+  color: var(--red);
+  border-color: var(--red);
+}
+
 /* ───── APPLY / SKIP STATUS PANEL ───── */
 .apply-status-host:empty { display: none; }
 .apply-status {

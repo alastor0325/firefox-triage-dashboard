@@ -1,0 +1,10 @@
+{# Response for the Apply/Applied toggle. Primary swap replaces the button
+   (hx-target="this", outerHTML); the status host is updated out-of-band so
+   one response moves both. On apply it shows the plan + queued note; on
+   revert it clears the host. Expects: draft, apply_queued, action, bug_id,
+   result (BackendResult|None), is_live. #}
+{% include "_apply_button.html" %}
+<div id="apply-status-{{ draft.bug_id }}" class="apply-status-host"
+     aria-live="polite" hx-swap-oob="true">
+  {% if apply_queued and result %}{% include "_plan.html" %}{% endif %}
+</div>

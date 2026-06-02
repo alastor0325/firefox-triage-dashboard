@@ -43,8 +43,6 @@ def test_rail_head_shows_info_icon_with_tab_specific_tooltip(
     write_draft(triage_dir, 2, severity="S3", priority="P3")
     body_b = client.get("/?tab=triaged&bug=2").text
     assert 'class="info-icon"' in body_b
-    # Mentions bug-start since that's a §1b side effect
-    assert "/bug-start" in body_b
 
     # §1c (Close / Reassign)
     write_draft(triage_dir, 3, resolution="INCOMPLETE")

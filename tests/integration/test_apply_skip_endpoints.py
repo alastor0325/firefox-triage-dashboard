@@ -133,7 +133,7 @@ def test_skip_does_not_delete_pending(triage_dir: Path) -> None:
     assert pending.is_file()
 
 
-# ─── §1b Apply queues a bug-start action (Phase 5) ──────────────────
+# ─── Apply queues a single apply action (no bug-start chaining) ─────
 
 def _queue_actions(triage_dir: Path) -> list[dict]:
     path = triage_dir / "claude-queue.jsonl"
@@ -142,16 +142,16 @@ def _queue_actions(triage_dir: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line]
 
 
-def test_b1_apply_queues_apply_then_bug_start(triage_dir: Path) -> None:
-    """Applying a §1b draft queues two entries: apply (post to Bugzilla)
-    THEN bug-start (start investigation after the post). Order matters —
-    apply must happen before bug-start in the drained sequence."""
+def test_b1_apply_queues_only_apply_no_bug_start(triage_dir: Path) -> None:
+    """Applying a §1b draft queues a single apply action. /bug-start is no
+    longer chained here — it already runs during triage, so queuing it on
+    Apply would re-investigate a bug that was just investigated."""
     write_draft(triage_dir, 555, severity="S3", priority="P3")
     response = client.post("/draft/555/apply")
     assert response.status_code == 200
     entries = _queue_actions(triage_dir)
-    assert [e["action"] for e in entries] == ["apply", "bug-start"]
-    assert all(e["bug_id"] == 555 for e in entries)
+    assert [e["action"] for e in entries] == ["apply"]
+    assert entries[0]["bug_id"] == 555
 
 
 def test_a1_apply_queues_only_apply(triage_dir: Path) -> None:
@@ -180,11 +180,11 @@ def test_skip_queues_nothing(triage_dir: Path) -> None:
     assert _queue_actions(triage_dir) == []
 
 
-def test_b1_apply_queue_count_visible_in_topbar(triage_dir: Path) -> None:
-    """After §1b apply, the topbar count is 2 (apply + bug-start)."""
+def test_b1_apply_queue_count_is_one(triage_dir: Path) -> None:
+    """After §1b apply, the topbar count is 1 — apply only, no bug-start."""
     write_draft(triage_dir, 555, severity="S3", priority="P3")
     client.post("/draft/555/apply")
-    assert client.get("/queue/count").json() == {"count": 2}
+    assert client.get("/queue/count").json() == {"count": 1}
 
 
 def test_a1_apply_queue_count_is_one(triage_dir: Path) -> None:
@@ -194,20 +194,62 @@ def test_a1_apply_queue_count_is_one(triage_dir: Path) -> None:
     assert client.get("/queue/count").json() == {"count": 1}
 
 
-def test_b1_repeat_apply_queues_one_pair_per_click(
-    triage_dir: Path,
-) -> None:
-    """Two clicks on Apply for the same §1b draft queue two apply +
-    two bug-start entries (no dedupe at queue-write time). The drain
-    prompt de-duplicates by distinct bug_id at consume time."""
+# ─── Apply is a reversible toggle ────────────────────────────────────
+
+def test_apply_is_a_toggle_second_click_reverts(triage_dir: Path) -> None:
+    """Apply is reversible. The first click queues the apply; the second
+    (button now reads "Applied") removes it, leaving the queue empty; a
+    third click re-queues. State is keyed solely on the queue contents."""
     write_draft(triage_dir, 555, severity="S3", priority="P3")
     client.post("/draft/555/apply")
+    assert [e["action"] for e in _queue_actions(triage_dir)] == ["apply"]
     client.post("/draft/555/apply")
-    entries = _queue_actions(triage_dir)
-    assert [e["action"] for e in entries] == [
-        "apply", "bug-start", "apply", "bug-start",
-    ]
-    assert all(e["bug_id"] == 555 for e in entries)
+    assert _queue_actions(triage_dir) == []
+    client.post("/draft/555/apply")
+    assert [e["action"] for e in _queue_actions(triage_dir)] == ["apply"]
+
+
+def test_apply_htmx_button_flips_to_applied(triage_dir: Path) -> None:
+    """The htmx apply fragment swaps the button into its Applied state."""
+    write_draft(triage_dir, 555, severity="S3", priority="P3")
+    body = client.post(
+        "/draft/555/apply", headers={"HX-Request": "true"},
+    ).text
+    assert "btn-applied" in body
+    assert ">Applied<" in body
+
+
+def test_revert_htmx_button_flips_back_to_apply(triage_dir: Path) -> None:
+    """Clicking Applied returns the button to its un-applied state and
+    clears the status host (no plan, no queued note)."""
+    write_draft(triage_dir, 555, severity="S3", priority="P3")
+    client.post("/draft/555/apply")
+    body = client.post(
+        "/draft/555/apply", headers={"HX-Request": "true"},
+    ).text
+    assert "btn-applied" not in body
+    assert ">Apply<" in body
+    assert "Queued for apply" not in body
+
+
+def test_applied_state_persists_across_reload(triage_dir: Path) -> None:
+    """After applying, a fresh page load still shows the button as Applied
+    — the toggle reads queue state, so a reload doesn't lose it."""
+    write_draft(triage_dir, 555, severity="S3", priority="P3")
+    client.post("/draft/555/apply")
+    body = client.get("/?tab=triaged&bug=555").text
+    assert "btn-applied" in body
+    assert ">Applied<" in body
+
+
+def test_revert_then_reload_shows_apply_again(triage_dir: Path) -> None:
+    """After a revert, a reload shows the plain Apply button again."""
+    write_draft(triage_dir, 555, severity="S3", priority="P3")
+    client.post("/draft/555/apply")
+    client.post("/draft/555/apply")  # revert
+    body = client.get("/?tab=triaged&bug=555").text
+    assert "btn-applied" not in body
+    assert ">Apply<" in body
 
 
 def test_apply_status_panel_mentions_queue_and_y_n_gate(
@@ -286,7 +328,7 @@ def test_apply_failure_queues_nothing(
     triage_dir: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """If the backend returns ok=False (here: LIVE-mode 501 from the
-    unimplemented real backend), neither apply nor bug-start gets queued."""
+    unimplemented real backend), no apply action gets queued."""
     write_draft(triage_dir, 555, severity="S3", priority="P3")
     monkeypatch.setenv("TRIAGE_DASHBOARD_LIVE", "1")
     response = client.post("/draft/555/apply")

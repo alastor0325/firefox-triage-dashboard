@@ -336,6 +336,28 @@ def classify_section(d: dict) -> Section:
     return "§1a"
 
 
+def draft_from_pending(data: dict) -> Draft:
+    """Build a Draft from one parsed pending JSON dict."""
+    return Draft(
+        bug_id=int(data.get("bug_id") or 0),
+        title=data.get("title") or "(no title)",
+        comment=data.get("comment") or "",
+        ni_targets=list(data.get("ni_targets") or []),
+        priority=data.get("priority"),
+        severity=data.get("severity"),
+        blocks_add=list(data.get("blocks_add") or []),
+        cc_add=list(data.get("cc_add") or []),
+        resolution=data.get("resolution"),
+        keywords_add=list(data.get("keywords_add") or []),
+        product=data.get("product"),
+        component=data.get("component"),
+        created_at=data.get("created_at") or "",
+        section=classify_section(data),
+        dupe_of=_parse_dupe_of(data.get("dupe_of")),
+        bug_context=_parse_bug_context(data.get("bug_context")),
+    )
+
+
 def load_drafts(triage_dir: Path = DEFAULT_TRIAGE_DIR) -> list[Draft]:
     pending = triage_dir / "pending"
     if not pending.is_dir():
@@ -346,26 +368,7 @@ def load_drafts(triage_dir: Path = DEFAULT_TRIAGE_DIR) -> list[Draft]:
             data = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError):
             continue
-        drafts.append(
-            Draft(
-                bug_id=int(data.get("bug_id") or 0),
-                title=data.get("title") or "(no title)",
-                comment=data.get("comment") or "",
-                ni_targets=list(data.get("ni_targets") or []),
-                priority=data.get("priority"),
-                severity=data.get("severity"),
-                blocks_add=list(data.get("blocks_add") or []),
-                cc_add=list(data.get("cc_add") or []),
-                resolution=data.get("resolution"),
-                keywords_add=list(data.get("keywords_add") or []),
-                product=data.get("product"),
-                component=data.get("component"),
-                created_at=data.get("created_at") or "",
-                section=classify_section(data),
-                dupe_of=_parse_dupe_of(data.get("dupe_of")),
-                bug_context=_parse_bug_context(data.get("bug_context")),
-            )
-        )
+        drafts.append(draft_from_pending(data))
     return drafts
 
 

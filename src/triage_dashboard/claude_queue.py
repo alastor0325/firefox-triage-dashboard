@@ -344,6 +344,63 @@ def remove_refine(triage_dir: Path, *, bug_id: int, ts: str) -> bool:
     return remove_entry(triage_dir, action="refine", bug_id=bug_id, ts=ts)
 
 
+def is_apply_queued(triage_dir: Path, bug_id: int) -> bool:
+    """True if at least one `apply` entry for `bug_id` is in the queue.
+
+    This is the source of truth for the dashboard's Apply/Applied toggle:
+    a draft is "applied" iff its apply action is sitting in the queue
+    waiting to be drained.
+    """
+    queue_path = triage_dir / QUEUE_FILE
+    if not queue_path.is_file():
+        return False
+    for entry in _read_jsonl(queue_path):
+        if entry.get("action") == "apply" and int(entry.get("bug_id") or 0) == int(bug_id):
+            return True
+    return False
+
+
+def remove_apply(triage_dir: Path, bug_id: int) -> bool:
+    """Remove every queued `apply` entry for `bug_id` (the toggle's revert).
+
+    Returns True if at least one entry was removed. Unlike `remove_entry`
+    this is keyed on (action, bug_id) only — the dashboard has no handle on
+    the original ts when the user clicks "Applied" to undo, and a draft
+    should never legitimately have more than one pending apply anyway.
+    Non-matching lines (including malformed ones) are preserved verbatim.
+    """
+    queue_path = triage_dir / QUEUE_FILE
+    if not queue_path.is_file():
+        return False
+
+    kept: list[str] = []
+    removed = False
+    for line in queue_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped:
+            try:
+                obj = json.loads(stripped)
+            except json.JSONDecodeError:
+                obj = None
+            if (
+                isinstance(obj, dict)
+                and obj.get("action") == "apply"
+                and int(obj.get("bug_id") or 0) == int(bug_id)
+            ):
+                removed = True
+                continue
+        kept.append(line)
+
+    if not removed:
+        return False
+
+    body = "\n".join(kept)
+    if body and not body.endswith("\n"):
+        body += "\n"
+    queue_path.write_text(body, encoding="utf-8")
+    return True
+
+
 _EMPTY = {"count": 0, "prompt": None, "bugs_affected": 0}
 
 

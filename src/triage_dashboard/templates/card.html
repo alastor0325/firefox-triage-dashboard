@@ -283,22 +283,7 @@
       {% endif %}
     </div>
     <div class="actions">
-      {% if draft.product or draft.component %}
-        <button class="btn btn-reassign"
-                hx-post="/draft/{{ draft.bug_id }}/apply"
-                hx-target="#apply-status-{{ draft.bug_id }}"
-                hx-swap="innerHTML">Reassign</button>
-      {% elif draft.resolution %}
-        <button class="btn btn-primary"
-                hx-post="/draft/{{ draft.bug_id }}/apply"
-                hx-target="#apply-status-{{ draft.bug_id }}"
-                hx-swap="innerHTML">Apply &amp; close</button>
-      {% else %}
-        <button class="btn btn-primary"
-                hx-post="/draft/{{ draft.bug_id }}/apply"
-                hx-target="#apply-status-{{ draft.bug_id }}"
-                hx-swap="innerHTML">Apply</button>
-      {% endif %}
+      {% include "_apply_button.html" %}
     </div>
   </div>
   <div id="apply-status-{{ draft.bug_id }}" class="apply-status-host" aria-live="polite"></div>
