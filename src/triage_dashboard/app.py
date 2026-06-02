@@ -34,6 +34,8 @@ templates.env.globals["is_regression"] = data.is_regression
 templates.env.globals["is_emergency"] = data.is_emergency
 templates.env.globals["is_stalled"] = data.is_stalled
 templates.env.globals["is_new_this_week"] = data.is_new_this_week
+templates.env.globals["is_taken"] = data.is_taken
+templates.env.globals["assignee_display"] = data.assignee_display
 templates.env.filters["version_only"] = data.version_only
 
 # Cache-bust /static/style.css with the file's mtime captured at import

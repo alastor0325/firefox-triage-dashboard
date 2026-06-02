@@ -1199,6 +1199,72 @@ def test_rail_dropped_tags_no_longer_render(triage_dir: Path) -> None:
     assert 'class="rail-tag rail-tag--crash"' not in body
 
 
+# ─── taken: rail tag + Assigned chip when bug is assigned ────────────
+
+def test_rail_tag_taken_when_assigned(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"assigned_to": "dev@mozilla.com",
+                     "assigned_to_name": "Dev Person"},
+    )
+    row = _rail_row_for(client.get("/?tab=needs-info").text, 1)
+    assert "rail-tag--taken" in row
+    assert ">taken<" in row
+
+
+def test_rail_tag_taken_renders_after_other_tags(triage_dir: Path) -> None:
+    """The taken tag sits at the END of the tag group, after New /
+    emergency / regression."""
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"keywords": ["sec-critical", "regression"],
+                     "assigned_to": "dev@mozilla.com"},
+    )
+    row = _rail_row_for(client.get("/?tab=needs-info").text, 1)
+    assert row.index("rail-tag--regression") < row.index("rail-tag--taken")
+    assert row.index("rail-tag--emergency") < row.index("rail-tag--taken")
+
+
+def test_rail_no_taken_tag_when_unassigned(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"assigned_to": "nobody@mozilla.org"},
+    )
+    row = _rail_row_for(client.get("/?tab=needs-info").text, 1)
+    assert "rail-tag--taken" not in row
+
+
+def test_card_shows_assigned_chip_when_assigned(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"assigned_to": "dev@mozilla.com",
+                     "assigned_to_name": "Dev Person"},
+    )
+    body = client.get("/?tab=needs-info&bug=1").text
+    assert "ver-chip--taken" in body
+    assert "Assigned" in body
+    assert "Dev Person" in body
+
+
+def test_card_assigned_chip_falls_back_to_email(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"assigned_to": "dev@mozilla.com"},
+    )
+    body = client.get("/?tab=needs-info&bug=1").text
+    assert "ver-chip--taken" in body
+    assert "dev@mozilla.com" in body
+
+
+def test_card_no_assigned_chip_when_unassigned(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1, ni_targets=["x@y"],
+        bug_context={"assigned_to": "nobody@mozilla.org"},
+    )
+    body = client.get("/?tab=needs-info&bug=1").text
+    assert "ver-chip--taken" not in body
+
+
 # ─── watching tab: stalled indicator on old entries ──────────────────
 
 def _write_watch(triage_dir: Path, entries: list[dict]) -> None:

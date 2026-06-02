@@ -1141,6 +1141,57 @@ def test_is_emergency_false_when_no_bug_context() -> None:
     assert data.is_emergency(_draft_without_context()) is False
 
 
+def test_is_taken_true_for_real_assignee() -> None:
+    assert data.is_taken(_draft_with_context(assigned_to="dev@mozilla.com")) is True
+
+
+def test_is_taken_false_for_nobody() -> None:
+    assert data.is_taken(_draft_with_context(assigned_to="nobody@mozilla.org")) is False
+    assert data.is_taken(_draft_with_context(assigned_to="Nobody@Mozilla.ORG")) is False
+
+
+def test_is_taken_false_for_empty() -> None:
+    assert data.is_taken(_draft_with_context(assigned_to="")) is False
+    assert data.is_taken(_draft_with_context(assigned_to="  ")) is False
+
+
+def test_is_taken_false_when_no_bug_context() -> None:
+    assert data.is_taken(_draft_without_context()) is False
+
+
+def test_assignee_display_prefers_name() -> None:
+    ctx = data.BugContext(assigned_to="dev@mozilla.com", assigned_to_name="Dev Person")
+    assert data.assignee_display(ctx) == "Dev Person"
+
+
+def test_assignee_display_falls_back_to_email() -> None:
+    ctx = data.BugContext(assigned_to="dev@mozilla.com")
+    assert data.assignee_display(ctx) == "dev@mozilla.com"
+    assert data.assignee_display(None) == ""
+
+
+def test_parse_bug_context_parses_assignee(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "assigned_to": "dev@mozilla.com",
+            "assigned_to_name": "Dev Person",
+        },
+    )
+    ctx = data.load_drafts(triage_dir)[0].bug_context
+    assert ctx is not None
+    assert ctx.assigned_to == "dev@mozilla.com"
+    assert ctx.assigned_to_name == "Dev Person"
+
+
+def test_parse_bug_context_assignee_defaults_empty(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, bug_context={"platform": "Linux"})
+    ctx = data.load_drafts(triage_dir)[0].bug_context
+    assert ctx is not None
+    assert ctx.assigned_to == ""
+    assert ctx.assigned_to_name == ""
+
+
 def _watch_entry(added_at: str) -> data.WatchEntry:
     return data.WatchEntry(bug_id=1, title="", ni_targets=[], added_at=added_at)
 

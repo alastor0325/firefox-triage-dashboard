@@ -166,6 +166,11 @@ class BugContext:
     current_severity: str = ""
     current_priority: str = ""
     keywords: list[str] = field(default_factory=list)
+    # Assignee at draft time. assigned_to is the email (the reliable
+    # signal); assigned_to_name is the real name for display. Both default
+    # to "" — an unassigned bug carries "" or "nobody@mozilla.org".
+    assigned_to: str = ""
+    assigned_to_name: str = ""
 
     @property
     def is_crash(self) -> bool:
@@ -207,6 +212,8 @@ def _parse_bug_context(raw: Any) -> BugContext | None:
         current_severity=str(raw.get("current_severity") or ""),
         current_priority=str(raw.get("current_priority") or ""),
         keywords=[str(k) for k in (raw.get("keywords") or [])],
+        assigned_to=str(raw.get("assigned_to") or ""),
+        assigned_to_name=str(raw.get("assigned_to_name") or ""),
     )
 
 
@@ -230,6 +237,33 @@ def is_emergency(draft: "Draft") -> bool:
     if ctx is None:
         return False
     return any(str(k).lower() in _EMERGENCY_KEYWORDS for k in (ctx.keywords or []))
+
+
+# A bug is "unassigned" when its assignee email is empty or the Bugzilla
+# default-owner sentinel; anything else means a real person owns it.
+_UNASSIGNED_EMAILS = frozenset({"", "nobody@mozilla.org"})
+
+
+def is_taken(arg: "Draft | BugContext | None") -> bool:
+    """True if the bug is assigned to a real person — i.e. its
+    assigned_to is set and is not the default-unassigned value ('' or
+    'nobody@mozilla.org', case-insensitive). Accepts either a Draft (rail)
+    or a BugContext directly (the card report partial, which has no Draft
+    in scope). False for None or a Draft without a bug_context."""
+    if arg is None:
+        return False
+    ctx = arg if isinstance(arg, BugContext) else getattr(arg, "bug_context", None)
+    if ctx is None:
+        return False
+    return ctx.assigned_to.strip().lower() not in _UNASSIGNED_EMAILS
+
+
+def assignee_display(ctx: "BugContext | None") -> str:
+    """The assignee name to show on the card — real name, falling back to
+    the email. Empty when there's no context."""
+    if ctx is None:
+        return ""
+    return ctx.assigned_to_name or ctx.assigned_to
 
 
 # A bug is "New" on the deck while it was filed within this many days. This

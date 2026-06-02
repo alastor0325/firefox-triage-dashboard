@@ -55,6 +55,7 @@
               {% if is_new_this_week(d) %}<span class="rail-tag rail-tag--new">New</span>{% endif %}
               {% if is_emergency(d) %}<span class="rail-tag rail-tag--emergency">emergency</span>{% endif %}
               {% if is_regression(d) %}<span class="rail-tag rail-tag--regression">regression</span>{% endif %}
+              {% if is_taken(d) %}<span class="rail-tag rail-tag--taken">taken</span>{% endif %}
             </span>
           </div>
           <div class="rail-title">{{ d.title }}</div>

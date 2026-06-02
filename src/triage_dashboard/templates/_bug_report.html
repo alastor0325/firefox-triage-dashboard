@@ -16,11 +16,13 @@
     </p>
     {% endif %}
     {% set fx = ctx.firefox_version | version_only %}
-    {% if ctx.platform or fx or ctx.affected_versions %}
+    {% set _taken = is_taken(ctx) %}
+    {% if ctx.platform or fx or ctx.affected_versions or _taken %}
     <p class="card-version">
       {% if ctx.platform %}<span class="ver-chip ver-chip--platform"><span class="ver-chip-key">Platform</span>{{ ctx.platform }}</span>{% endif %}
       {% if fx %}<span class="ver-chip ver-chip--found"><span class="ver-chip-key">Found</span>{{ fx }}</span>{% endif %}
       {% if ctx.affected_versions %}<span class="ver-chip ver-chip--affected"><span class="ver-chip-key">Affected</span>{{ ctx.affected_versions }}</span>{% endif %}
+      {% if _taken %}<span class="ver-chip ver-chip--taken"><span class="ver-chip-key">Assigned</span>{{ assignee_display(ctx) }}</span>{% endif %}
     </p>
     {% endif %}
 
