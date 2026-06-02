@@ -260,6 +260,36 @@ def test_load_watch_dict_format(triage_dir: Path) -> None:
     assert watch[0].ni_targets == ["alwu@mozilla.com"]
 
 
+def test_load_watch_uses_ni_set_date_for_added_at(triage_dir: Path) -> None:
+    """bugzilla-cli writes the NI timestamp as `ni_set_date`, not
+    `added_at`. load_watch must surface it as added_at so the stalled
+    badge and date display work (regression: it was reading added_at
+    only, so every real entry showed no date and never went stalled)."""
+    payload = {
+        "2043087": {
+            "title": "stale candidate",
+            "ni_targets": ["alwu@mozilla.com"],
+            "ni_set_date": "2026-05-01T12:00:00Z",
+        }
+    }
+    (triage_dir / "ni-watch.json").write_text(json.dumps(payload))
+    watch = data.load_watch(triage_dir)
+    assert len(watch) == 1
+    assert watch[0].added_at == "2026-05-01T12:00:00Z"
+    # And that date is old enough to read as stalled (>14 days).
+    assert data.is_stalled(watch[0], now=datetime(2026, 6, 1, tzinfo=timezone.utc))
+
+
+def test_load_watch_prefers_added_at_over_ni_set_date(triage_dir: Path) -> None:
+    """If both keys are present, the explicit added_at wins."""
+    payload = {
+        "1": {"title": "x", "ni_targets": [], "added_at": "2026-05-10",
+              "ni_set_date": "2026-05-20T00:00:00Z"},
+    }
+    (triage_dir / "ni-watch.json").write_text(json.dumps(payload))
+    assert data.load_watch(triage_dir)[0].added_at == "2026-05-10"
+
+
 def test_load_watch_list_format(triage_dir: Path) -> None:
     """ni-watch.json as a list of entries is also supported."""
     payload = [{"bug_id": 9999, "title": "x", "ni_targets": [], "added_at": ""}]

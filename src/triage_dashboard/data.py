@@ -522,7 +522,10 @@ def load_watch(triage_dir: Path = DEFAULT_TRIAGE_DIR) -> list[WatchEntry]:
                 bug_id=int(e.get("bug_id") or 0),
                 title=e.get("title") or "",
                 ni_targets=list(e.get("ni_targets") or []),
-                added_at=e.get("added_at") or "",
+                # bugzilla-cli writes the NI timestamp as `ni_set_date`;
+                # older formats used `added_at`. Accept either so the
+                # stalled badge and date display work with both.
+                added_at=e.get("added_at") or e.get("ni_set_date") or "",
             )
         )
     return out
