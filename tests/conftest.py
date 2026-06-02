@@ -42,3 +42,28 @@ def write_draft(triage_dir: Path, bug_id: int, **overrides: Any) -> Path:
     path = triage_dir / "pending" / f"bug-{bug_id}.json"
     path.write_text(json.dumps(base))
     return path
+
+
+def write_applied_draft(triage_dir: Path, bug_id: int, **overrides: Any) -> Path:
+    """Write an applied/bug-N.json archive (same shape as a pending draft)."""
+    base = {
+        "bug_id": bug_id,
+        "title": f"test bug {bug_id}",
+        "comment": "",
+        "ni_targets": [],
+        "priority": None,
+        "severity": None,
+        "blocks_add": [],
+        "cc_add": [],
+        "resolution": None,
+        "keywords_add": [],
+        "product": None,
+        "component": None,
+        "created_at": "2026-01-01T00:00:00Z",
+    }
+    base.update(overrides)
+    applied = triage_dir / "applied"
+    applied.mkdir(exist_ok=True)
+    path = applied / f"bug-{bug_id}.json"
+    path.write_text(json.dumps(base))
+    return path

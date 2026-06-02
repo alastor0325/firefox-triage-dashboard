@@ -268,6 +268,18 @@ def index(
     groups = data.group_by_section(drafts)
     watch = data.load_watch(triage_dir)
     stats = data.compute_stats(drafts, watch)
+    # Per-watched-bug detail map for the Awaiting tab: the archived applied
+    # draft's bug_context report and any persisted investigation. Only the
+    # small watch list is involved, so unconditional loading is fine.
+    watch_reports = {}
+    for w in watch:
+        applied = data.load_applied_draft(triage_dir, w.bug_id)
+        inv = data.load_investigation(w.bug_id)
+        watch_reports[w.bug_id] = {
+            "report": applied.bug_context if applied else None,
+            "investigation": inv,
+            "is_stale": _compute_is_stale(applied, inv),
+        }
     active_tab = _resolve_active_tab(tab, groups)
     active_marker = SLUG_TO_MARKER[active_tab]
     # Global search (Option B): when q is present the rail+deck show a flat
@@ -326,6 +338,7 @@ def index(
             "drafts": drafts,
             "groups": groups,
             "watch": watch,
+            "watch_reports": watch_reports,
             "stats": stats,
             "dateline": data.last_updated_dateline(triage_dir),
             "tabs": TABS,

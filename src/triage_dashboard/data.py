@@ -372,6 +372,22 @@ def load_drafts(triage_dir: Path = DEFAULT_TRIAGE_DIR) -> list[Draft]:
     return drafts
 
 
+def load_applied_draft(
+    triage_dir: Path, bug_id: int
+) -> Draft | None:
+    """Read `applied/bug-<id>.json` (an archived applied draft, same JSON
+    shape as a pending draft) and return the parsed Draft. Returns None
+    when the archive is missing or corrupt."""
+    path = Path(triage_dir) / "applied" / f"bug-{bug_id}.json"
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+    return draft_from_pending(data)
+
+
 def _newest_first_key(d: "Draft") -> tuple[str, int]:
     """Sort key: by bug filed-date (creation_time) then bug_id, both
     descending when used with reverse=True. Drafts without a filed date sort

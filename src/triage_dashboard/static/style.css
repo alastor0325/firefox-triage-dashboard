@@ -1557,6 +1557,36 @@ code, kbd {
   color: var(--ink);
   line-height: 1.35;
 }
+/* Folded report details on each Awaiting entry: the bug-context report
+   and investigation findings, collapsed by default. Mirrors the
+   disclosure affordance used by .findings / .more elsewhere. */
+.watch-report {
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+.watch-report > summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--ink-3);
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.watch-report > summary::-webkit-details-marker { display: none; }
+.watch-report > summary::before {
+  content: '▸';
+  display: inline-block;
+  transition: transform 0.12s;
+  color: var(--ink-4);
+  font-size: 0.75em;
+}
+.watch-report[open] > summary::before { transform: rotate(90deg); }
+.watch-report > summary:hover { color: var(--ink); }
+.watch-report-body { margin-top: 0.5rem; }
 
 /* ───── RESPONSIVE ───── */
 @media (max-width: 1080px) {

@@ -1,0 +1,126 @@
+{# Bug-context report block. Expects `ctx` (a BugContext) in context. #}
+    {% set _by_parts = [] %}
+    {% if ctx.reporter_name or ctx.reporter_email %}
+      {% set _ = _by_parts.append('reporter') %}
+    {% endif %}
+    {% if ctx.filed or ctx.last_activity %}
+      {% set _ = _by_parts.append('env') %}
+    {% endif %}
+    {% if _by_parts %}
+    <p class="card-byline">
+      {% if ctx.reporter_name or ctx.reporter_email %}
+        Reported by <strong>{{ ctx.reporter_name or ctx.reporter_email }}</strong>
+      {% endif %}
+      {% if ctx.filed %} <span class="dot">·</span> filed {{ ctx.filed[:10] }}{% endif %}
+      {% if ctx.last_activity %} <span class="dot">·</span> last activity {{ ctx.last_activity[:10] }}{% endif %}
+    </p>
+    {% endif %}
+    {% set fx = ctx.firefox_version | version_only %}
+    {% if ctx.platform or fx or ctx.affected_versions %}
+    <p class="card-version">
+      {% if ctx.platform %}<span class="ver-chip ver-chip--platform"><span class="ver-chip-key">Platform</span>{{ ctx.platform }}</span>{% endif %}
+      {% if fx %}<span class="ver-chip ver-chip--found"><span class="ver-chip-key">Found</span>{{ fx }}</span>{% endif %}
+      {% if ctx.affected_versions %}<span class="ver-chip ver-chip--affected"><span class="ver-chip-key">Affected</span>{{ ctx.affected_versions }}</span>{% endif %}
+    </p>
+    {% endif %}
+
+    {% if ctx.inventory_present or ctx.inventory_missing %}
+    <ul class="inventory">
+      {% for it in ctx.inventory_present %}<li class="present">{{ it }}</li>{% endfor %}
+      {% for it in ctx.inventory_missing %}<li class="missing">{{ it }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+
+    {% set _regressors, _similar = (ctx.see_also | split_see_also) %}
+    {% if _regressors %}
+    <div class="regression-tag-block">
+      <span class="regression-tag">regression</span>
+      {% for s in _regressors %}
+        <a class="regression-bug"
+           href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ s.bug_id }}"
+           target="_blank" rel="noopener">bug {{ s.bug_id }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if _similar %}
+    <details open class="similar-details">
+      <summary>Similar ({{ _similar|length }})</summary>
+      <div class="see-also similar-list">
+        {% for s in _similar %}
+          <a class="see-also-pill"
+             href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ s.bug_id }}"
+             target="_blank" rel="noopener">
+            bug {{ s.bug_id }}{% if s.label %}<span class="lbl">{{ s.label }}</span>{% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    {% if ctx.description_excerpt or ctx.recent_comments or ctx.attachments or ctx.ai_reasoning %}
+    <div class="more">
+      {% if ctx.description_excerpt %}
+      {% set parsed = ctx.description_excerpt | parse_description %}
+      <details>
+        <summary>Bug description (excerpt)</summary>
+        <div class="body description-body">
+          {% if parsed.intro %}
+            <p>{{ parsed.intro | linkify }}</p>
+          {% endif %}
+          {% if parsed.steps %}
+            <div class="desc-section">
+              <span class="desc-label">Steps to reproduce</span>
+              <div class="desc-content">{{ parsed.steps | linkify }}</div>
+            </div>
+          {% endif %}
+          {% if parsed.actual %}
+            <div class="desc-section">
+              <span class="desc-label">Actual</span>
+              <div class="desc-content">{{ parsed.actual | linkify }}</div>
+            </div>
+          {% endif %}
+          {% if parsed.expected %}
+            <div class="desc-section">
+              <span class="desc-label">Expected</span>
+              <div class="desc-content">{{ parsed.expected | linkify }}</div>
+            </div>
+          {% endif %}
+          {% if parsed.notes %}
+            <p>{{ parsed.notes | linkify }}</p>
+          {% endif %}
+        </div>
+      </details>
+      {% endif %}
+      {% set key_comments = ctx.recent_comments | filter_key_comments %}
+      {% if key_comments %}
+      <details>
+        <summary>{{ key_comments|length }} key comment{% if key_comments|length != 1 %}s{% endif %}</summary>
+        <div class="body">
+          {% for c in key_comments %}
+          <div class="comment-snippet">
+            <span class="author">{{ c.author }}</span>
+            <span class="ts">{{ c.ts[:16].replace('T', ' ') if c.ts else '' }}</span>
+            <p>{{ c.text | linkify }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
+      {% if ctx.attachments %}
+      <details>
+        <summary>Attachments ({{ ctx.attachments|length }})</summary>
+        <div class="body">
+          {% for a in ctx.attachments %}
+            <div><a href="{{ a.url }}" target="_blank" rel="noopener"><code>{{ a.name }}</code></a></div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
+      {% if ctx.ai_reasoning %}
+      <details>
+        <summary>AI reasoning</summary>
+        <div class="body md-body">{{ ctx.ai_reasoning | render_markdown }}</div>
+      </details>
+      {% endif %}
+    </div>
+    {% endif %}
