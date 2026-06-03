@@ -226,12 +226,23 @@ _EMERGENCY_KEYWORDS = frozenset({"sec-critical", "sec-high", "topcrash"})
 
 
 def is_regression(draft: "Draft") -> bool:
-    """True if the draft's bug_context.keywords contains 'regression'
-    (case-insensitive). False for drafts without a bug_context."""
+    """True if triage has classified the draft as a regression, by any signal:
+    the bug's current `regression` keyword, a `regressionwindow-wanted` keyword,
+    the draft proposing the `regression` keyword (keywords_add), or a regressor
+    identified in see_also. The current keyword alone is too narrow — a bug we've
+    classified as a regression usually doesn't carry the keyword on Bugzilla yet
+    (we propose it via keywords_add). False when no signal is present."""
+    if any(str(k).lower() == "regression"
+           for k in (getattr(draft, "keywords_add", None) or [])):
+        return True
     ctx = getattr(draft, "bug_context", None)
     if ctx is None:
         return False
-    return any(str(k).lower() == "regression" for k in (ctx.keywords or []))
+    kw = [str(k).lower() for k in (ctx.keywords or [])]
+    if "regression" in kw or "regressionwindow-wanted" in kw:
+        return True
+    regressors, _ = split_see_also(ctx.see_also)
+    return bool(regressors)
 
 
 def is_emergency(draft: "Draft") -> bool:

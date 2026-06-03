@@ -1006,6 +1006,31 @@ def test_is_regression_false_when_keyword_absent() -> None:
     assert data.is_regression(_draft_with_context(keywords=[])) is False
 
 
+def test_is_regression_true_for_regressionwindow_wanted() -> None:
+    assert data.is_regression(
+        _draft_with_context(keywords=["regressionwindow-wanted"])) is True
+
+
+def test_is_regression_true_for_regressor_see_also() -> None:
+    assert data.is_regression(
+        _draft_with_context(see_also=[{"bug_id": 123, "label": "regressor"}])) is True
+    # a non-regressor see_also alone does not count
+    assert data.is_regression(
+        _draft_with_context(see_also=[{"bug_id": 123, "label": "follow-up"}])) is False
+
+
+def test_is_regression_true_when_draft_proposes_keyword() -> None:
+    """A bug we've classified as a regression proposes the keyword via
+    keywords_add even before it's set on Bugzilla."""
+    draft = data.Draft(
+        bug_id=1, title="", comment="", ni_targets=[], priority=None,
+        severity=None, blocks_add=[], cc_add=[], resolution=None,
+        keywords_add=["regression"], product=None, component=None,
+        created_at="", section="§1b", bug_context=data.BugContext(),
+    )
+    assert data.is_regression(draft) is True
+
+
 def test_is_regression_false_when_no_bug_context() -> None:
     assert data.is_regression(_draft_without_context()) is False
 
