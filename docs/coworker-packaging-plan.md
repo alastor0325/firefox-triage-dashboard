@@ -33,9 +33,9 @@ We categorized all 27 personal skills and decided **what NOT to expose** is as
 important as what we do. Only two plugins are in scope, plus the wiki as an
 optional companion:
 
-- **① `firefox-bug-toolkit`** — the per-bug investigation cluster. **The MVP;
+- **① `fx-bug-toolkit`** — the per-bug investigation cluster. **The MVP;
   ships first, alone.** Broadly useful to any coworker doing A/V bug work.
-- **② `firefox-triage`** — the opinionated weekly A/V triage *process* + the
+- **② `fx-triage`** — the opinionated weekly A/V triage *process* + the
   dashboard. Layered on top of ①; only for a triage co-owner.
 
 **Explicitly dropped from this effort** (not exposed): the
@@ -48,14 +48,14 @@ the standalone/personal skills `playwright`, `mozdata`, `auto-update-my-md`,
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  ②  firefox-triage   — opinionated A/V triage process                 │
+│  ②  fx-triage   — opinionated A/V triage process                      │
 │      triage · triage-apply-feedback · [dashboard repo]                │
 │      (for a triage co-owner only)                                     │
 └─────────────────────────────────────────────────────────────────────┘
                     │  hard edge: dispatches /bug-start --triage-mode
                     ▼  (Layer ② REQUIRES Layer ① installed)
 ┌─────────────────────────────────────────────────────────────────────┐
-│  ①  firefox-bug-toolkit      ★ THE MVP — ships first, alone ★          │
+│  ①  fx-bug-toolkit      ★ THE MVP — ships first, alone ★              │
 │                                                                       │
 │      bug-start (hub)                                                  │
 │        ├── analyze-profile        ├── update-investigation            │
@@ -73,7 +73,7 @@ the standalone/personal skills `playwright`, `mozdata`, `auto-update-my-md`,
 
 ### The two plugins at a glance
 
-| | **① firefox-bug-toolkit** | **② firefox-triage** |
+| | **① fx-bug-toolkit** | **② fx-triage** |
 |---|---|---|
 | **Skills** | bug-start, analyze-profile, check-firefox-log, spec-check, update-investigation, download-guard, source-links + gecko-navigator agent | triage, triage-apply-feedback + dashboard repo |
 | **Audience** | any coworker doing A/V bug work | a triage **co-owner** (shares the weekly process) |
@@ -103,7 +103,7 @@ file-contract coupling. Leaf nodes on the right are the external CLIs/services
 each skill assumes present.
 
 ```
-②  firefox-triage
+②  fx-triage
    triage ─────────────────────────────────────────────┐ CLIs: bmo-to-md, jq,
      │  writes ~/firefox-triage/pending/*.json          │       git, python3
      │  drains  ~/firefox-triage/claude-queue.jsonl      │
@@ -118,7 +118,7 @@ each skill assumes present.
        appends claude-queue.jsonl ; never spawns Claude/CLI directly.
        Only coupling = the ~/firefox-triage/ data contract.
 ─────────────────────────────────────────────────────────────────────────────
-①  firefox-bug-toolkit
+①  fx-bug-toolkit
    bug-start (hub) ── writes ~/firefox-bug-investigation/
      ├──▶ analyze-profile ─────────────── profiler-cli  ┄▶ wiki [opt]
      ├──▶ check-firefox-log               (self-contained)
@@ -213,7 +213,7 @@ each skill assumes present.
 - [ ] one-time private-data scan of wiki content (sec keywords, bug numbers,
       internal URLs). Note: current content already has **0** `sec-*` pages.
 
-**Phase 1 — sanitize plugin ① (firefox-bug-toolkit; single source of truth, no hard-copy)**
+**Phase 1 — sanitize plugin ① (fx-bug-toolkit; single source of truth, no hard-copy)**
 - [ ] strip the `/auto-update-my-md` push step in `bug-start` (6c) — it pushes
       investigation files to a personal GitHub repo
 - [ ] parametrize hardcoded paths: `profiler-cli` location in `analyze-profile`
@@ -228,13 +228,13 @@ each skill assumes present.
       discoverable config; document how to install/register it.
 
 **Phase 2 — package plugin ① + the wiki companion**
-- [ ] a marketplace listing `firefox-bug-toolkit` (+ the `firefox-wiki` plugin
+- [ ] a marketplace listing `fx-bug-toolkit` (+ the `firefox-wiki` plugin
       as a separate, optional plugin in the same marketplace)
 - [ ] bundle `download-guard` and the `gecko-navigator` agent inside ①
 - [ ] ship ① alone as v1; validate a coworker can install + investigate a bug
       with zero personal config
 
-**Phase 3 — plugin ② (firefox-triage + dashboard); only after ① lands**
+**Phase 3 — plugin ② (fx-triage + dashboard); only after ① lands**
 - [ ] decide the Open-question #2 dashboard model (per-user local vs shared)
 - [ ] parametrize personal GitHub URLs in the dashboard templates (the "Triage"
       title link, investigation links) and serve investigations locally rather
