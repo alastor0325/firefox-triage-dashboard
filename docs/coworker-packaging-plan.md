@@ -4,7 +4,7 @@
 we can resume cold. Nothing here is committed-to yet except the few items
 marked **DONE**.
 
-**Last updated:** 2026-06-01
+**Last updated:** 2026-06-03
 
 ---
 
@@ -27,14 +27,58 @@ it compound**. That is the point — not any single skill.
 
 ---
 
-## The system = 4 layers
+## Scope decision (2026-06-03): two plugins only
 
-| Layer | Repo | Self-contained? | Sharing difficulty |
-|---|---|---|---|
-| A. Wiki engine | `firefox-wiki-plugin` | Yes — no hardcoded paths | Easy (already a plugin) |
-| B. Wiki content | `firefox-wiki` (~60 component pages, specs, patterns) | the valuable asset | Medium — private-data + multi-user |
-| C. Triage/investigation skills | `Claude-Skills` (bug-start, analyze-profile, …) | hardcoded deps | Hard (portability work) |
-| D. Triage dashboard | `firefox-triage-dashboard` | standalone FastAPI | Medium |
+We categorized all 27 personal skills and decided **what NOT to expose** is as
+important as what we do. Only two plugins are in scope, plus the wiki as an
+optional companion:
+
+- **① `firefox-bug-toolkit`** — the per-bug investigation cluster. **The MVP;
+  ships first, alone.** Broadly useful to any coworker doing A/V bug work.
+- **② `firefox-triage`** — the opinionated weekly A/V triage *process* + the
+  dashboard. Layered on top of ①; only for a triage co-owner.
+
+**Explicitly dropped from this effort** (not exposed): the
+implementation/review clusters and everything that only served them —
+`firefox-implementation`, `verify`, `try-push`, `ci-failure-analysis`,
+`sec-approval`, `review-patch`, `review-feedback`, `git-worktree-sync`,
+`clear-done-worktrees`, `taskboard`, `commit-rules`, `code-comment-rules` — plus
+the standalone/personal skills `playwright`, `mozdata`, `auto-update-my-md`,
+`project-plan`, `setup-dev-flow`, and the unidentified `firefox-manager`.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  ②  firefox-triage   — opinionated A/V triage process                 │
+│      triage · triage-apply-feedback · [dashboard repo]                │
+│      (for a triage co-owner only)                                     │
+└─────────────────────────────────────────────────────────────────────┘
+                    │  hard edge: dispatches /bug-start --triage-mode
+                    ▼  (Layer ② REQUIRES Layer ① installed)
+┌─────────────────────────────────────────────────────────────────────┐
+│  ①  firefox-bug-toolkit      ★ THE MVP — ships first, alone ★          │
+│                                                                       │
+│      bug-start (hub)                                                  │
+│        ├── analyze-profile        ├── update-investigation            │
+│        ├── check-firefox-log      ├── spec-check                      │
+│        ├── download-guard   (bundled IN — not a separate plugin)      │
+│        ├── source-links     (passive rule, for nicer output)          │
+│        └── gecko-navigator  [agent]                                   │
+└─────────────────────────────────────────────────────────────────────┘
+                    ┊  optional, gated on INDEX.md (degrades silently)
+                    ▼
+        ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+        ┆  firefox-wiki  (already a plugin) + content  ┆   optional
+        ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+```
+
+### The two plugins at a glance
+
+| | **① firefox-bug-toolkit** | **② firefox-triage** |
+|---|---|---|
+| **Skills** | bug-start, analyze-profile, check-firefox-log, spec-check, update-investigation, download-guard, source-links + gecko-navigator agent | triage, triage-apply-feedback + dashboard repo |
+| **Audience** | any coworker doing A/V bug work | a triage **co-owner** (shares the weekly process) |
+| **Depends on** | nothing required (wiki optional) | **requires ①** |
+| **Ship order** | **v1** | v2, layered on top |
 
 ---
 
@@ -51,43 +95,75 @@ only shared write-target is the wiki.
 
 ---
 
-## Decided: the MVP package = "Firefox A/V bug investigation toolkit"
+## Dependency findings (verified this session by reading the call graph)
 
-Package **by coupling (the call-graph), not by theme.** Skills that invoke each
-other must ship together (no native auto-dependency — see open questions).
+The full transitive dependency graph for the in-scope plugins. Edges are: `──▶`
+invokes/dispatches (hard), `┄▶` optional (degrades silently), and the dashboard's
+file-contract coupling. Leaf nodes on the right are the external CLIs/services
+each skill assumes present.
 
-**Bundle (the investigation/analysis cluster):**
-- `bug-start` (the hub; triage-mode + deep mode)
-- `analyze-profile` (profiles — called by bug-start)
-- `check-firefox-log` (logs — called by bug-start)
-- `spec-check` (spec conformance; also useful standalone)
-- `source-links` (rule — link formatting)
-- `gecko-navigator` (agent — architecture/flow)
-- `update-investigation` (iterate the findings — completes bug-start's loop)
+```
+②  firefox-triage
+   triage ─────────────────────────────────────────────┐ CLIs: bmo-to-md, jq,
+     │  writes ~/firefox-triage/pending/*.json          │       git, python3
+     │  drains  ~/firefox-triage/claude-queue.jsonl      │
+     │                                                   │
+     ├──▶ /bug-start --triage-mode  (hard edge into ①)   │
+     ├──▶ /download-guard                                │
+     └┄▶ /firefox-wiki:lookup|add        [optional]      │
+   triage-apply-feedback                                 │
+     └┄▶ /firefox-wiki:add               [optional]      │
+                                                         │
+   [dashboard repo] ── reads pending/*.json + investigation files,
+       appends claude-queue.jsonl ; never spawns Claude/CLI directly.
+       Only coupling = the ~/firefox-triage/ data contract.
+─────────────────────────────────────────────────────────────────────────────
+①  firefox-bug-toolkit
+   bug-start (hub) ── writes ~/firefox-bug-investigation/
+     ├──▶ analyze-profile ─────────────── profiler-cli  ┄▶ wiki [opt]
+     ├──▶ check-firefox-log               (self-contained)
+     ├──▶ spec-check ───────────────────── searchfox-cli, mach
+     ├──▶ update-investigation            (self-contained)
+     ├──▶ download-guard ───────────────── bmo-to-md  (bundled IN ①)
+     ├··▶ source-links                    (passive rule — nicer output)
+     ├──▶ gecko-navigator  [AGENT] ─────── searchfox-cli, mcp__moz__*
+     ├──── CLIs: bmo-to-md, searchfox-cli, profiler-cli, mach+checkout,
+     │           git, mcp__moz__get_bugzilla_bug
+     └┄▶ /firefox-wiki:lookup|add         [optional, gated on INDEX.md]
+                                                  ┊
+        ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+        ┆ firefox-wiki plugin + ~/firefox-wiki content ┆   optional companion
+        ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+```
 
-**`firefox-wiki` ships as an OPTIONAL extension**, not a hard dependency. With
-it: faster starts (lookup) + compounding (contribute back). Without it: the
-toolkit still fully works (just searches code directly).
-
-**Explicitly OUT (implementation-level, not investigation):**
-firefox-implementation, verify, commit-rules, jj-split, git-worktree-sync,
-review-patch, review-feedback, sec-approval, try-push, ci-failure-analysis,
-reorganize-patches, taskboard.
-
-**The opinionated `triage` orchestrator + `triage-apply-feedback` + the
-dashboard** are a *second* package layered on top — only for whoever actually
-shares the weekly A/V triage *process*. The `triage` skill encodes our specific
-policy (§1a/§1b/§1c tabs, component routing, media-alerts conventions), so it's
-gold for a co-owner and over-specific baggage for someone who just wants good
-per-bug tooling.
-
-### Two framings to choose between later
-- **A. "Run my triage process"** — full bundle + dashboard + triage orchestrator. For a triage co-owner.
-- **B. "Better A/V bug tooling + shared wiki"** — the investigation toolkit above. Broadly useful, lower risk. **The MVP leans B.**
+- **`download-guard` is the only utility the MVP truly needs**, and it's a
+  *behavioral* dependency (consumers say "follow the `/download-guard` rule" —
+  no programmatic call). Without it nothing crashes, but the download safety
+  gate silently no-ops. Because Claude Code plugins **cannot auto-install each
+  other**, we **bundle download-guard inside ①** rather than externalizing it —
+  a separate "utility" plugin would create a silent cross-plugin failure.
+- **A generic "utility" plugin is the wrong cut.** "Utility" is a theme, not a
+  coupling. The candidate utilities serve different clusters: `download-guard`
+  → investigation (①), the rule skills (`commit-rules`, `code-comment-rules`,
+  `source-links`) → implementation (dropped), `playwright` → nobody (leaf).
+- **`source-links`** has only one *explicit* consumer (`firefox-implementation`,
+  now dropped). It stays in ① as a **passive quality rule** — bug-start writes
+  investigation files with hyperlinked sources — not as a hard dependency.
+- **`playwright` is a true leaf** — zero skills reference it. Out of scope.
+- **The dashboard is a thin shell.** It never spawns Claude or any CLI; it only
+  reads `~/firefox-triage/` + `~/firefox-bug-investigation/` and appends to
+  `claude-queue.jsonl`, which a human then drains. Its only real coupling is the
+  `~/firefox-triage/` **data contract** (the `pending/*.json` schema + the
+  queue action format) — documented as the Phase-3 deliverable below.
+- **External CLIs/services both plugins assume present:** `bmo-to-md`,
+  `searchfox-cli`, `profiler-cli`, `mach` + a mozilla-central checkout, the
+  `moz` MCP server, and `jq`/`git`/`python3`. The `moz` MCP server has **no
+  discoverable config file** — a coworker won't get it for free; it needs a
+  documented install step.
 
 ---
 
-## DONE this session
+## DONE
 
 - **Wiki made an optional extension via presence gates.** `bug-start` (step 3
   lookup, §6b write-back) and `analyze-profile` (step 3 lookup, step 6
@@ -106,22 +182,24 @@ per-bug tooling.
   the plugin). Everything defaults to `~/firefox-wiki`. Coworkers need zero
   config — clone the wiki to `~/firefox-wiki` and it's found; set `WIKI_PATH`
   only to relocate.
+- **Scope cut to two plugins** (2026-06-03) — see Scope decision above. Dropped
+  the implementation/review clusters and standalone/personal skills.
 
 ---
 
 ## Open questions / decisions for next time
 
-1. **Framing A vs B** — share the opinionated triage process, or just the
-   investigation toolkit? (MVP assumes B.)
-2. **Shared wiki contribution model** — PR-reviewed vs direct-push. Gates the
-   wiki being multi-contributor-safe.
-3. **Dashboard model** — each coworker runs their own local instance (all
+1. **Wiki contribution model** — PR-reviewed vs direct-push. Gates the wiki
+   being multi-contributor-safe.
+2. **Dashboard model** — each coworker runs their own local instance (all
    pointing at the shared wiki) vs one shared dashboard. Changes the dashboard
-   work a lot.
-4. **Native plugin dependency?** — Confirm whether current Claude Code supports
-   a plugin declaring/auto-installing another. To my knowledge it does NOT;
-   the plan therefore relies on graceful degradation + a bootstrap `init`
-   script, not auto-install. **Verify before relying on "many small plugins".**
+   work a lot. Only matters once we ship plugin ②.
+3. **Native plugin dependency?** — Confirmed assumption: Claude Code does **not**
+   support a plugin declaring/auto-installing another. The plan therefore relies
+   on graceful degradation + a documented "install ① first" step for the ②→①
+   edge, not auto-install. (Re-verify before relying on multi-plugin installs.)
+4. **`firefox-manager` is unidentified** — empty description; decide if it's even
+   relevant before it can be categorized. Currently out of scope.
 
 ---
 
@@ -135,7 +213,7 @@ per-bug tooling.
 - [ ] one-time private-data scan of wiki content (sec keywords, bug numbers,
       internal URLs). Note: current content already has **0** `sec-*` pages.
 
-**Phase 1 — sanitize + extract the toolkit (single source of truth, no hard-copy)**
+**Phase 1 — sanitize plugin ① (firefox-bug-toolkit; single source of truth, no hard-copy)**
 - [ ] strip the `/auto-update-my-md` push step in `bug-start` (6c) — it pushes
       investigation files to a personal GitHub repo
 - [ ] parametrize hardcoded paths: `profiler-cli` location in `analyze-profile`
@@ -145,18 +223,25 @@ per-bug tooling.
       "re-run + review diff", never manual copy-paste forever)
 - [ ] document external CLI deps the coworker machine needs:
       `jq`, `python3`, `git`, `searchfox-cli`, `profiler-cli`, `bmo-to-md`,
-      the `moz` MCP server — and which feature degrades without each
+      `mach` + a mozilla-central checkout, the `moz` MCP server — and which
+      feature degrades without each. Note the `moz` MCP server has no
+      discoverable config; document how to install/register it.
 
-**Phase 2 — package structure**
-- [ ] a marketplace listing the toolkit plugin (+ the `firefox-wiki` plugin as
-      a separate, optional plugin in the same marketplace)
-- [ ] decide: one toolkit plugin (recommended — fewest cross-plugin edges) vs
-      several smaller plugins
+**Phase 2 — package plugin ① + the wiki companion**
+- [ ] a marketplace listing `firefox-bug-toolkit` (+ the `firefox-wiki` plugin
+      as a separate, optional plugin in the same marketplace)
+- [ ] bundle `download-guard` and the `gecko-navigator` agent inside ①
+- [ ] ship ① alone as v1; validate a coworker can install + investigate a bug
+      with zero personal config
 
-**Phase 3 — dashboard shareable (only if we go framing A / share the dashboard)**
-- [ ] parametrize personal GitHub URLs (the "Triage" title link, investigation
-      links) and serve investigations locally rather than from a personal repo
-- [ ] document the `~/firefox-triage/` data contract both halves share
+**Phase 3 — plugin ② (firefox-triage + dashboard); only after ① lands**
+- [ ] decide the Open-question #2 dashboard model (per-user local vs shared)
+- [ ] parametrize personal GitHub URLs in the dashboard templates (the "Triage"
+      title link, investigation links) and serve investigations locally rather
+      than from a personal repo
+- [ ] document the `~/firefox-triage/` data contract both halves share — the
+      `pending/*.json` schema and the `claude-queue.jsonl` action format
+- [ ] document the hard **②→① install order** (no auto-install)
 - [ ] a `dashboard init` bootstrap that wires everything: check deps, install
       plugins (via `claude plugin` CLI if it exists, else careful merge into
       `~/.claude/settings.json` — the `extraKnownMarketplaces` + `enabledPlugins`
@@ -174,7 +259,8 @@ per-bug tooling.
 ## Key principles to remember
 
 - **Package by coupling, not theme.** Cut plugin boundaries where the call
-  graph is sparse.
+  graph is sparse. ("Utility" is a theme — that's why we rejected a utility
+  plugin and bundled `download-guard` into ① instead.)
 - **Never hard-copy + manually-sync-forever.** Single source of truth (the
   existing repos) + a scripted, sanitized extraction.
 - **Wiki = optional accelerator, not a hard dependency.** Already true for the
@@ -183,6 +269,9 @@ per-bug tooling.
 - **"Optional" is a skip-risk in skill text.** Gate on a verifiable fact
   (`test -f .../INDEX.md`) with a hard `MUST` on the installed branch, not on
   the word "optional".
+- **No auto-install between plugins.** Behavioral/cross-plugin edges fail
+  *silently*. Keep tightly-coupled pieces in the same plugin (download-guard in
+  ①); for the unavoidable ②→① edge, document install order.
 - **Investigations stay private; only the wiki is shared.**
 
 ---
