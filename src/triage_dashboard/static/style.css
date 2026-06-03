@@ -521,6 +521,31 @@ code, kbd {
 }
 .card-sub strong { color: var(--ink); font-weight: 600; }
 
+/* ── "Changed since Awaiting" note ──
+   A one-line brief from /triage explaining why the bug moved out of the
+   Awaiting tab. Rendered at the top of the report as context for the
+   whole card. Soft blue informational banner with a left accent border —
+   distinct from the labelled version chips and the amber regression tag. */
+.change-note {
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  line-height: 1.4;
+  background: var(--blue-soft);
+  border-left: 3px solid var(--blue);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.6rem;
+  margin: 0 0 0.7rem;
+}
+.change-note-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--blue);
+  margin-right: 0.35rem;
+}
+
 .card-byline {
   font-size: 0.9rem;
   color: var(--ink-2);

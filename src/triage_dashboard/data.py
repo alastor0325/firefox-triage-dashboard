@@ -171,6 +171,10 @@ class BugContext:
     # to "" — an unassigned bug carries "" or "nobody@mozilla.org".
     assigned_to: str = ""
     assigned_to_name: str = ""
+    # One-line brief written by /triage when the bug moved OUT of the
+    # Awaiting tab into a §-tab on re-triage (e.g. "Reporter attached a
+    # media log → re-triaged §1b"). Empty for the common case.
+    change_note: str = ""
 
     @property
     def is_crash(self) -> bool:
@@ -214,6 +218,7 @@ def _parse_bug_context(raw: Any) -> BugContext | None:
         keywords=[str(k) for k in (raw.get("keywords") or [])],
         assigned_to=str(raw.get("assigned_to") or ""),
         assigned_to_name=str(raw.get("assigned_to_name") or ""),
+        change_note=str(raw.get("change_note") or ""),
     )
 
 

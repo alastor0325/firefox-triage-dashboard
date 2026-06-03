@@ -1,4 +1,7 @@
 {# Bug-context report block. Expects `ctx` (a BugContext) in context. #}
+    {% if ctx.change_note %}
+    <div class="change-note"><span class="change-note-label">Changed since Awaiting</span> {{ ctx.change_note }}</div>
+    {% endif %}
     {% set _by_parts = [] %}
     {% if ctx.reporter_name or ctx.reporter_email %}
       {% set _ = _by_parts.append('reporter') %}

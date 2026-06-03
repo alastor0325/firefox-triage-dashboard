@@ -1192,6 +1192,25 @@ def test_parse_bug_context_assignee_defaults_empty(triage_dir: Path) -> None:
     assert ctx.assigned_to_name == ""
 
 
+def test_parse_bug_context_parses_change_note(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "change_note": "Reporter attached a media log → re-triaged §1b",
+        },
+    )
+    ctx = data.load_drafts(triage_dir)[0].bug_context
+    assert ctx is not None
+    assert ctx.change_note == "Reporter attached a media log → re-triaged §1b"
+
+
+def test_parse_bug_context_change_note_defaults_empty(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, bug_context={"platform": "Linux"})
+    ctx = data.load_drafts(triage_dir)[0].bug_context
+    assert ctx is not None
+    assert ctx.change_note == ""
+
+
 def _watch_entry(added_at: str) -> data.WatchEntry:
     return data.WatchEntry(bug_id=1, title="", ni_targets=[], added_at=added_at)
 

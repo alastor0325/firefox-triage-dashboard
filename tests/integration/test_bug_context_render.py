@@ -190,6 +190,35 @@ def test_ai_reasoning_only_for_b1(triage_dir: Path) -> None:
     assert "dom/media/" in body
 
 
+# ─── "Changed since Awaiting" note ──────────────────────────────────
+
+def test_change_note_renders_label_and_text(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "change_note": "Reporter attached a media log → re-triaged §1b",
+        },
+    )
+    body = client.get("/").text
+    assert "change-note" in body
+    assert "Changed since Awaiting" in body
+    assert "Reporter attached a media log" in body
+
+
+def test_change_note_absent_when_empty(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, bug_context={"change_note": ""})
+    body = client.get("/").text
+    assert "change-note" not in body
+    assert "Changed since Awaiting" not in body
+
+
+def test_change_note_absent_when_not_set(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, bug_context={"platform": "Linux"})
+    body = client.get("/").text
+    assert "change-note" not in body
+    assert "Changed since Awaiting" not in body
+
+
 # ─── graceful absence ───────────────────────────────────────────────
 
 def test_card_without_bug_context_has_no_byline_or_more_sections(
