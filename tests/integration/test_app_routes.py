@@ -1343,3 +1343,22 @@ def test_will_apply_diff_omits_regressed_by_when_empty(triage_dir: Path) -> None
     write_draft(triage_dir, 1, ni_targets=["x@y"])
     body = client.get("/").text
     assert "regressed by" not in body
+
+
+# ─── will-apply diff: assignee ──────────────────────────────────────
+
+def test_will_apply_diff_shows_assignee_and_status(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1, severity="S2", priority="P2",
+        status="ASSIGNED", assigned_to="alwu@mozilla.com",
+    )
+    body = client.get("/?tab=triaged&bug=1").text
+    assert "assign to" in body
+    assert "alwu@mozilla.com" in body
+    assert "ASSIGNED" in body
+
+
+def test_will_apply_diff_omits_assignee_when_absent(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, severity="S2", priority="P2")
+    body = client.get("/?tab=triaged&bug=1").text
+    assert "assign to" not in body

@@ -6,6 +6,11 @@
       {% if draft.product or draft.component %}
         <span>move to <span class="pill pill-reassign">{{ draft.product or 'Core' }} :: {{ draft.component or '?' }}</span></span>
       {% endif %}
+      {% if draft.status %}<span class="pill pill-status">{{ draft.status }}</span>{% endif %}
+      {% if draft.assigned_to %}
+        <span class="sep">·</span>
+        <span>assign to <span class="pill pill-assign">{{ draft.assigned_to }}</span></span>
+      {% endif %}
       {% if draft.blocks_add %}
         <span class="sep">·</span>
         <span><span class="plus">+</span>blocks

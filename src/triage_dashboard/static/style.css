@@ -862,6 +862,8 @@ code, kbd {
 .pill-pri { background: var(--surface-2); color: var(--ink); }
 .pill-resolve { background: var(--red); color: var(--surface); padding: 0.1rem 0.5rem; font-weight: 700; }
 .pill-reassign { background: var(--blue-soft); color: var(--blue); font-weight: 600; }
+.pill-status { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+.pill-assign { background: var(--violet-soft); color: var(--violet); font-weight: 600; }
 .diff .meta { color: var(--blue); font-family: var(--font-mono); font-size: 0.85rem; font-weight: 500; }
 .diff .plus { color: var(--green); font-weight: 700; margin-right: 0.1em; }
 

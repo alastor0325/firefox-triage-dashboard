@@ -373,6 +373,20 @@ def test_draft_from_pending_regressed_by_add_defaults_empty() -> None:
     assert draft.regressed_by_add == []
 
 
+def test_draft_from_pending_parses_status_and_assignee() -> None:
+    draft = data.draft_from_pending(
+        {"bug_id": 1, "status": "ASSIGNED", "assigned_to": "alwu@mozilla.com"}
+    )
+    assert draft.status == "ASSIGNED"
+    assert draft.assigned_to == "alwu@mozilla.com"
+
+
+def test_draft_from_pending_status_and_assignee_default_none() -> None:
+    draft = data.draft_from_pending({"bug_id": 1})
+    assert draft.status is None
+    assert draft.assigned_to is None
+
+
 # ─── triage_dir_from_env ───────────────────────────────────────────
 
 def test_triage_dir_from_env_uses_override(
