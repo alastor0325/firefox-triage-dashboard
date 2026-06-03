@@ -366,6 +366,8 @@ class Draft:
     # Legacy enrichment fields (kept for backward-compat with prior code paths)
     bug_component: str | None = None
     bug_reporter: str | None = None
+    # Bugzilla `regressed_by` relation: the change(s) that caused this regression
+    regressed_by_add: list[int] = field(default_factory=list)
 
 
 def classify_section(d: dict) -> Section:
@@ -396,6 +398,7 @@ def draft_from_pending(data: dict) -> Draft:
         priority=data.get("priority"),
         severity=data.get("severity"),
         blocks_add=list(data.get("blocks_add") or []),
+        regressed_by_add=list(data.get("regressed_by_add") or []),
         cc_add=list(data.get("cc_add") or []),
         resolution=data.get("resolution"),
         keywords_add=list(data.get("keywords_add") or []),

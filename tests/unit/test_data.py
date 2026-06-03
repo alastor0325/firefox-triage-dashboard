@@ -359,6 +359,20 @@ def test_compute_stats_counts_everything() -> None:
     assert stats.watching == 1
 
 
+# ─── draft_from_pending: regressed_by_add ──────────────────────────
+
+def test_draft_from_pending_parses_regressed_by_add() -> None:
+    draft = data.draft_from_pending(
+        {"bug_id": 1, "regressed_by_add": [2033628]}
+    )
+    assert draft.regressed_by_add == [2033628]
+
+
+def test_draft_from_pending_regressed_by_add_defaults_empty() -> None:
+    draft = data.draft_from_pending({"bug_id": 1})
+    assert draft.regressed_by_add == []
+
+
 # ─── triage_dir_from_env ───────────────────────────────────────────
 
 def test_triage_dir_from_env_uses_override(

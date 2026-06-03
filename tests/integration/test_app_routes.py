@@ -1326,3 +1326,20 @@ def test_watching_no_stalled_badge_when_added_at_missing(
     body = client.get("/?tab=watching").text
     item = _watch_item_for(body, 12345)
     assert "watch-stalled" not in item
+
+
+# ─── will-apply diff: regressed_by ──────────────────────────────────
+
+def test_will_apply_diff_shows_regressed_by(triage_dir: Path) -> None:
+    """A draft with regressed_by_add renders a '+regressed by bug N' line
+    linking to the regressor on Bugzilla."""
+    write_draft(triage_dir, 1, ni_targets=["x@y"], regressed_by_add=[2033628])
+    body = client.get("/").text
+    assert "regressed by" in body
+    assert "id=2033628" in body
+
+
+def test_will_apply_diff_omits_regressed_by_when_empty(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, ni_targets=["x@y"])
+    body = client.get("/").text
+    assert "regressed by" not in body

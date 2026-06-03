@@ -12,6 +12,12 @@
           {% for b in draft.blocks_add %}<a class="meta" href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ b }}" target="_blank" rel="noopener">{{ b }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
         </span>
       {% endif %}
+      {% if draft.regressed_by_add %}
+        <span class="sep">·</span>
+        <span><span class="plus">+</span>regressed by
+          {% for b in draft.regressed_by_add %}<a class="meta" href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ b }}" target="_blank" rel="noopener">bug {{ b }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+        </span>
+      {% endif %}
       {% if draft.ni_targets %}
         <span class="sep">·</span>
         <span><span class="plus">+</span>ni {{ draft.ni_targets|join(', ') }}</span>
