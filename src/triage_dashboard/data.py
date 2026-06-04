@@ -39,11 +39,15 @@ _InvestigationYamlLoader.yaml_implicit_resolvers = {
 
 Section = Literal["§1b", "§1a", "§1c"]
 
-# Recognised Mozilla severity/priority levels. Anything else (legacy
-# values like "critical"/"normal", empty strings, garbage) maps to the
-# "unknown" warning treatment so card-head pills are never unstyled.
-_SEVERITY_LEVELS = {"S1", "S2", "S3", "S4"}
-_PRIORITY_LEVELS = {"P1", "P2", "P3", "P4", "P5"}
+# Recognised Mozilla severity/priority levels, most→least severe. These ordered
+# tuples are the single source for both the Will-apply override dropdowns and
+# the (unordered) validation sets below. Anything else (legacy values like
+# "critical"/"normal", empty strings, garbage) maps to the "unknown" warning
+# treatment so card-head pills are never unstyled.
+SEVERITY_OPTIONS = ("S1", "S2", "S3", "S4")
+PRIORITY_OPTIONS = ("P1", "P2", "P3", "P4", "P5")
+_SEVERITY_LEVELS = frozenset(SEVERITY_OPTIONS)
+_PRIORITY_LEVELS = frozenset(PRIORITY_OPTIONS)
 
 
 def level_class(value: str | None) -> str:
@@ -726,6 +730,23 @@ def toggle_in_list(items: list[str], value: str, on: bool) -> list[str]:
     return out
 
 
+def _modify_pending(triage_dir: Path, bug_id: int, mutate) -> bool:
+    """Read a pending draft's JSON, apply `mutate(dict)` in place, and persist.
+    Returns False (no-op) when the pending file is missing or unreadable. Shared
+    read-modify-write mechanics for the pending-draft setters below; callers
+    validate the field/value before passing `mutate`."""
+    path = triage_dir / "pending" / f"bug-{bug_id}.json"
+    if not path.is_file():
+        return False
+    try:
+        d = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    mutate(d)
+    path.write_text(json.dumps(d, indent=2, ensure_ascii=False), encoding="utf-8")
+    return True
+
+
 def set_owner_membership(
     triage_dir: Path, bug_id: int, field: str, on: bool
 ) -> bool:
@@ -738,16 +759,35 @@ def set_owner_membership(
     owner = triage_owner()
     if not owner:
         return False
-    path = triage_dir / "pending" / f"bug-{bug_id}.json"
-    if not path.is_file():
+    return _modify_pending(
+        triage_dir, bug_id,
+        lambda d: d.update({field: toggle_in_list(list(d.get(field) or []), owner, on)}),
+    )
+
+
+_LEVEL_OPTIONS = {"severity": SEVERITY_OPTIONS, "priority": PRIORITY_OPTIONS}
+
+
+def level_options(field: str) -> tuple[str, ...]:
+    """Ordered selectable values for a draft 'severity' / 'priority' field;
+    () for any other field. Pure — backs the Will-apply override dropdowns
+    and validates incoming overrides in `set_draft_field`."""
+    return _LEVEL_OPTIONS.get(field, ())
+
+
+def set_draft_field(triage_dir: Path, bug_id: int, field: str, value: str) -> bool:
+    """Override a pending draft's 'severity' / 'priority' with an explicit
+    value and persist it — the value that will actually be applied this round.
+    `value` must be one of the field's allowed levels (case-insensitive).
+    Returns False (no-op) on unknown field, invalid value, or missing/unreadable
+    pending file. Read-modify-write, mirrors `set_owner_membership`."""
+    options = level_options(field)
+    if not options:
         return False
-    try:
-        d = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    value = str(value or "").strip().upper()
+    if value not in options:
         return False
-    d[field] = toggle_in_list(list(d.get(field) or []), owner, on)
-    path.write_text(json.dumps(d, indent=2, ensure_ascii=False), encoding="utf-8")
-    return True
+    return _modify_pending(triage_dir, bug_id, lambda d: d.update({field: value}))
 
 
 def strip_frontmatter(text: str) -> str:

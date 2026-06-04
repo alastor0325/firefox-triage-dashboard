@@ -39,6 +39,7 @@ templates.env.globals["is_taken"] = data.is_taken
 templates.env.globals["assignee_display"] = data.assignee_display
 templates.env.filters["version_only"] = data.version_only
 templates.env.globals["triage_owner"] = data.triage_owner
+templates.env.globals["level_options"] = data.level_options
 
 # Cache-bust /static/style.css with the file's mtime captured at import
 # time. Browsers refetch when the URL changes; on the server, restarting
@@ -603,6 +604,33 @@ def toggle_owner(request: Request, bug_id: int, field: str) -> HTMLResponse:
     # card — suppress the watcher so it doesn't also fire a whole-tab SSE refresh.
     broker.suppress_path(triage_dir / "pending" / f"bug-{bug_id}.json")
     data.set_owner_membership(triage_dir, bug_id, key, not currently_on)
+    pending = _load_pending_or_404(bug_id)  # reload post-write
+    return templates.TemplateResponse(
+        request=request,
+        name="_apply_wrap.html",
+        context={"draft": data.draft_from_pending(pending)},
+    )
+
+
+@app.post("/draft/{bug_id}/field/{field}", response_class=HTMLResponse)
+def set_field(
+    request: Request, bug_id: int, field: str, value: str = Form(...)
+) -> HTMLResponse:
+    """Override the pending draft's severity / priority for this round's apply.
+
+    The Will-apply dropdowns default to the AI's proposed level; selecting a
+    different one persists it as the value that will actually be applied. Like
+    the owner toggle, this is the app's own write + the htmx swap below already
+    refreshes the wrap, so suppress the watcher to avoid a whole-tab SSE
+    refresh. Re-renders the will-apply wrap so the diff reflects the override.
+    """
+    if not data.level_options(field):
+        raise HTTPException(status_code=404, detail="unknown field")
+    triage_dir = data.triage_dir_from_env()
+    _load_pending_or_404(bug_id)
+    broker.suppress_path(triage_dir / "pending" / f"bug-{bug_id}.json")
+    if not data.set_draft_field(triage_dir, bug_id, field, value):
+        raise HTTPException(status_code=400, detail="invalid value")
     pending = _load_pending_or_404(bug_id)  # reload post-write
     return templates.TemplateResponse(
         request=request,

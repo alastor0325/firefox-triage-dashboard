@@ -2,6 +2,7 @@
    the owner-toggle endpoint can re-render both at once (the diff's +cc/+ni lines
    must stay in sync with the checkboxes). Lives inside #applywrap-<id>. #}
 <div class="diff">
+{% set editable = True %}
 {% include "_applied_diff.html" %}
 </div>
 {% include "_owner_toggles.html" %}

@@ -1,0 +1,13 @@
+{# Will-apply severity/priority override dropdown. Defaults to the AI's
+   proposed level (_current); changing it persists the override and re-renders
+   the wrap. Expects: draft, _field ('severity'|'priority'), _current, _cls. #}
+<select class="pill pill-{{ _cls }} pill-select"
+        aria-label="{{ _field|capitalize }} to apply"
+        name="value"
+        hx-post="/draft/{{ draft.bug_id }}/field/{{ _field }}"
+        hx-target="#applywrap-{{ draft.bug_id }}"
+        hx-swap="innerHTML">
+  {% for opt in level_options(_field) %}
+  <option value="{{ opt }}"{% if opt == _current %} selected{% endif %}>{{ opt }}</option>
+  {% endfor %}
+</select>

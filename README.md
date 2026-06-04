@@ -200,7 +200,10 @@ While reading a card, watch for these:
 
 - **Card-head S/P pills** show the bug's *current* Bugzilla state —
   not what the draft will set. The "Will apply" footer at the bottom
-  shows the draft's deltas.
+  shows the draft's deltas. In that footer the **severity / priority
+  are editable dropdowns**: they default to the AI's proposed level,
+  and selecting a different one overrides what will actually be applied
+  this round.
 
 - **Pending feedback** — refines you've queued for this specific bug
   via the composer. ✕ on any row to remove it before draining.

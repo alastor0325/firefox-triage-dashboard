@@ -1610,3 +1610,55 @@ def test_lightbox_element_present_in_shell() -> None:
     body = client.get("/").text
     assert 'id="img-lightbox"' in body
     assert 'class="img-lightbox-img"' in body
+
+
+# ─── Will-apply severity/priority override dropdowns ─────────────────
+
+def test_will_apply_renders_severity_priority_as_selects(triage_dir: Path) -> None:
+    """In the editable will-apply wrap, S/P render as dropdowns defaulting to
+    the AI's proposed level."""
+    write_draft(triage_dir, 770001, severity="S2", priority="P1")
+    body = client.get("/?tab=triaged&bug=770001").text
+    assert 'hx-post="/draft/770001/field/severity"' in body
+    assert 'hx-post="/draft/770001/field/priority"' in body
+    assert '<option value="S2" selected>' in body
+    assert '<option value="P1" selected>' in body
+
+
+def test_field_override_persists_and_rerenders(triage_dir: Path) -> None:
+    import json
+    write_draft(triage_dir, 770002, severity="S3", priority="P3")
+    r = client.post("/draft/770002/field/severity",
+                    data={"value": "S1"}, headers={"HX-Request": "true"})
+    assert r.status_code == 200
+    assert '<option value="S1" selected>' in r.text          # wrap re-rendered
+    saved = json.loads((triage_dir / "pending" / "bug-770002.json").read_text())
+    assert saved["severity"] == "S1"
+    assert saved["priority"] == "P3"                          # untouched
+
+
+def test_field_override_rejects_invalid_value(triage_dir: Path) -> None:
+    import json
+    write_draft(triage_dir, 770003, severity="S3", priority="P3")
+    r = client.post("/draft/770003/field/severity", data={"value": "P1"})
+    assert r.status_code == 400
+    saved = json.loads((triage_dir / "pending" / "bug-770003.json").read_text())
+    assert saved["severity"] == "S3"                          # unchanged
+
+
+def test_field_override_unknown_field_404(triage_dir: Path) -> None:
+    write_draft(triage_dir, 770004, severity="S3")
+    r = client.post("/draft/770004/field/status", data={"value": "NEW"})
+    assert r.status_code == 404
+
+
+def test_watch_applied_diff_stays_readonly_pill() -> None:
+    """The shared diff partial renders read-only pills (not selects) outside the
+    editable wrap, so the watch-applied 'already applied' view isn't editable."""
+    from triage_dashboard.app import templates
+    tmpl = templates.get_template("_applied_diff.html")
+    draft = {"bug_id": 9, "severity": "S2", "priority": "P1"}
+    readonly = tmpl.render(draft=draft, editable=False)
+    assert "pill pill-sev" in readonly and "<select" not in readonly
+    editable = tmpl.render(draft=draft, editable=True)
+    assert "field/severity" in editable and "<select" in editable

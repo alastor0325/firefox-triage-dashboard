@@ -1,7 +1,15 @@
 {# Applied-changes diff: the fields a draft will write to Bugzilla.
-   Expects `draft` (Draft) in context. #}
-      {% if draft.severity %}<span class="pill pill-sev">{{ draft.severity }}</span>{% endif %}
-      {% if draft.priority %}<span class="pill pill-pri">{{ draft.priority }}</span>{% endif %}
+   Expects `draft` (Draft) in context. When `editable` is set (the will-apply
+   wrap), severity/priority render as override dropdowns; otherwise (the
+   watch-applied/"already applied" view) they stay read-only pills. #}
+      {% if draft.severity %}
+        {% if editable %}{% set _field = 'severity' %}{% set _current = draft.severity %}{% set _cls = 'sev' %}{% include "_level_select.html" %}
+        {% else %}<span class="pill pill-sev">{{ draft.severity }}</span>{% endif %}
+      {% endif %}
+      {% if draft.priority %}
+        {% if editable %}{% set _field = 'priority' %}{% set _current = draft.priority %}{% set _cls = 'pri' %}{% include "_level_select.html" %}
+        {% else %}<span class="pill pill-pri">{{ draft.priority }}</span>{% endif %}
+      {% endif %}
       {% if draft.resolution %}<span>resolve <span class="pill pill-resolve">{{ draft.resolution }}</span>{% if draft.resolution == "DUPLICATE" and draft.dupe_of %} of <a class="meta" href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ draft.dupe_of }}" target="_blank" rel="noopener">bug {{ draft.dupe_of }}</a>{% endif %}</span>{% endif %}
       {% if draft.product or draft.component %}
         <span>move to <span class="pill pill-reassign">{{ draft.product or 'Core' }} :: {{ draft.component or '?' }}</span></span>
