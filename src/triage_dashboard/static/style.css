@@ -1942,3 +1942,51 @@ code, kbd {
   border-radius: 3px;
   color: var(--ink-2);
 }
+
+/* In-app full-bleed reading overlay (htmx swaps the fragment into
+   #investigation-overlay; empty host stays hidden). */
+#investigation-overlay:empty { display: none; }
+.inv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  animation: inv-overlay-in 0.13s ease-out;
+}
+@keyframes inv-overlay-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+.inv-overlay-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.inv-overlay-title { font-size: 0.9rem; color: var(--ink-2); }
+.inv-overlay-title strong { color: var(--ink); font-weight: 600; }
+.inv-overlay-bar .investigation-bz { margin-left: auto; }
+.inv-overlay-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink-3);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.inv-overlay-close:hover { border-color: var(--accent); color: var(--accent); }
+.inv-overlay-scroll { flex: 1; overflow-y: auto; }
+/* No back-link inside the overlay (the ✕ replaces it), so the column needs
+   its own top padding. */
+.inv-overlay-scroll .investigation-main { padding-top: 1.75rem; }

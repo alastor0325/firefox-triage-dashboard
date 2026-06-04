@@ -15,14 +15,6 @@
 
 <main class="investigation-main">
   <a class="investigation-back" href="/">←&nbsp;Back to triage</a>
-  {% if found %}
-  <article class="investigation-body md-body">{{ body | render_markdown }}</article>
-  {% else %}
-  <div class="investigation-missing">
-    <h2>No investigation yet</h2>
-    <p>There's no investigation on file for bug {{ bug_id }}. Run
-       <code>/bug-start {{ bug_id }}</code> to create one — it'll appear here.</p>
-  </div>
-  {% endif %}
+  {% include "_investigation_content.html" %}
 </main>
 {% endblock %}

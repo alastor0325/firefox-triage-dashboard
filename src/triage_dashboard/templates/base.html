@@ -13,6 +13,31 @@
 </head>
 <body>
 {% block body %}{% endblock %}
+{# In-app full-bleed investigation reading overlay. htmx swaps the
+   /investigation/<id> fragment in here; empty = hidden (CSS). #}
+<div id="investigation-overlay"></div>
+<script>
+  // Close the investigation overlay. With hx-push-url the URL is
+  // /investigation/<id>; history.back() returns to the dashboard and htmx
+  // restores its snapshot (overlay cleared). Fallback: empty the host.
+  function closeInvestigation() {
+    if (location.pathname.indexOf('/investigation/') === 0) {
+      history.back();
+    } else {
+      const host = document.getElementById('investigation-overlay');
+      if (host) host.innerHTML = '';
+    }
+  }
+  // Esc closes the overlay (capture phase + stopPropagation so the deck's
+  // own Esc handler doesn't also run).
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.querySelector('.inv-overlay')) {
+      closeInvestigation();
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+</script>
 <script>
   function autosize(el) {
     el.style.height = 'auto';
@@ -42,6 +67,9 @@
   document.addEventListener('keydown', (e) => {
     const tag = (document.activeElement?.tagName || '').toLowerCase();
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    // While the investigation overlay is open, the dashboard shortcuts
+    // (j/k/a/arrows) are suppressed — only Esc (handled separately) acts.
+    if (document.querySelector('.inv-overlay')) return;
     if (['input', 'textarea', 'select'].includes(tag) && e.key !== 'Escape') return;
     const clickIfActive = sel => {
       const btn = document.querySelector(sel);

@@ -378,9 +378,15 @@ def investigation_page(request: Request, bug_id: int) -> HTMLResponse:
     rather than a dead link.
     """
     raw = data.load_investigation_markdown(bug_id)
+    # Dual-render (same pattern as `index`): an htmx request gets just the
+    # overlay fragment to swap into the dashboard in-place; a direct GET
+    # (refresh, bookmark, new tab) gets the full standalone page. Either way
+    # the URL is /investigation/<id> and stays valid.
+    is_htmx = request.headers.get("HX-Request") == "true"
+    name = "_investigation_overlay.html" if is_htmx else "investigation.html"
     return templates.TemplateResponse(
         request=request,
-        name="investigation.html",
+        name=name,
         context={
             "bug_id": bug_id,
             "found": raw is not None,

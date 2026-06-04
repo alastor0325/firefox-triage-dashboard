@@ -834,6 +834,9 @@ def test_card_findings_open_link_points_at_local_route(
     monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'href="/investigation/2042320"' in body
+    # In-app overlay swap (htmx) — but href stays as the new-tab/no-JS fallback.
+    assert 'hx-get="/investigation/2042320"' in body
+    assert 'hx-target="#investigation-overlay"' in body
     # Regression guards: removed the private-repo link and any file:// link.
     assert "github.com/alastor0325/firefox-bug-investigation" not in body
     assert "file://" not in body
@@ -873,6 +876,42 @@ def test_investigation_route_missing_is_graceful(
     resp = client.get("/investigation/999999")
     assert resp.status_code == 200
     assert "/bug-start 999999" in resp.text
+
+
+def test_investigation_route_htmx_returns_overlay_fragment(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """An htmx request gets just the in-app overlay fragment (to swap into
+    the dashboard), not a full HTML document."""
+    inv_dir = tmp_path / "inv"
+    inv_dir.mkdir()
+    (inv_dir / "bug-2042320-investigation.md").write_text(
+        "---\nbug_id: 2042320\n---\n# Root cause\n\nbody\n", encoding="utf-8",
+    )
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
+    resp = client.get("/investigation/2042320", headers={"HX-Request": "true"})
+    assert resp.status_code == 200
+    body = resp.text
+    assert 'class="inv-overlay"' in body          # the overlay fragment
+    assert "inv-overlay-close" in body            # close affordance
+    assert "<!doctype" not in body.lower()        # NOT a full page
+    assert "<h1>Root cause</h1>" in body          # body still rendered
+
+
+def test_investigation_route_direct_get_is_full_page(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """A direct GET (no HX-Request) gets the full standalone page, so the
+    URL is refresh/bookmark-safe — not the bare overlay fragment."""
+    inv_dir = tmp_path / "inv"
+    inv_dir.mkdir()
+    (inv_dir / "bug-2042320-investigation.md").write_text(
+        "---\nbug_id: 2042320\n---\n# Root cause\n\nbody\n", encoding="utf-8",
+    )
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
+    resp = client.get("/investigation/2042320")
+    assert "<!doctype" in resp.text.lower()
+    assert 'class="inv-overlay"' not in resp.text
 
 
 # ─── is_stale flag (investigation older than bug activity) ────────────
