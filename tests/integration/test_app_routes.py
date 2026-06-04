@@ -773,9 +773,9 @@ def test_card_findings_shell_renders_when_file_has_no_frontmatter(
 ) -> None:
     """A pre-schema investigation file (no `---` frontmatter) still
     exists on disk, so render a minimal Findings block with just the
-    GitHub link. The per-section `{% if %}` guards short-circuit on
-    empty fields so no status pill, no root-cause, no affected files
-    appear."""
+    same-origin investigation link. The per-section `{% if %}` guards
+    short-circuit on empty fields so no status pill, no root-cause, no
+    affected files appear."""
     write_draft(triage_dir, 5551, severity="S3", priority="P3")
     inv_dir = tmp_path / "inv"
     inv_dir.mkdir()
@@ -787,11 +787,9 @@ def test_card_findings_shell_renders_when_file_has_no_frontmatter(
     body = client.get("/").text
     # Findings block still rendered.
     assert 'class="findings"' in body
-    # GitHub link present and templated with the bug id.
-    assert (
-        'href="https://github.com/alastor0325/firefox-bug-investigation/'
-        'blob/main/bug-5551-investigation.md"'
-    ) in body
+    # Same-origin investigation link present and templated with the bug id.
+    assert 'href="/investigation/5551"' in body
+    assert "github.com/alastor0325/firefox-bug-investigation" not in body
     # No status pill, no root-cause / affected-file / regression /
     # related / complexity / notes blocks rendered (their values are
     # empty defaults so the `{% if %}` guards skip them).
@@ -824,23 +822,57 @@ def test_card_findings_related_bugs_render_as_links(
     )
 
 
-def test_card_findings_open_link_points_at_github(
+def test_card_findings_open_link_points_at_local_route(
     triage_dir: Path, tmp_path: Path, monkeypatch,
 ) -> None:
-    """Chrome (and other browsers) block http→file:// navigation entirely,
-    so the "Open full investigation →" link must point at the canonical
-    GitHub copy of the investigation file instead."""
+    """The "Open full investigation →" link must be a same-origin route the
+    dashboard serves itself — always valid. It must NOT point at the old
+    private GitHub repo (404 for anyone else) or a browser-blocked file://."""
     write_draft(triage_dir, 2042320, severity="S3", priority="P3")
     inv_dir = tmp_path / "inv"
     _write_inv(inv_dir, 2042320, "bug_id: 2042320\n")
     monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
-    assert (
-        'href="https://github.com/alastor0325/firefox-bug-investigation/'
-        'blob/main/bug-2042320-investigation.md"'
-    ) in body
-    # Regression guard: no stale file:// links remain.
+    assert 'href="/investigation/2042320"' in body
+    # Regression guards: removed the private-repo link and any file:// link.
+    assert "github.com/alastor0325/firefox-bug-investigation" not in body
     assert "file://" not in body
+
+
+def test_investigation_route_renders_local_file(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """GET /investigation/<id> renders the local investigation markdown
+    (same-origin, always valid), with the body rendered and a Bugzilla link,
+    and the YAML frontmatter stripped out."""
+    inv_dir = tmp_path / "inv"
+    inv_dir.mkdir()
+    (inv_dir / "bug-2042320-investigation.md").write_text(
+        "---\nbug_id: 2042320\nstatus: investigated\n---\n"
+        "# Root cause\n\nThe decoder mis-maps the codec.\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    resp = client.get("/investigation/2042320")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "The decoder mis-maps the codec." in body
+    assert "<h1>Root cause</h1>" in body                 # body rendered as markdown
+    assert "show_bug.cgi?id=2042320" in body              # bugzilla link present
+    assert "status: investigated" not in body             # frontmatter not leaked
+
+
+def test_investigation_route_missing_is_graceful(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """A bug with no investigation file returns a 200 'not investigated yet'
+    page (still a valid URL), never a dead link or a 404."""
+    inv_dir = tmp_path / "inv"
+    inv_dir.mkdir()
+    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    resp = client.get("/investigation/999999")
+    assert resp.status_code == 200
+    assert "/bug-start 999999" in resp.text
 
 
 # ─── is_stale flag (investigation older than bug activity) ────────────

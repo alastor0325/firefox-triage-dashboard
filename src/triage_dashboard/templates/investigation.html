@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Bug {{ bug_id }} · Investigation{% endblock %}
+{% block body %}
+<main class="investigation-page">
+  <header class="investigation-head">
+    <a class="investigation-back" href="/">← Triage</a>
+    <h1>Bug {{ bug_id }} — Investigation</h1>
+    <a class="investigation-bz"
+       href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ bug_id }}"
+       target="_blank" rel="noopener">Bugzilla →</a>
+  </header>
+  {% if found %}
+  <article class="investigation-body">{{ body | render_markdown }}</article>
+  {% else %}
+  <p class="investigation-missing">
+    No investigation on file for bug {{ bug_id }} yet — run
+    <code>/bug-start {{ bug_id }}</code> to create one.
+  </p>
+  {% endif %}
+</main>
+{% endblock %}

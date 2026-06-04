@@ -167,11 +167,10 @@ job. The two skills work together via the dashboard:
   to fix the bug.
 
 Investigation files live at
-`~/firefox-bug-investigation/bug-<id>-investigation.md` and are pushed
-to the
-[firefox-bug-investigation](https://github.com/alastor0325/firefox-bug-investigation)
-GitHub repo so the dashboard's "Open full investigation →" link
-resolves publicly.
+`~/firefox-bug-investigation/bug-<id>-investigation.md`. The dashboard
+serves them itself at `/investigation/<id>`, so the "Open full
+investigation →" link is always valid and nothing has to leave your
+machine (no remote repo required).
 
 If the bug doesn't have enough data for `/bug-start` to be useful (no
 media profile, no media log, no crash signature, etc.), the skill
@@ -266,7 +265,7 @@ terminal, gated by its `[y/N]` confirmation.
 
 ## Related projects
 
-- **[firefox-bug-investigation](https://github.com/alastor0325/firefox-bug-investigation)** — investigation files written by `/bug-start`, linked from the dashboard's Findings block
+- **[firefox-bug-investigation](https://github.com/alastor0325/firefox-bug-investigation)** — investigation files written by `/bug-start`; the dashboard reads them from the local investigation dir and serves them at `/investigation/<id>`
 - **[Claude-Skills](https://github.com/alastor0325/Claude-Skills)** — the `/triage` and `/bug-start` skills that drive the workflow
 - **[bugzilla-cli](https://github.com/alastor0325/bugzilla-cli)** — the underlying tool for Bugzilla I/O, including the `[y/N]` apply prompt
 

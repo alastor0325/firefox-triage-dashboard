@@ -664,6 +664,39 @@ def investigation_dir_from_env() -> Path:
     return DEFAULT_INVESTIGATION_DIR
 
 
+def strip_frontmatter(text: str) -> str:
+    """Return the markdown body after a leading `---`-fenced YAML
+    frontmatter block. Returns the text unchanged when it has no
+    frontmatter (doesn't open with `---`) or no closing fence (malformed —
+    don't silently swallow the whole body). Pure; the /investigation/<id>
+    route uses it so the frontmatter never renders into the page."""
+    if not text.startswith(_FRONTMATTER_DELIM):
+        return text
+    lines = text.splitlines(keepends=True)
+    if not lines or lines[0].strip() != _FRONTMATTER_DELIM:
+        return text
+    for i in range(1, len(lines)):
+        if lines[i].strip() == _FRONTMATTER_DELIM:
+            return "".join(lines[i + 1:])
+    return text
+
+
+def load_investigation_markdown(
+    bug_id: int, investigation_dir: Path | None = None
+) -> str | None:
+    """Return the raw markdown of `bug-{id}-investigation.md` from the
+    investigation dir, or None if it's absent/unreadable. Thin I/O wrapper;
+    body extraction (`strip_frontmatter`) and rendering happen on the
+    result via pure functions."""
+    if investigation_dir is None:
+        investigation_dir = investigation_dir_from_env()
+    md_path = investigation_dir / f"bug-{bug_id}-investigation.md"
+    try:
+        return md_path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+
 def load_investigation(
     bug_id: int, investigation_dir: Path | None = None
 ) -> Investigation | None:

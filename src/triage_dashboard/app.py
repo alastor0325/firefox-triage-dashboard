@@ -367,6 +367,28 @@ def index(
     )
 
 
+@app.get("/investigation/{bug_id}", response_class=HTMLResponse)
+def investigation_page(request: Request, bug_id: int) -> HTMLResponse:
+    """Render the local investigation markdown for a bug, same-origin.
+
+    Replaces the old "Open full investigation" link to a private GitHub
+    repo (404 for anyone else). The dashboard already has the file locally,
+    so it serves it itself: the link is always valid, nothing leaves the
+    machine, and a missing file yields a 200 "not investigated yet" page
+    rather than a dead link.
+    """
+    raw = data.load_investigation_markdown(bug_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="investigation.html",
+        context={
+            "bug_id": bug_id,
+            "found": raw is not None,
+            "body": data.strip_frontmatter(raw) if raw is not None else "",
+        },
+    )
+
+
 @app.get("/healthz")
 def healthz() -> dict:
     return {"ok": True}
