@@ -271,6 +271,20 @@ def all_queued_actions(triage_dir: Path) -> list[dict]:
     return out
 
 
+def apply_bug_ids(rows: list[dict]) -> set[int]:
+    """Pure: the set of bug ids with a queued `apply` action, from the rows
+    `all_queued_actions` returns. Drives the 'queued to apply this round'
+    treatment on cards + rail rows."""
+    out: set[int] = set()
+    for r in rows:
+        if r.get("action") == "apply":
+            try:
+                out.add(int(r["bug_id"]))
+            except (KeyError, TypeError, ValueError):
+                pass
+    return out
+
+
 def pending_feedback_for(triage_dir: Path, bug_id: int) -> list[dict]:
     """Return all queued refine entries for `bug_id`, file order preserved.
 

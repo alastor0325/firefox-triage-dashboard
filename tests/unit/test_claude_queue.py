@@ -633,3 +633,24 @@ def test_all_queued_actions_skips_malformed_lines(triage_dir: Path) -> None:
     )
     items = claude_queue.all_queued_actions(triage_dir)
     assert len(items) == 1
+
+
+# ─── apply_bug_ids (pure — drives the queued-to-apply card/rail treatment) ───
+
+def test_apply_bug_ids_filters_apply_actions() -> None:
+    rows = [
+        {"action": "apply", "bug_id": 1},
+        {"action": "refine", "bug_id": 2},
+        {"action": "apply", "bug_id": 3},
+        {"action": "bug-start", "bug_id": 4},
+    ]
+    assert claude_queue.apply_bug_ids(rows) == {1, 3}
+
+
+def test_apply_bug_ids_empty() -> None:
+    assert claude_queue.apply_bug_ids([]) == set()
+
+
+def test_apply_bug_ids_skips_malformed() -> None:
+    rows = [{"action": "apply"}, {"action": "apply", "bug_id": "x"}]
+    assert claude_queue.apply_bug_ids(rows) == set()

@@ -52,6 +52,7 @@
             {# Action-driving tags. 'New' is recomputed every render from
                bug_context.filed, so it drops once the bug ages past a week. #}
             <span class="rail-tag-group">
+              {% if d.bug_id in (queued_apply_ids or []) %}<span class="rail-tag rail-tag--applied" title="Apply queued this round">✓ Applied</span>{% endif %}
               {% if is_new_this_week(d) %}<span class="rail-tag rail-tag--new">New</span>{% endif %}
               {% if is_emergency(d) %}<span class="rail-tag rail-tag--emergency">emergency</span>{% endif %}
               {% if is_regression(d) %}<span class="rail-tag rail-tag--regression">regression</span>{% endif %}

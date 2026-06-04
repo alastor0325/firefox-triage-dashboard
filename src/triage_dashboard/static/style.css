@@ -2027,3 +2027,27 @@ code, kbd {
   margin: 0;
 }
 .owner-toggle:hover { color: var(--ink); }
+
+/* ───── QUEUED-TO-APPLY treatment (this bug's apply is queued this round) ─────
+   Card gets a green left-edge accent + faint tint (glanceable); the card-head
+   and rail rows get a "✓ Applied" tag (unambiguous). Matches the green Applied
+   button. The inset box-shadow avoids a layout shift vs a thicker border. */
+.card--queued {
+  border-color: var(--green);
+  background: var(--green-soft);
+  box-shadow: inset 3px 0 0 0 var(--green);
+}
+.card--queued:hover { border-color: var(--green); }
+.badge-applied {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  background: var(--green-soft);
+  color: var(--green);
+}
+.rail-tag--applied { background: var(--green-soft); color: var(--green); }

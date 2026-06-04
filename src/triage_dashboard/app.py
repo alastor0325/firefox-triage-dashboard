@@ -324,6 +324,9 @@ def index(
     }
     queue_rows = claude_queue.all_queued_actions(triage_dir)
     queue_count = len(queue_rows)
+    # Bugs whose apply is already queued this round — used to flag their card +
+    # rail row as "locked in" (green border/tint + ✓ Applied tag).
+    queued_apply_ids = claude_queue.apply_bug_ids(queue_rows)
     counts_by_slug = {
         slug: (
             len(groups.get(marker, [])) if marker
@@ -364,6 +367,7 @@ def index(
             "investigation": investigation,
             "is_stale": is_stale,
             "apply_queued": apply_queued,
+            "queued_apply_ids": queued_apply_ids,
         },
     )
 

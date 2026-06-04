@@ -1503,3 +1503,26 @@ def test_applywrap_css_grows_to_right_align_the_button() -> None:
     css = (STATIC_DIR / "style.css").read_text(encoding="utf-8")
     assert re.search(r"\.applywrap\s*\{[^}]*flex:\s*1", css), \
         ".applywrap must declare flex:1 to right-align the Apply button"
+
+
+# ─── queued-to-apply card + rail treatment ───────────────────────────
+
+def test_queued_card_and_rail_get_applied_treatment(triage_dir: Path) -> None:
+    """A bug whose apply is queued this round gets the green card treatment
+    (card--queued + ✓ Applied badge) and a rail tag."""
+    from triage_dashboard import claude_queue
+    write_draft(triage_dir, 700800, severity="S3", priority="P3")
+    write_draft(triage_dir, 700801, severity="S3", priority="P3")  # not queued
+    claude_queue.append_apply(triage_dir, bug_id=700800)
+    body = client.get("/?tab=triaged&bug=700800").text
+    assert "card--queued" in body          # focused card styled
+    assert "badge-applied" in body         # ✓ Applied pill in card-head
+    assert "rail-tag--applied" in body     # rail row tagged
+
+
+def test_unqueued_card_has_no_applied_treatment(triage_dir: Path) -> None:
+    write_draft(triage_dir, 700802, severity="S3", priority="P3")
+    body = client.get("/?tab=triaged&bug=700802").text
+    assert "card--queued" not in body
+    assert "badge-applied" not in body
+    assert "rail-tag--applied" not in body
