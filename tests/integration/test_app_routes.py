@@ -1526,3 +1526,28 @@ def test_unqueued_card_has_no_applied_treatment(triage_dir: Path) -> None:
     assert "card--queued" not in body
     assert "badge-applied" not in body
     assert "rail-tag--applied" not in body
+
+
+# ─── investigation page scroll (long reports must not crop) ──────────
+
+def test_investigation_standalone_page_has_scroll_container(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """The app-shell body is height:100vh; overflow:hidden, so the standalone
+    investigation page must wrap its content in a full-height scroll container
+    or long reports get cropped with no scrollbar."""
+    inv = tmp_path / "inv"
+    inv.mkdir()
+    (inv / "bug-555-investigation.md").write_text(
+        "---\nbug_id: 555\n---\n# Big report\n\nbody\n", encoding="utf-8")
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv))
+    resp = client.get("/investigation/555")
+    assert 'class="investigation-scroll"' in resp.text
+
+
+def test_investigation_scroll_css_scrolls() -> None:
+    import re
+    from triage_dashboard.app import STATIC_DIR
+    css = (STATIC_DIR / "style.css").read_text(encoding="utf-8")
+    assert re.search(r"\.investigation-scroll\s*\{[^}]*overflow-y:\s*auto", css), \
+        ".investigation-scroll must overflow-y:auto so long reports scroll"

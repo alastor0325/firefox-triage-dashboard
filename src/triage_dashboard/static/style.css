@@ -1837,6 +1837,15 @@ code, kbd {
    .topbar chrome and the .md-body prose styles; adds a centered reading
    column plus heading/table/blockquote rules the investigation body needs
    (.md-body alone styles only lists/code/links). */
+/* Standalone investigation page: the body is a fixed-height (100vh, overflow
+   hidden) app shell, so the content area must scroll itself or long reports get
+   cropped. Full-width scroll container; the .investigation-main column centers
+   inside it (scrollbar at the viewport edge, not mid-column). */
+.investigation-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
 .investigation-main {
   width: 100%;
   max-width: 820px;
