@@ -1,10 +1,10 @@
 # Packaging the triage toolkit for coworkers — parked plan
 
-**Status:** parked / not started. This is a record of the design discussion so
-we can resume cold. Nothing here is committed-to yet except the few items
-marked **DONE**.
+**Status:** ① `fx-bug-toolkit` **shipped** (public, v0.1.5). Triage + dashboard
+now being folded into it as a **single plugin** (see the 2026-06-04 decision
+below, which supersedes the two-plugin scope).
 
-**Last updated:** 2026-06-03
+**Last updated:** 2026-06-04
 
 ---
 
@@ -27,7 +27,68 @@ it compound**. That is the point — not any single skill.
 
 ---
 
-## Scope decision (2026-06-03): two plugins only
+## Decision update (2026-06-04): collapse to ONE plugin + lazy dashboard
+
+This supersedes the two-plugin scope below. The two-plugin split (① `fx-bug-toolkit`
++ ② `fx-triage`) was, in the end, mostly **ceremony** for a personal/small-team
+toolset — a second repo, manifest, CI, version line, and a `dependencies` edge —
+and the *one* thing it was really buying (not forcing the dashboard's heavy deps
+on investigate-only users) can be solved inside a single plugin with a **lazy
+install**. So:
+
+**Everything lives in one plugin: `fx-bug-toolkit`** (already shipped).
+- It gains the **triage skills** (`/triage`, triage-apply-feedback) and a
+  **`/triage-dashboard` launcher** skill.
+- The **dashboard becomes a pip-installable app** (`pyproject.toml`), **bundled
+  inside the plugin** (e.g. `dashboard/` or `src/triage_dashboard/`).
+- `init` is **unchanged** — it installs only the core investigation CLIs. It does
+  **not** install `fastapi`/`uvicorn`, so investigate-only users pay nothing.
+- **Lazy, consent-gated bootstrap on first `/triage`**: the triage skill checks
+  for a managed venv (e.g. `~/.fx-bug-toolkit/venv`); if absent, it asks before
+  creating it + `pip install`-ing the bundled dashboard app, then runs `uvicorn`.
+  Subsequent runs skip the bootstrap. (Honors the toolkit's existing "never
+  install without confirming first" rule.) Re-bootstrap when deps change on
+  `claude plugin update`.
+
+**Why one plugin is fine now (and the line that actually mattered):**
+- The decision was never really "1 vs 2 plugins" — it was *"are the dashboard's
+  heavy deps mandatory or on-demand."* Lazy install makes them on-demand, which
+  is the whole win, without a second plugin.
+- The "is it a server?" distinction is a red herring — the bundled viewer
+  (`serve.py`) is also a server. The real line is **deps + side effects**:
+  `serve.py` is stdlib + read-only; the dashboard needs a framework stack and
+  actively queues/applies work, so it gets a venv and a lazy bootstrap rather
+  than riding in for free.
+
+**Correction to a prior assumption:** Claude Code **does** support inter-plugin
+dependencies — `plugin.json` can declare `"dependencies": ["other-plugin"]` and
+they auto-install (≥ 2.1.110), and one marketplace can host multiple plugins.
+(Verified 2026-06-04 against the docs.) This makes the old "no auto-install →
+must document install order" worry moot — but it's also now irrelevant, since
+there's only one plugin.
+
+**Revised work items (replaces Phase 3's two-plugin framing):**
+- [ ] Make `triage-dashboard` **pip-installable** (finalize `pyproject.toml`,
+      entry point, static/templates as package data).
+- [ ] **Bundle** the dashboard app into the `fx-bug-toolkit` repo/plugin.
+- [ ] Add **`/triage`** + **`/triage-dashboard`** skills to the plugin; the
+      latter is the launcher (the `serve.py`/`browse` pattern, but it first
+      ensures the venv).
+- [ ] Implement the **lazy venv + pip bootstrap** (consent-gated; idempotent;
+      cross-platform — heed the MSYS2/PATH/zshenv lessons from v0.1.2–0.1.4).
+- [ ] **Unify the data dir** — there are currently three (`~/firefox-triage/`,
+      `~/firefox-bug-investigation/`, and the plugin default
+      `~/.fx-bug-toolkit/bug-investigation`). Pick one convention so the triage
+      skills, the dashboard, and the investigation viewer all read/write the same
+      place. This is the real integration contract and the prerequisite for the
+      rest.
+- [ ] Document the **data contract** (the `pending/*.json` schema +
+      `claude-queue.jsonl` action format + the investigation file schema) — now
+      with three consumers (triage skills, dashboard, browse viewer).
+
+---
+
+## Scope decision (2026-06-03): two plugins only — **SUPERSEDED** (see 2026-06-04 update above)
 
 We categorized all 27 personal skills and decided **what NOT to expose** is as
 important as what we do. Only two plugins are in scope, plus the wiki as an
