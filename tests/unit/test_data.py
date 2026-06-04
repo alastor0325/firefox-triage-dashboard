@@ -788,13 +788,13 @@ def test_load_investigation_no_opening_delim_returns_shell(
 def test_load_investigation_env_var_override(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """FIREFOX_INVESTIGATION_DIR overrides the default location when no
+    """FX_BUG_INVESTIGATION_DIR overrides the default location when no
     explicit directory is passed."""
     _write_investigation(
         tmp_path, 42,
         "---\nbug_id: 42\nstatus: investigated\n---\n"
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(tmp_path))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(tmp_path))
     inv = data.load_investigation(42)
     assert inv is not None
     assert inv.status == "investigated"
@@ -816,7 +816,7 @@ def test_load_investigation_yaml_not_dict_returns_shell(tmp_path: Path) -> None:
 def test_investigation_dir_from_env_falls_back_to_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("FIREFOX_INVESTIGATION_DIR", raising=False)
+    monkeypatch.delenv("FX_BUG_INVESTIGATION_DIR", raising=False)
     assert data.investigation_dir_from_env() == data.DEFAULT_INVESTIGATION_DIR
 
 

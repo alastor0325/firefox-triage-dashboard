@@ -617,7 +617,7 @@ def test_index_renders_when_investigation_file_present(
         "# Bug 5551 Investigation\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     response = client.get("/")
     assert response.status_code == 200
     # Sanity: the card for the active draft is rendered.
@@ -632,7 +632,7 @@ def test_index_renders_when_no_investigation_file(
     write_draft(triage_dir, 5551, severity="S3", priority="P3")
     inv_dir = tmp_path / "investigations"
     inv_dir.mkdir()
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     response = client.get("/")
     assert response.status_code == 200
     assert 'id="card-5551"' in response.text
@@ -655,7 +655,7 @@ def test_card_renders_findings_root_cause(
         "bug_id: 5551\nstatus: investigated\n"
         "root_cause: HEVC mapping table mis-identifies missing MFT\n",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'class="findings"' in body
     assert "Root cause:" in body
@@ -674,7 +674,7 @@ def test_card_findings_links_affected_files_to_searchfox(
         "  - dom/media/platforms/VideoUtils.cpp\n"
         "  - dom/media/platforms/wmf/WMFDecoderModule.cpp\n",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     # Searchfox migrated mozilla-central → firefox-main (the old tree
     # now 301-redirects). Always link to the canonical URL.
@@ -707,7 +707,7 @@ def test_card_findings_affected_files_with_line_anchor(
         "  - dom/media/MediaDecoder.cpp\n"
         "  - dom/media/foo.cpp#L42-L50\n",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     # Single-line anchor: href ends with #297, display reads "...:297".
     assert (
@@ -738,7 +738,7 @@ def test_card_findings_no_regression_line_when_null(
         inv_dir, 5551,
         "bug_id: 5551\nstatus: investigated\nregression_range: null\n",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert "Regression:" not in body
 
@@ -752,7 +752,7 @@ def test_card_findings_status_pill_blocked_modifier(
         inv_dir, 5551,
         "bug_id: 5551\nstatus: blocked\n",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'class="findings-status findings-status--blocked"' in body
 
@@ -763,7 +763,7 @@ def test_card_no_findings_element_without_investigation(
     write_draft(triage_dir, 5551, severity="S3", priority="P3")
     inv_dir = tmp_path / "inv"
     inv_dir.mkdir()
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'class="findings"' not in body
 
@@ -783,7 +783,7 @@ def test_card_findings_shell_renders_when_file_has_no_frontmatter(
         "# Bug 5551 Investigation\n\nOld-style file without frontmatter.\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     # Findings block still rendered.
     assert 'class="findings"' in body
@@ -810,7 +810,7 @@ def test_card_findings_related_bugs_render_as_links(
         inv_dir, 5551,
         "bug_id: 5551\nrelated_bugs: [1992187, 2038494]\n",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert (
         '<a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1992187"'
@@ -831,7 +831,7 @@ def test_card_findings_open_link_points_at_local_route(
     write_draft(triage_dir, 2042320, severity="S3", priority="P3")
     inv_dir = tmp_path / "inv"
     _write_inv(inv_dir, 2042320, "bug_id: 2042320\n")
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'href="/investigation/2042320"' in body
     # Regression guards: removed the private-repo link and any file:// link.
@@ -852,7 +852,7 @@ def test_investigation_route_renders_local_file(
         "# Root cause\n\nThe decoder mis-maps the codec.\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     resp = client.get("/investigation/2042320")
     assert resp.status_code == 200
     body = resp.text
@@ -869,7 +869,7 @@ def test_investigation_route_missing_is_graceful(
     page (still a valid URL), never a dead link or a 404."""
     inv_dir = tmp_path / "inv"
     inv_dir.mkdir()
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     resp = client.get("/investigation/999999")
     assert resp.status_code == 200
     assert "/bug-start 999999" in resp.text
@@ -893,7 +893,7 @@ def test_findings_stale_pill_when_bug_activity_newer(
         "investigated_at: 2026-05-29T14:08:00Z\n"
         "status: investigated\n",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'class="findings-stale"' in body
     assert ">stale<" in body
@@ -915,7 +915,7 @@ def test_findings_not_stale_when_investigation_newer(
         "investigated_at: 2026-05-30T14:08:00Z\n"
         "status: investigated\n",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'class="findings-stale"' not in body
 
@@ -934,7 +934,7 @@ def test_findings_not_stale_on_malformed_iso_strings(
         "bug_id: 5551\n"
         'investigated_at: "not a date at all"\n',
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     response = client.get("/")
     assert response.status_code == 200
     assert 'class="findings-stale"' not in response.text
@@ -951,7 +951,7 @@ def test_findings_not_stale_when_no_bug_context(
         "bug_id: 5551\n"
         "investigated_at: 2026-05-29T14:08:00Z\n",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'class="findings-stale"' not in body
 
@@ -971,7 +971,7 @@ def test_findings_not_stale_when_only_one_side_is_tz_aware(
         "bug_id: 5551\n"
         "investigated_at: 2026-05-29T14:08:00\n",  # naive (no tz)
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     response = client.get("/")
     assert response.status_code == 200
     assert 'class="findings-stale"' not in response.text
@@ -994,7 +994,7 @@ def test_findings_investigating_pill_when_lock_fresh(
     write_draft(triage_dir, 5551, severity="S3", priority="P3")
     inv_dir = tmp_path / "inv"
     _touch_lock_path(inv_dir, 5551)
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'class="findings-status findings-status--investigating"' in body
     # No root-cause / affected-files section even if a stale md were present.
@@ -1015,7 +1015,7 @@ def test_findings_investigating_overrides_md_status(
         "root_cause: stale data from a previous run\n",
     )
     _touch_lock_path(inv_dir, 5551)
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'findings-status--investigating' in body
     assert 'findings-status--investigated' not in body
@@ -1032,7 +1032,7 @@ def test_findings_investigation_stalled_pill_when_lock_old(
     import os, time
     old = time.time() - (31 * 60)
     os.utime(lock, (old, old))
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert (
         'class="findings-status findings-status--investigation-stalled"'
@@ -1053,7 +1053,7 @@ def test_findings_depth_triage_badge_renders(
         inv_dir, 5551,
         "bug_id: 5551\nstatus: investigated\ndepth: triage\n",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'class="findings-depth-triage"' in body
     assert "shallow" in body
@@ -1068,7 +1068,7 @@ def test_findings_no_depth_badge_when_deep(
         inv_dir, 5551,
         "bug_id: 5551\nstatus: investigated\n",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     body = client.get("/").text
     assert 'findings-depth-triage' not in body
 

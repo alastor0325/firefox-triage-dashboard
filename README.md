@@ -166,8 +166,9 @@ job. The two skills work together via the dashboard:
   investigation document. You invoke this manually when you're about
   to fix the bug.
 
-Investigation files live at
-`~/firefox-bug-investigation/bug-<id>-investigation.md`. The dashboard
+Investigation files live in `$FX_BUG_INVESTIGATION_DIR` (default
+`~/.fx-bug-toolkit/bug-investigation/`, shared with the fx-bug-toolkit
+plugin that writes them) as `bug-<id>-investigation.md`. The dashboard
 serves them itself at `/investigation/<id>`, so the "Open full
 investigation →" link is always valid and nothing has to leave your
 machine (no remote repo required).
@@ -250,11 +251,12 @@ scripts/serve.sh stop               # stop it
 # env overrides: HOST=0.0.0.0 PORT=9000 scripts/serve.sh start
 ```
 
-The dashboard reads from `~/firefox-triage/` by default (or
-`$TRIAGE_DIR`). Pending drafts live in `~/firefox-triage/pending/`,
-investigations in `~/firefox-bug-investigation/`. Both directories are
-created by the `/triage` and `/bug-start` skills, not by the
-dashboard.
+The dashboard reads triage data from `~/firefox-triage/` by default (or
+`$TRIAGE_DIR`), and investigations from `$FX_BUG_INVESTIGATION_DIR`
+(default `~/.fx-bug-toolkit/bug-investigation/` — the same variable and
+default the fx-bug-toolkit plugin uses, so both see the same files).
+Pending drafts live in `~/firefox-triage/pending/`. These directories are
+created by the `/triage` and `/bug-start` skills, not by the dashboard.
 
 The dashboard ships with a mock Bugzilla backend by default —
 clicking Apply shows what *would* happen but doesn't actually post.

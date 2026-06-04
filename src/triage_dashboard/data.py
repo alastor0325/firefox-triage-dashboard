@@ -17,7 +17,7 @@ import yaml
 _CRASH_ID_RE = re.compile(r"bp-[a-f0-9-]+", re.IGNORECASE)
 
 DEFAULT_TRIAGE_DIR = Path.home() / "firefox-triage"
-DEFAULT_INVESTIGATION_DIR = Path.home() / "firefox-bug-investigation"
+DEFAULT_INVESTIGATION_DIR = Path.home() / ".fx-bug-toolkit" / "bug-investigation"
 
 # Frontmatter delimiter for investigation files; we only parse YAML when
 # the file opens with `---\n` and we can find a matching closing `---`.
@@ -656,9 +656,10 @@ def _extract_frontmatter(text: str) -> str | None:
 
 
 def investigation_dir_from_env() -> Path:
-    """Resolve the investigation data directory from $FIREFOX_INVESTIGATION_DIR
-    or the default ~/firefox-bug-investigation/."""
-    override = os.environ.get("FIREFOX_INVESTIGATION_DIR")
+    """Resolve the investigation data directory from $FX_BUG_INVESTIGATION_DIR
+    or the default ~/.fx-bug-toolkit/bug-investigation/ (shared with the
+    fx-bug-toolkit plugin, which writes investigations there)."""
+    override = os.environ.get("FX_BUG_INVESTIGATION_DIR")
     if override:
         return Path(override).expanduser()
     return DEFAULT_INVESTIGATION_DIR
@@ -715,8 +716,8 @@ def load_investigation(
     fields at their defaults — that way the card can still link to the
     file on GitHub even for legacy pre-schema investigations.
 
-    The file location defaults to $FIREFOX_INVESTIGATION_DIR (or
-    ~/firefox-bug-investigation/); callers may pass an explicit
+    The file location defaults to $FX_BUG_INVESTIGATION_DIR (or
+    ~/.fx-bug-toolkit/bug-investigation/); callers may pass an explicit
     directory for tests.
     """
     if investigation_dir is None:

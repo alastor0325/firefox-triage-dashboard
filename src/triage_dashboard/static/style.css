@@ -1656,7 +1656,7 @@ code, kbd {
 
 /* ───── FINDINGS BLOCK (bug-start investigation surfacing) ─────
    Renders the YAML frontmatter from
-   ~/firefox-bug-investigation/bug-{id}-investigation.md inside the card,
+   $FX_BUG_INVESTIGATION_DIR/bug-{id}-investigation.md inside the card,
    above the proposed comment. Defaults open when the investigation
    status is "investigated"; collapsed otherwise so blocked / needs-info
    states don't dominate the card. */

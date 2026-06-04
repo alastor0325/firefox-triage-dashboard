@@ -35,7 +35,7 @@ def test_applied_archive_renders_folded_report(
 ) -> None:
     inv_dir = tmp_path / "inv"
     inv_dir.mkdir()
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     _write_watch(triage_dir, {"bug_id": 12345, "title": "Tracked bug"})
     write_applied_draft(
         triage_dir, 12345,
@@ -67,7 +67,7 @@ def test_investigation_findings_appear_folded(
         "---\n# body\n",
         encoding="utf-8",
     )
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     item = _watch_item(client.get("/?tab=watching").text, 12345)
     assert '<details class="watch-report"' in item
     assert "Root cause:" in item
@@ -79,7 +79,7 @@ def test_draft_comment_not_rendered(
 ) -> None:
     inv_dir = tmp_path / "inv"
     inv_dir.mkdir()
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     _write_watch(triage_dir, {"bug_id": 12345, "title": "Tracked bug"})
     write_applied_draft(
         triage_dir, 12345,
@@ -95,7 +95,7 @@ def test_applied_diff_and_current_sp_render(
 ) -> None:
     inv_dir = tmp_path / "inv"
     inv_dir.mkdir()
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     _write_watch(triage_dir, {"bug_id": 12345, "title": "Tracked bug"})
     write_applied_draft(
         triage_dir, 12345,
@@ -137,7 +137,7 @@ def test_minimal_entry_without_archive_or_investigation(
 ) -> None:
     inv_dir = tmp_path / "inv"
     inv_dir.mkdir()
-    monkeypatch.setenv("FIREFOX_INVESTIGATION_DIR", str(inv_dir))
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
     _write_watch(triage_dir, {"bug_id": 99999, "title": "Bare bug"})
     item = _watch_item(client.get("/?tab=watching").text, 99999)
     assert "watch-report" not in item
