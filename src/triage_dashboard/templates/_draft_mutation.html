@@ -1,0 +1,7 @@
+{# Response for a draft mutation that re-renders the will-apply wrap — owner
+   CC/NI toggle and severity/priority override. The primary target
+   #applywrap-<id> gets the refreshed wrap; the dry-run plan host is refreshed
+   out-of-band so its actions never lag the pending draft. Expects: draft,
+   apply_queued, result, action, bug_id, is_live. #}
+{% include "_apply_wrap.html" %}
+{% include "_apply_status.html" %}

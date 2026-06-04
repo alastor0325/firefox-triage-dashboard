@@ -1,0 +1,10 @@
+{# Out-of-band refresh of the apply DRY-RUN plan host. Shared by the apply
+   toggle and every draft-mutation response (owner toggle, S/P override) so the
+   on-screen plan never goes stale. Always renders the host (emptying it clears
+   a prior plan, e.g. on apply revert); the plan shows only while queued.
+   The route guarantees apply_queued ⇒ result, so no `and result` gate needed.
+   Expects: draft, apply_queued, result, action, bug_id, is_live. #}
+<div id="apply-status-{{ draft.bug_id }}" class="apply-status-host"
+     aria-live="polite" hx-swap-oob="true">
+  {% if apply_queued %}{% include "_plan.html" %}{% endif %}
+</div>

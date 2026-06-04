@@ -492,6 +492,38 @@ def _backend_result_response(
     })
 
 
+def _queued_apply_plan(
+    triage_dir: Path, bug_id: int, pending: dict
+) -> tuple[bool, backend.BackendResult | None]:
+    """For a mutation to a pending draft: if its apply is queued, the DRY RUN
+    plan panel is on screen, so recompute the plan to refresh it. Returns
+    `(queued, result)`. The mock backend's apply is a pure plan computation; the
+    live backend raises (and an apply can't be queued in live mode), so degrade
+    to `(False, None)` rather than 500."""
+    if not claude_queue.is_apply_queued(triage_dir, bug_id):
+        return False, None
+    try:
+        return True, backend.get_backend().apply(bug_id, pending)
+    except NotImplementedError:
+        return False, None
+
+
+def _draft_mutation_context(
+    bug_id: int, pending: dict, *, queued: bool,
+    result: backend.BackendResult | None,
+) -> dict:
+    """Shared template context for a draft-mutation htmx response (apply toggle,
+    owner toggle, S/P override): the draft plus the apply-plan panel state."""
+    return {
+        "draft": data.draft_from_pending(pending),
+        "apply_queued": queued,
+        "result": result,
+        "action": "apply",
+        "bug_id": bug_id,
+        "is_live": os.environ.get(backend.LIVE_ENV_VAR) == "1",
+    }
+
+
 def _apply_toggle_response(
     request: Request,
     *,
@@ -510,14 +542,8 @@ def _apply_toggle_response(
         resp = templates.TemplateResponse(
             request=request,
             name="_apply_toggle.html",
-            context={
-                "draft": data.draft_from_pending(pending),
-                "apply_queued": queued,
-                "action": "apply",
-                "bug_id": bug_id,
-                "result": result,
-                "is_live": os.environ.get(backend.LIVE_ENV_VAR) == "1",
-            },
+            context=_draft_mutation_context(
+                bug_id, pending, queued=queued, result=result),
         )
         # Tell the page the queued state flipped, so it can sync the card's
         # green treatment + the "✓ Applied" tag (card-head + rail row) by
@@ -591,7 +617,8 @@ def toggle_owner(request: Request, bug_id: int, field: str) -> HTMLResponse:
     """Toggle whether the triage owner ($TRIAGE_OWNER) is CC'd / needinfo'd on
     this draft. `field` is 'cc' or 'ni'. Flips the owner's membership in the
     pending draft's cc_add / ni_targets list (default off), then re-renders the
-    will-apply wrap (diff + toggles) so both reflect the new state.
+    will-apply wrap (diff + toggles) so both reflect the new state — and, if an
+    apply is queued, the dry-run plan too (cc/ni are planned actions).
     """
     key = {"cc": "cc_add", "ni": "ni_targets"}.get(field)
     if key is None:
@@ -605,10 +632,12 @@ def toggle_owner(request: Request, bug_id: int, field: str) -> HTMLResponse:
     broker.suppress_path(triage_dir / "pending" / f"bug-{bug_id}.json")
     data.set_owner_membership(triage_dir, bug_id, key, not currently_on)
     pending = _load_pending_or_404(bug_id)  # reload post-write
+    queued, result = _queued_apply_plan(triage_dir, bug_id, pending)
     return templates.TemplateResponse(
         request=request,
-        name="_apply_wrap.html",
-        context={"draft": data.draft_from_pending(pending)},
+        name="_draft_mutation.html",
+        context=_draft_mutation_context(
+            bug_id, pending, queued=queued, result=result),
     )
 
 
@@ -632,10 +661,12 @@ def set_field(
     if not data.set_draft_field(triage_dir, bug_id, field, value):
         raise HTTPException(status_code=400, detail="invalid value")
     pending = _load_pending_or_404(bug_id)  # reload post-write
+    queued, result = _queued_apply_plan(triage_dir, bug_id, pending)
     return templates.TemplateResponse(
         request=request,
-        name="_apply_wrap.html",
-        context={"draft": data.draft_from_pending(pending)},
+        name="_draft_mutation.html",
+        context=_draft_mutation_context(
+            bug_id, pending, queued=queued, result=result),
     )
 
 

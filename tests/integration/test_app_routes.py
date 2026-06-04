@@ -1652,6 +1652,47 @@ def test_field_override_unknown_field_404(triage_dir: Path) -> None:
     assert r.status_code == 404
 
 
+def test_field_override_refreshes_dry_run_plan_when_queued(triage_dir: Path) -> None:
+    """When an apply is already queued, the DRY RUN plan panel is showing — an
+    S/P override must OOB-refresh it so its actions reflect the new level."""
+    from triage_dashboard import claude_queue
+    write_draft(triage_dir, 770010, severity="S3", priority="P3")
+    claude_queue.append_apply(triage_dir, bug_id=770010)
+    r = client.post("/draft/770010/field/severity",
+                    data={"value": "S1"}, headers={"HX-Request": "true"})
+    assert r.status_code == 200
+    assert 'id="apply-status-770010"' in r.text      # plan host
+    assert 'hx-swap-oob="true"' in r.text             # refreshed out-of-band
+    assert "set severity → S1" in r.text         # new level in the plan
+
+
+def test_field_override_no_plan_actions_when_not_queued(triage_dir: Path) -> None:
+    """No apply queued → the plan host refreshes but stays empty (no DRY RUN
+    actions), so nothing stale is shown."""
+    write_draft(triage_dir, 770011, severity="S3", priority="P3")
+    r = client.post("/draft/770011/field/severity",
+                    data={"value": "S2"}, headers={"HX-Request": "true"})
+    assert r.status_code == 200
+    assert "set severity →" not in r.text     # no plan body
+    assert "DRY RUN" not in r.text
+
+
+def test_owner_toggle_refreshes_dry_run_plan_when_queued(
+    triage_dir: Path, monkeypatch,
+) -> None:
+    """A queued apply's plan lists the +cc/+ni actions, so toggling CC must
+    OOB-refresh the plan too — not just the S/P override path."""
+    from triage_dashboard import claude_queue
+    monkeypatch.setenv("TRIAGE_OWNER", "owner@example.com")
+    write_draft(triage_dir, 770012, severity="S3")
+    claude_queue.append_apply(triage_dir, bug_id=770012)
+    r = client.post("/draft/770012/owner/cc")
+    assert r.status_code == 200
+    assert 'id="apply-status-770012"' in r.text         # plan host refreshed
+    assert 'hx-swap-oob="true"' in r.text
+    assert "cc" in r.text and "owner@example.com" in r.text
+
+
 def test_watch_applied_diff_stays_readonly_pill() -> None:
     """The shared diff partial renders read-only pills (not selects) outside the
     editable wrap, so the watch-applied 'already applied' view isn't editable."""
