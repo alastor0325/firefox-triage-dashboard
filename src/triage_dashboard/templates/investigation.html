@@ -1,21 +1,28 @@
 {% extends "base.html" %}
 {% block title %}Bug {{ bug_id }} · Investigation{% endblock %}
 {% block body %}
-<main class="investigation-page">
-  <header class="investigation-head">
-    <a class="investigation-back" href="/">← Triage</a>
-    <h1>Bug {{ bug_id }} — Investigation</h1>
+<header class="topbar">
+  <div class="brand">
+    <h1 class="brand-title"><a href="/">Triage</a></h1>
+    <span class="brand-sub">Bug <strong>{{ bug_id }}</strong> · Investigation</span>
+  </div>
+  <div class="topbar-right">
     <a class="investigation-bz"
        href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ bug_id }}"
-       target="_blank" rel="noopener">Bugzilla →</a>
-  </header>
+       target="_blank" rel="noopener">Open in Bugzilla&nbsp;↗</a>
+  </div>
+</header>
+
+<main class="investigation-main">
+  <a class="investigation-back" href="/">←&nbsp;Back to triage</a>
   {% if found %}
-  <article class="investigation-body">{{ body | render_markdown }}</article>
+  <article class="investigation-body md-body">{{ body | render_markdown }}</article>
   {% else %}
-  <p class="investigation-missing">
-    No investigation on file for bug {{ bug_id }} yet — run
-    <code>/bug-start {{ bug_id }}</code> to create one.
-  </p>
+  <div class="investigation-missing">
+    <h2>No investigation yet</h2>
+    <p>There's no investigation on file for bug {{ bug_id }}. Run
+       <code>/bug-start {{ bug_id }}</code> to create one — it'll appear here.</p>
+  </div>
   {% endif %}
 </main>
 {% endblock %}
