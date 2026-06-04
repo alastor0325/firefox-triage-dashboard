@@ -1480,3 +1480,26 @@ def test_owner_toggle_unknown_field_404(triage_dir: Path, monkeypatch) -> None:
     monkeypatch.setenv("TRIAGE_OWNER", "owner@example.com")
     write_draft(triage_dir, 700702)
     assert client.post("/draft/700702/owner/bogus").status_code == 404
+
+
+def test_apply_button_sits_after_applywrap_in_card_foot(triage_dir: Path) -> None:
+    """The Apply button (.actions) must come after the growing .applywrap
+    column in the card foot, so flex pushes it to the right edge. Regression:
+    wrapping the diff + owner toggles dropped the flex:1 that right-aligned it."""
+    write_draft(triage_dir, 1, severity="S2", priority="P2")
+    body = client.get("/?tab=triaged&bug=1").text
+    i_wrap = body.find('class="applywrap"')
+    i_actions = body.find('class="actions"')
+    assert i_wrap != -1, "card foot should wrap the will-apply in .applywrap"
+    assert i_actions != -1
+    assert i_wrap < i_actions, ".actions must follow .applywrap so it's right-aligned"
+
+
+def test_applywrap_css_grows_to_right_align_the_button() -> None:
+    """The CSS guarantee behind the right-alignment: .applywrap is flex:1
+    (grows), so the sibling .actions is pushed to the card foot's right edge."""
+    import re
+    from triage_dashboard.app import STATIC_DIR
+    css = (STATIC_DIR / "style.css").read_text(encoding="utf-8")
+    assert re.search(r"\.applywrap\s*\{[^}]*flex:\s*1", css), \
+        ".applywrap must declare flex:1 to right-align the Apply button"

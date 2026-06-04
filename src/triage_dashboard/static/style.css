@@ -831,6 +831,13 @@ code, kbd {
   padding-top: 0.45rem;
   border-top: 1px solid var(--border);
 }
+/* The will-apply wrap (diff + owner toggles) is the growing column, so the
+   Apply button (.actions) is pushed to the right edge of the card foot — the
+   role the bare .diff used to play before the toggles were wrapped with it. */
+.applywrap {
+  flex: 1;
+  min-width: 12rem;
+}
 .diff {
   flex: 1; min-width: 12rem;
   font-size: 0.85rem;
