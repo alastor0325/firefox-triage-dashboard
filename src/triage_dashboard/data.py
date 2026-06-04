@@ -62,16 +62,35 @@ def level_class(value: str | None) -> str:
     return "unknown"
 
 
-# Attachment-type inference. BMO attachment entries carry only name/url/size
-# (no content_type), so we classify from the filename extension, falling back
-# to the URL host (Firefox Profiler share links have no extension). `is_image`
-# drives the in-page lightbox; `kind` drives the colour chip; `label` is the
-# human tag shown before clicking.
+# Attachment-type inference. When the attachment carries a `content_type` (the
+# MIME type BMO records), we trust it for media — that's exact, and catches
+# images/videos attached with a descriptive, extension-less name. Otherwise we
+# classify from the filename extension, falling back to the URL host (Firefox
+# Profiler share links have no extension). `is_image` drives the in-page
+# lightbox; `kind` drives the colour chip; `label` is the human tag.
 _IMAGE_EXTS = {"png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "avif", "ico"}
 _VIDEO_EXTS = {"mp4", "webm", "mov", "mkv", "avi", "m4v", "ogv"}
 _AUDIO_EXTS = {"mp3", "wav", "ogg", "oga", "flac", "m4a", "aac", "opus"}
 _ARCHIVE_EXTS = {"zip", "gz", "tgz", "tar", "7z", "rar", "xz", "bz2", "zst"}
 _LOG_EXTS = {"log", "moz_log", "txt"}
+
+
+def _meta_from_content_type(ctype: str) -> dict | None:
+    """Classify image/video/audio attachments from their MIME type. Returns None
+    for anything else (incl. empty), so the extension heuristic handles it — the
+    extension labels for json/html/log/archive are already accurate."""
+    if not ctype or "/" not in ctype:
+        return None
+    major, sub = ctype.split("/", 1)
+    sub = sub.split(";", 1)[0].strip()                 # drop ";charset=…"
+    label_sub = sub.split("+", 1)[0].rsplit(".", 1)[-1].upper()  # svg+xml→SVG
+    if major == "image":
+        return {"label": f"{label_sub} image", "kind": "image", "is_image": True}
+    if major == "video":
+        return {"label": f"{label_sub} video", "kind": "video", "is_image": False}
+    if major == "audio":
+        return {"label": f"{label_sub} audio", "kind": "audio", "is_image": False}
+    return None
 
 
 def attachment_meta(att: dict) -> dict:
@@ -80,8 +99,16 @@ def attachment_meta(att: dict) -> dict:
     Returns `{"label", "kind", "is_image"}`. Pure (no I/O) so it's unit-tested
     directly and used as the `attachment_meta` Jinja filter in _bug_report.html.
     """
-    name = str((att or {}).get("name") or "").strip()
-    url = str((att or {}).get("url") or "")
+    att = att or {}
+    name = str(att.get("name") or "").strip()
+    url = str(att.get("url") or "")
+
+    # Trust the MIME type for media when present (exact; catches extension-less
+    # screenshots/recordings); fall back to filename/host heuristics otherwise.
+    by_mime = _meta_from_content_type(str(att.get("content_type") or "").strip().lower())
+    if by_mime:
+        return by_mime
+
     base = name.split("?", 1)[0].rsplit("/", 1)[-1].lower()
     ext = base.rsplit(".", 1)[-1] if "." in base else ""
     host = url.split("/")[2].lower() if "://" in url else ""
