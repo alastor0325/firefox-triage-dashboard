@@ -142,6 +142,15 @@ def test_render_markdown_numbered_list() -> None:
     assert "<li>first</li>" in out
 
 
+def test_render_markdown_pipe_table() -> None:
+    """Pipe tables (common in investigation files) render as a real
+    <table>, not raw `| a | b |` text."""
+    out = str(desc.render_markdown("| a | b |\n|---|---|\n| 1 | 2 |"))
+    assert "<table>" in out
+    assert "<th>a</th>" in out
+    assert "<td>1</td>" in out
+
+
 def test_render_markdown_inline_link() -> None:
     out = str(desc.render_markdown("See [docs](https://example.com) here."))
     assert 'href="https://example.com"' in out

@@ -92,16 +92,17 @@ def _label_to_key(matched_label: str) -> str:
 def render_markdown(text: str) -> Markup:
     """Render a small Markdown subset as safe HTML.
 
-    Suitable for AI-generated fields (e.g. `bug_context.ai_reasoning`) that
-    contain inline code, lists, links, bold/italic. Raw HTML in the input
-    is pre-escaped so it can't inject tags into the page.
+    Suitable for AI-generated fields (e.g. `bug_context.ai_reasoning`) and
+    whole investigation files (the /investigation/<id> page), which contain
+    inline code, lists, links, bold/italic, and pipe tables. Raw HTML in the
+    input is pre-escaped so it can't inject tags into the page.
     """
     if not text:
         return Markup("")
     safe_input = str(escape(text))
     html = _markdown.markdown(
         safe_input,
-        extensions=["fenced_code", "sane_lists"],
+        extensions=["fenced_code", "sane_lists", "tables"],
         output_format="html",
     )
     return Markup(html)
