@@ -1,8 +1,9 @@
-{# Per-draft triage-owner opt-ins. Two checkboxes — "CC me" / "NI me" — that
-   toggle whether $TRIAGE_OWNER is CC'd / needinfo'd when this draft is applied.
-   Default OFF (the skill no longer force-adds the owner). Each posts a flip and
-   re-renders #applywrap-<id> so the Will-apply diff updates in lockstep.
-   Hidden when no triage owner is configured. #}
+{# Per-draft triage-owner opt-ins. Three checkboxes — "CC me" / "NI me" /
+   "Assign me" — that toggle whether $TRIAGE_OWNER is CC'd / needinfo'd /
+   assigned when this draft is applied. Default OFF (the skill no longer
+   force-adds the owner). Each posts a flip and re-renders #applywrap-<id> so
+   the Will-apply diff updates in lockstep. Hidden when no triage owner is
+   configured. #}
 {% set owner = triage_owner() %}
 {% if owner %}
 <div class="owner-toggles" role="group" aria-label="Triage owner ({{ owner }})">
@@ -20,6 +21,13 @@
            hx-target="#applywrap-{{ draft.bug_id }}" hx-swap="innerHTML"
            hx-sync="closest .owner-toggles:replace">
     <span>NI me</span>
+  </label>
+  <label class="owner-toggle" title="Assign this bug to {{ owner }} when applied">
+    <input type="checkbox" {% if draft.assigned_to == owner %}checked{% endif %}
+           hx-post="/draft/{{ draft.bug_id }}/owner/assign"
+           hx-target="#applywrap-{{ draft.bug_id }}" hx-swap="innerHTML"
+           hx-sync="closest .owner-toggles:replace">
+    <span>Assign me</span>
   </label>
 </div>
 {% endif %}

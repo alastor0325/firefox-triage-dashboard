@@ -765,6 +765,20 @@ def set_owner_membership(
     )
 
 
+def set_owner_assignment(triage_dir: Path, bug_id: int, on: bool) -> bool:
+    """Assign the pending draft to the triage owner (`on`) or clear its
+    assignee (`not on`), and persist. Unlike cc/ni this is a scalar field, so
+    `on=False` clears `assigned_to` to None. Returns False (no-op) when the
+    owner isn't configured or the pending file is missing."""
+    owner = triage_owner()
+    if not owner:
+        return False
+    return _modify_pending(
+        triage_dir, bug_id,
+        lambda d: d.update({"assigned_to": owner if on else None}),
+    )
+
+
 _LEVEL_OPTIONS = {"severity": SEVERITY_OPTIONS, "priority": PRIORITY_OPTIONS}
 
 

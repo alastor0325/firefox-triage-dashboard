@@ -614,23 +614,27 @@ def apply_draft(request: Request, bug_id: int):
 
 @app.post("/draft/{bug_id}/owner/{field}", response_class=HTMLResponse)
 def toggle_owner(request: Request, bug_id: int, field: str) -> HTMLResponse:
-    """Toggle whether the triage owner ($TRIAGE_OWNER) is CC'd / needinfo'd on
-    this draft. `field` is 'cc' or 'ni'. Flips the owner's membership in the
-    pending draft's cc_add / ni_targets list (default off), then re-renders the
-    will-apply wrap (diff + toggles) so both reflect the new state — and, if an
-    apply is queued, the dry-run plan too (cc/ni are planned actions).
+    """Toggle a triage-owner ($TRIAGE_OWNER) opt-in on this draft. `field` is
+    'cc' / 'ni' (flip the owner's membership in cc_add / ni_targets) or 'assign'
+    (set/clear assigned_to to the owner). All default off. Re-renders the
+    will-apply wrap (diff + toggles) and, if an apply is queued, the dry-run
+    plan too (each of cc/ni/assign is a planned action).
     """
-    key = {"cc": "cc_add", "ni": "ni_targets"}.get(field)
-    if key is None:
+    list_key = {"cc": "cc_add", "ni": "ni_targets"}.get(field)
+    if list_key is None and field != "assign":
         raise HTTPException(status_code=404, detail="unknown owner field")
     pending = _load_pending_or_404(bug_id)
     owner = data.triage_owner()
-    currently_on = owner in (pending.get(key) or [])
     triage_dir = data.triage_dir_from_env()
     # This is the app's own write + the htmx swap below already refreshes the
     # card — suppress the watcher so it doesn't also fire a whole-tab SSE refresh.
     broker.suppress_path(triage_dir / "pending" / f"bug-{bug_id}.json")
-    data.set_owner_membership(triage_dir, bug_id, key, not currently_on)
+    if field == "assign":
+        currently_on = (pending.get("assigned_to") or "") == owner
+        data.set_owner_assignment(triage_dir, bug_id, not currently_on)
+    else:
+        currently_on = owner in (pending.get(list_key) or [])
+        data.set_owner_membership(triage_dir, bug_id, list_key, not currently_on)
     pending = _load_pending_or_404(bug_id)  # reload post-write
     queued, result = _queued_apply_plan(triage_dir, bug_id, pending)
     return templates.TemplateResponse(

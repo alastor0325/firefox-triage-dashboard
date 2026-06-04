@@ -80,6 +80,17 @@ def test_plan_includes_reassign() -> None:
     assert "Widget: Gtk" in rs[0].description
 
 
+def test_plan_includes_assign() -> None:
+    plan = applier.plan_apply(_pending(assigned_to="owner@example.com"))
+    asg = [a for a in plan if a.kind == "assign"]
+    assert len(asg) == 1
+    assert "owner@example.com" in asg[0].description
+
+
+def test_plan_no_assign_without_assignee() -> None:
+    assert "assign" not in kinds(applier.plan_apply(_pending()))
+
+
 def test_plan_watch_add_when_ni_targets() -> None:
     """Per the /triage skill, non-empty ni_targets implies a watch-add."""
     plan = applier.plan_apply(_pending(ni_targets=["x@y.com"]))

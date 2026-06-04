@@ -1482,6 +1482,43 @@ def test_owner_toggle_unknown_field_404(triage_dir: Path, monkeypatch) -> None:
     assert client.post("/draft/700702/owner/bogus").status_code == 404
 
 
+def test_owner_toggles_include_assign_me(triage_dir: Path, monkeypatch) -> None:
+    monkeypatch.setenv("TRIAGE_OWNER", "owner@example.com")
+    write_draft(triage_dir, 700720, severity="S3")
+    body = client.get("/?tab=triaged&bug=700720").text
+    assert "Assign me" in body
+    assert "/draft/700720/owner/assign" in body
+
+
+def test_owner_toggle_assign_sets_then_clears(triage_dir: Path, monkeypatch) -> None:
+    """Assign me ON sets assigned_to to the owner (and the will-apply diff);
+    a second POST clears it."""
+    import json
+    monkeypatch.setenv("TRIAGE_OWNER", "owner@example.com")
+    write_draft(triage_dir, 700721, severity="S3")
+    r = client.post("/draft/700721/owner/assign")
+    assert r.status_code == 200
+    assert "owner@example.com" in r.text          # diff shows 'assign to owner'
+    pend = json.loads((triage_dir / "pending" / "bug-700721.json").read_text())
+    assert pend["assigned_to"] == "owner@example.com"
+    client.post("/draft/700721/owner/assign")     # toggle OFF
+    pend2 = json.loads((triage_dir / "pending" / "bug-700721.json").read_text())
+    assert pend2["assigned_to"] is None
+
+
+def test_owner_toggle_assign_refreshes_plan_when_queued(
+    triage_dir: Path, monkeypatch,
+) -> None:
+    from triage_dashboard import claude_queue
+    monkeypatch.setenv("TRIAGE_OWNER", "owner@example.com")
+    write_draft(triage_dir, 700722, severity="S3")
+    claude_queue.append_apply(triage_dir, bug_id=700722)
+    r = client.post("/draft/700722/owner/assign")
+    assert r.status_code == 200
+    assert 'id="apply-status-700722"' in r.text                # plan refreshed
+    assert "assign → owner@example.com" in r.text          # plan lists assign
+
+
 def test_apply_button_sits_after_applywrap_in_card_foot(triage_dir: Path) -> None:
     """The Apply button (.actions) must come after the growing .applywrap
     column in the card foot, so flex pushes it to the right edge. Regression:

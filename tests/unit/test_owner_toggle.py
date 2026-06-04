@@ -89,6 +89,29 @@ def test_set_owner_membership_unknown_field(tmp_path, monkeypatch) -> None:
     assert data.set_owner_membership(tmp_path, 5, "bogus", True) is False
 
 
+# ─── set_owner_assignment (scalar assigned_to) ───────────────────────
+
+def test_set_owner_assignment_sets_then_clears(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("TRIAGE_OWNER", "owner@x.com")
+    p = _draft(tmp_path)
+    assert data.set_owner_assignment(tmp_path, 5, True) is True
+    assert json.loads(p.read_text())["assigned_to"] == "owner@x.com"
+    assert data.set_owner_assignment(tmp_path, 5, False) is True
+    assert json.loads(p.read_text())["assigned_to"] is None
+
+
+def test_set_owner_assignment_no_owner_is_noop(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("TRIAGE_OWNER", raising=False)
+    _draft(tmp_path)
+    assert data.set_owner_assignment(tmp_path, 5, True) is False
+
+
+def test_set_owner_assignment_missing_file(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("TRIAGE_OWNER", "owner@x.com")
+    (tmp_path / "pending").mkdir()
+    assert data.set_owner_assignment(tmp_path, 999, True) is False
+
+
 # ─── broker self-write suppression (no whole-tab SSE refresh on toggle) ──
 
 def test_broker_suppress_path_within_window() -> None:

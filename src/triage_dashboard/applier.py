@@ -24,7 +24,7 @@ class PlannedAction:
 def plan_apply(pending: dict) -> list[PlannedAction]:
     """Compute the list of actions an `apply {id}` would perform.
 
-    Order is: severity, priority, resolution, reassign, blocks, cc,
+    Order is: severity, priority, resolution, reassign, assign, blocks, cc,
     keywords, ni, comment, watch-add — fields first, comment second-to-last,
     watch-add at the very end. So a reviewer reads the Bugzilla-impacting
     metadata before the (often long) comment.
@@ -53,6 +53,11 @@ def plan_apply(pending: dict) -> list[PlannedAction]:
         out.append(PlannedAction(
             kind="reassign",
             description=f"reassign → {product} :: {component}",
+        ))
+    if pending.get("assigned_to"):
+        out.append(PlannedAction(
+            kind="assign",
+            description=f"assign → {pending['assigned_to']}",
         ))
     for b in pending.get("blocks_add") or []:
         out.append(PlannedAction(
