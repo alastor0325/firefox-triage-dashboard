@@ -87,3 +87,22 @@ def test_set_owner_membership_unknown_field(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("TRIAGE_OWNER", "owner@x.com")
     _draft(tmp_path)
     assert data.set_owner_membership(tmp_path, 5, "bogus", True) is False
+
+
+# ─── broker self-write suppression (no whole-tab SSE refresh on toggle) ──
+
+def test_broker_suppress_path_within_window() -> None:
+    from triage_dashboard.watch import FileWatchBroker
+    b = FileWatchBroker()
+    assert b.suppressed("/t/pending/bug-1.json") is False
+    b.suppress_path("/t/pending/bug-1.json")
+    assert b.suppressed("/t/pending/bug-1.json") is True       # this path skipped
+    assert b.suppressed("/t/pending/bug-2.json") is False      # others unaffected
+
+
+def test_broker_suppress_path_expires() -> None:
+    from triage_dashboard.watch import FileWatchBroker
+    b = FileWatchBroker()
+    b.suppress_path("/t/pending/bug-1.json")
+    b._suppressed["/t/pending/bug-1.json"] = 0.0               # force past expiry
+    assert b.suppressed("/t/pending/bug-1.json") is False

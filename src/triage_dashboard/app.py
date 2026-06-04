@@ -586,9 +586,11 @@ def toggle_owner(request: Request, bug_id: int, field: str) -> HTMLResponse:
     pending = _load_pending_or_404(bug_id)
     owner = data.triage_owner()
     currently_on = owner in (pending.get(key) or [])
-    data.set_owner_membership(
-        data.triage_dir_from_env(), bug_id, key, not currently_on
-    )
+    triage_dir = data.triage_dir_from_env()
+    # This is the app's own write + the htmx swap below already refreshes the
+    # card — suppress the watcher so it doesn't also fire a whole-tab SSE refresh.
+    broker.suppress_path(triage_dir / "pending" / f"bug-{bug_id}.json")
+    data.set_owner_membership(triage_dir, bug_id, key, not currently_on)
     pending = _load_pending_or_404(bug_id)  # reload post-write
     return templates.TemplateResponse(
         request=request,

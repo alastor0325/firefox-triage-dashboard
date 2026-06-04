@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -102,9 +103,32 @@ def event_for_path(
 class FileWatchBroker:
     """Pub/sub broker. Thread-safe emit; async subscribe."""
 
+    # How long a self-write suppression lasts. Covers the watchdog latency
+    # between the app writing a file and the OS event arriving.
+    _SELF_WRITE_WINDOW = 2.0
+
     def __init__(self) -> None:
         self._subscribers: set[asyncio.Queue[WatchEvent]] = set()
         self._loop: asyncio.AbstractEventLoop | None = None
+        # path -> monotonic expiry. Events for these paths are ignored: the
+        # app itself just wrote them (e.g. an owner-CC/NI toggle) and already
+        # updated the UI via the htmx swap, so a full SSE refresh would be a
+        # jarring no-op that wipes scroll/selection.
+        self._suppressed: dict[str, float] = {}
+
+    def suppress_path(self, path) -> None:
+        """Ignore filesystem events for `path` for a short window — call this
+        immediately *before* the app writes the file itself."""
+        self._suppressed[str(path)] = time.monotonic() + self._SELF_WRITE_WINDOW
+
+    def suppressed(self, path) -> bool:
+        exp = self._suppressed.get(str(path))
+        if exp is None:
+            return False
+        if time.monotonic() > exp:
+            self._suppressed.pop(str(path), None)
+            return False
+        return True
 
     def bind_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         """Call once from the asyncio event loop at app startup."""
@@ -149,6 +173,9 @@ class TriageDirEventHandler(FileSystemEventHandler):
         self.broker = broker
 
     def _emit_for(self, src_path: str, *, deleted: bool) -> None:
+        # Skip events the app suppressed (its own writes — UI already updated).
+        if not deleted and self.broker.suppressed(src_path):
+            return
         ev = event_for_path(
             Path(src_path),
             deleted=deleted,

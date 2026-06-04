@@ -248,8 +248,13 @@ class _RecordingBroker:
     """Sync stand-in for FileWatchBroker — captures emitted events."""
     def __init__(self):
         self.events: list[watch.WatchEvent] = []
+        self._suppressed: set[str] = set()
     def emit(self, ev: watch.WatchEvent) -> None:
         self.events.append(ev)
+    def suppress_path(self, path) -> None:
+        self._suppressed.add(str(path))
+    def suppressed(self, path) -> bool:
+        return str(path) in self._suppressed
 
 
 class _FakeFsEvent:
@@ -461,6 +466,8 @@ def test_watcher_emits_on_real_file_create(tmp_path: Path) -> None:
     class _Recorder:
         def emit(self, ev: watch.WatchEvent) -> None:
             events.append(ev)
+        def suppressed(self, path) -> bool:
+            return False
 
     w = watch.TriageDirWatcher(triage, _Recorder())  # type: ignore[arg-type]
     try:
