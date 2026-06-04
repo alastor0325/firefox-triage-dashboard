@@ -2007,6 +2007,70 @@ code, kbd {
    its own top padding. */
 .inv-overlay-scroll .investigation-main { padding-top: 1.75rem; }
 
+/* ─── Attachment rows + type chips ─────────────────────────────────── */
+.attach-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.2rem 0;
+}
+.attach-kind {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.05rem 0.35rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink-4);
+  border: 1px solid var(--border);
+}
+.attach-kind--image    { background: var(--blue-soft);   color: var(--blue);   border-color: transparent; }
+.attach-kind--profiler { background: var(--violet-soft); color: var(--violet); border-color: transparent; }
+.attach-kind--video,
+.attach-kind--audio    { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+/* The name reuses the link look; the image trigger is a borderless button. */
+.attach-name {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.attach-img-trigger code { text-decoration: underline dotted; text-underline-offset: 2px; }
+.attach-img-trigger:hover code { color: var(--accent); }
+
+/* ─── Image lightbox ───────────────────────────────────────────────── */
+.img-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;                 /* above the investigation overlay (1000) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3vmin;
+  background: rgba(9, 9, 11, 0.72);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  cursor: zoom-out;
+}
+.img-lightbox[hidden] { display: none; }
+.img-lightbox.is-open { opacity: 1; }
+.img-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.45);
+  transform: scale(0.97);
+  transition: transform 0.18s ease;
+  cursor: default;               /* clicking the image itself doesn't close */
+}
+.img-lightbox.is-open .img-lightbox-img { transform: scale(1); }
+
 /* ───── TRIAGE-OWNER CC/NI TOGGLES (per draft, in the will-apply wrap) ─────
    Two opt-in checkboxes — default off — controlling whether $TRIAGE_OWNER is
    CC'd / needinfo'd when the draft is applied. */

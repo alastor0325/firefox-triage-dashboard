@@ -58,6 +58,52 @@ def level_class(value: str | None) -> str:
     return "unknown"
 
 
+# Attachment-type inference. BMO attachment entries carry only name/url/size
+# (no content_type), so we classify from the filename extension, falling back
+# to the URL host (Firefox Profiler share links have no extension). `is_image`
+# drives the in-page lightbox; `kind` drives the colour chip; `label` is the
+# human tag shown before clicking.
+_IMAGE_EXTS = {"png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "avif", "ico"}
+_VIDEO_EXTS = {"mp4", "webm", "mov", "mkv", "avi", "m4v", "ogv"}
+_AUDIO_EXTS = {"mp3", "wav", "ogg", "oga", "flac", "m4a", "aac", "opus"}
+_ARCHIVE_EXTS = {"zip", "gz", "tgz", "tar", "7z", "rar", "xz", "bz2", "zst"}
+_LOG_EXTS = {"log", "moz_log", "txt"}
+
+
+def attachment_meta(att: dict) -> dict:
+    """Classify a bug attachment for display.
+
+    Returns `{"label", "kind", "is_image"}`. Pure (no I/O) so it's unit-tested
+    directly and used as the `attachment_meta` Jinja filter in _bug_report.html.
+    """
+    name = str((att or {}).get("name") or "").strip()
+    url = str((att or {}).get("url") or "")
+    base = name.split("?", 1)[0].rsplit("/", 1)[-1].lower()
+    ext = base.rsplit(".", 1)[-1] if "." in base else ""
+    host = url.split("/")[2].lower() if "://" in url else ""
+
+    if ext in _IMAGE_EXTS:
+        return {"label": f"{ext.upper()} image", "kind": "image", "is_image": True}
+    if ext in _VIDEO_EXTS:
+        return {"label": f"{ext.upper()} video", "kind": "video", "is_image": False}
+    if ext in _AUDIO_EXTS:
+        return {"label": f"{ext.upper()} audio", "kind": "audio", "is_image": False}
+    if "profiler" in name.lower() or "share.firefox.dev" in host \
+            or "profiler.firefox.com" in host:
+        return {"label": "profiler", "kind": "profiler", "is_image": False}
+    if ext == "json" or base.endswith(".json.gz"):
+        return {"label": "JSON", "kind": "data", "is_image": False}
+    if ext in ("html", "htm"):
+        return {"label": "HTML", "kind": "html", "is_image": False}
+    if ext in _LOG_EXTS:
+        return {"label": "log", "kind": "log", "is_image": False}
+    if ext in _ARCHIVE_EXTS:
+        return {"label": "archive", "kind": "archive", "is_image": False}
+    if ext:
+        return {"label": ext.upper(), "kind": "file", "is_image": False}
+    return {"label": "link", "kind": "link", "is_image": False}
+
+
 # Whole-word match on "regress" so labels like "regressor" / "regressed
 # by" / "regression" count, but a label like "progression" or "egress"
 # does not. Anchored at a word boundary on the left only — "regression

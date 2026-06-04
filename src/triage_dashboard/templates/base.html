@@ -16,6 +16,59 @@
 {# In-app full-bleed investigation reading overlay. htmx swaps the
    /investigation/<id> fragment in here; empty = hidden (CSS). #}
 <div id="investigation-overlay"></div>
+{# Shared image lightbox: clicking an image attachment opens it here, layered
+   over the page; clicking the backdrop (outside the image) or Esc closes it. #}
+<div id="img-lightbox" class="img-lightbox" hidden>
+  <img class="img-lightbox-img" alt="">
+</div>
+<script>
+  // Image-attachment lightbox. Delegated click handler so it works for cards
+  // swapped in by htmx. Open = unhide + (after a reflow) add .is-open so the
+  // opacity/scale transition runs; close = drop .is-open, then hide on
+  // transitionend so the fade-out is visible.
+  (function () {
+    const lb = document.getElementById('img-lightbox');
+    if (!lb) return;
+    const img = lb.querySelector('.img-lightbox-img');
+    function openImg(src, name) {
+      img.src = src;
+      img.alt = name || '';
+      lb.hidden = false;
+      void lb.offsetWidth;            // force reflow from the hidden state
+      lb.classList.add('is-open');
+    }
+    function closeImg() {
+      if (lb.hidden) return;
+      lb.classList.remove('is-open');
+      const done = () => {
+        lb.hidden = true;
+        img.removeAttribute('src');
+        lb.removeEventListener('transitionend', done);
+      };
+      lb.addEventListener('transitionend', done);
+    }
+    document.addEventListener('click', (e) => {
+      const trigger = e.target.closest('.attach-img-trigger');
+      if (trigger) {
+        e.preventDefault();
+        openImg(trigger.dataset.imgSrc, trigger.dataset.imgName);
+        return;
+      }
+      // A click that lands on the backdrop itself (not the image) closes.
+      if (!lb.hidden && e.target === lb) closeImg();
+    });
+    // Esc closes (capture + stopPropagation so the deck's Esc handler is
+    // suppressed while the lightbox is up).
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !lb.hidden) {
+        closeImg();
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+    window.__imgLightboxOpen = () => !lb.hidden;
+  })();
+</script>
 <script>
   // Close the investigation overlay. With hx-push-url the URL is
   // /investigation/<id>; history.back() returns to the dashboard and htmx
@@ -81,9 +134,10 @@
   document.addEventListener('keydown', (e) => {
     const tag = (document.activeElement?.tagName || '').toLowerCase();
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    // While the investigation overlay is open, the dashboard shortcuts
-    // (j/k/a/arrows) are suppressed — only Esc (handled separately) acts.
+    // While the investigation overlay or image lightbox is open, the dashboard
+    // shortcuts (j/k/a/arrows) are suppressed — only Esc (handled separately) acts.
     if (document.querySelector('.inv-overlay')) return;
+    if (window.__imgLightboxOpen && window.__imgLightboxOpen()) return;
     if (['input', 'textarea', 'select'].includes(tag) && e.key !== 'Escape') return;
     const clickIfActive = sel => {
       const btn = document.querySelector(sel);

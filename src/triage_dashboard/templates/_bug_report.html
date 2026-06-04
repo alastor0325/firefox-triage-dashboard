@@ -116,7 +116,20 @@
         <summary>Attachments ({{ ctx.attachments|length }})</summary>
         <div class="body">
           {% for a in ctx.attachments %}
-            <div><a href="{{ a.url }}" target="_blank" rel="noopener"><code>{{ a.name }}</code></a></div>
+            {% set m = a | attachment_meta %}
+            <div class="attach-row">
+              <span class="attach-kind attach-kind--{{ m.kind }}">{{ m.label }}</span>
+              {% if m.is_image %}
+              {# Image: open in the in-page lightbox (base.html) instead of a new
+                 tab. JS reads data-img-* via event delegation so it survives
+                 htmx swaps. #}
+              <button type="button" class="attach-name attach-img-trigger"
+                      data-img-src="{{ a.url }}" data-img-name="{{ a.name }}"
+                      title="Preview image"><code>{{ a.name }}</code></button>
+              {% else %}
+              <a class="attach-name" href="{{ a.url }}" target="_blank" rel="noopener"><code>{{ a.name }}</code></a>
+              {% endif %}
+            </div>
           {% endfor %}
         </div>
       </details>

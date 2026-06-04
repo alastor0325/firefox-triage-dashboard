@@ -28,6 +28,7 @@ templates.env.filters["linkify"] = descriptions.linkify
 templates.env.filters["render_markdown"] = descriptions.render_markdown
 templates.env.filters["filter_key_comments"] = descriptions.filter_key_comments
 templates.env.filters["level_class"] = data.level_class
+templates.env.filters["attachment_meta"] = data.attachment_meta
 templates.env.filters["split_see_also"] = data.split_see_also
 templates.env.filters["parse_affected_file"] = data.parse_affected_file
 templates.env.globals["is_regression"] = data.is_regression

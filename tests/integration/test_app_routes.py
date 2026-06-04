@@ -1573,3 +1573,40 @@ def test_investigation_scroll_css_scrolls() -> None:
     css = (STATIC_DIR / "style.css").read_text(encoding="utf-8")
     assert re.search(r"\.investigation-scroll\s*\{[^}]*overflow-y:\s*auto", css), \
         ".investigation-scroll must overflow-y:auto so long reports scroll"
+
+
+# ─── attachment type chips + image lightbox ─────────────────────────
+
+def _attach_ctx(*atts):
+    return {"bug_context": {"attachments": list(atts)}}
+
+
+def test_image_attachment_opens_in_lightbox_with_type_chip(triage_dir: Path) -> None:
+    """An image attachment renders a type chip + a lightbox trigger button
+    carrying the image URL (not a plain new-tab link)."""
+    write_draft(
+        triage_dir, 660001, severity="S3", priority="P3",
+        **_attach_ctx({"name": "shot.png", "url": "https://bmo.test/attachment.cgi?id=1"}),
+    )
+    body = client.get("/?tab=triaged&bug=660001").text
+    assert 'class="attach-kind attach-kind--image">PNG image' in body
+    assert 'class="attach-name attach-img-trigger"' in body
+    assert 'data-img-src="https://bmo.test/attachment.cgi?id=1"' in body
+
+
+def test_non_image_attachment_stays_a_link_with_type_chip(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 660002, severity="S3", priority="P3",
+        **_attach_ctx({"name": "log.txt", "url": "https://bmo.test/attachment.cgi?id=2"}),
+    )
+    body = client.get("/?tab=triaged&bug=660002").text
+    assert "attach-kind--log" in body and ">log<" in body
+    # the trigger class also appears in base.html's JS, so match the element
+    assert 'class="attach-name attach-img-trigger"' not in body
+    assert 'href="https://bmo.test/attachment.cgi?id=2"' in body
+
+
+def test_lightbox_element_present_in_shell() -> None:
+    body = client.get("/").text
+    assert 'id="img-lightbox"' in body
+    assert 'class="img-lightbox-img"' in body
