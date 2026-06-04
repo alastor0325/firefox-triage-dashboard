@@ -124,11 +124,15 @@ Procedure:
    to empty (write a zero-byte file). If any apply was declined by the
    user, leave the queue intact and let the user decide what to do.
 
-7. Print a one-line summary per bug describing what happened, e.g.
-     2039425: refined — shortened analysis
-     2040167: applied (user confirmed)
-     2042320: apply declined by user
-     2045110: /bug-start invoked
+7. Print a one-line summary per bug describing what happened. End every line
+   with the bug's full Bugzilla link
+   (https://bugzilla.mozilla.org/show_bug.cgi?id=<bug_id>) so it is clickable
+   in the terminal — ALWAYS for bugs you applied, so the user can one-click to
+   verify the write on Bugzilla. e.g.
+     2039425: refined — shortened analysis — https://bugzilla.mozilla.org/show_bug.cgi?id=2039425
+     2040167: applied (user confirmed) — https://bugzilla.mozilla.org/show_bug.cgi?id=2040167
+     2042320: apply declined by user — https://bugzilla.mozilla.org/show_bug.cgi?id=2042320
+     2045110: /bug-start invoked — https://bugzilla.mozilla.org/show_bug.cgi?id=2045110
 
 Begin.
 """

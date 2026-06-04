@@ -155,6 +155,16 @@ def test_prepare_queue_drain_prompt_invokes_apply_feedback_skill(
     assert "Skill tool" in prompt or "via the Skill" in prompt
 
 
+def test_prepare_queue_drain_prompt_requires_bugzilla_links(
+    triage_dir: Path,
+) -> None:
+    """The summary must include each bug's Bugzilla link (always for applied
+    bugs) so the user can one-click to verify the write."""
+    claude_queue.append_apply(triage_dir, bug_id=2040167)
+    prompt = claude_queue.prepare_queue_drain(triage_dir)["prompt"]
+    assert "bugzilla.mozilla.org/show_bug.cgi?id=" in prompt
+
+
 def test_prepare_queue_drain_bugs_affected_counts_distinct_bugs(
     triage_dir: Path,
 ) -> None:
