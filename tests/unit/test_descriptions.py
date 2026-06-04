@@ -151,6 +151,20 @@ def test_render_markdown_pipe_table() -> None:
     assert "<td>1</td>" in out
 
 
+def test_render_markdown_code_span_no_double_escape() -> None:
+    """Regression: `->`, `<`, `&` inside an inline code span must be
+    single-escaped, not double-escaped. A bug 2044952 AI draft rendered
+    `graph->mTracks` as the literal `graph-&gt;mTracks` because the input was
+    pre-escaped AND markdown re-escaped it inside the code span."""
+    out = str(desc.render_markdown("the `graph->mTracks.RemoveElement(this)` call"))
+    assert "<code>graph-&gt;mTracks.RemoveElement(this)</code>" in out
+    assert "&amp;gt;" not in out                      # '>' not double-escaped
+    out2 = str(desc.render_markdown("check `a < b` and `x & y`"))
+    assert "<code>a &lt; b</code>" in out2            # '<' single-escaped
+    assert "<code>x &amp; y</code>" in out2           # '&' single-escaped
+    assert "&amp;lt;" not in out2 and "&amp;amp;" not in out2
+
+
 def test_render_markdown_inline_link() -> None:
     out = str(desc.render_markdown("See [docs](https://example.com) here."))
     assert 'href="https://example.com"' in out

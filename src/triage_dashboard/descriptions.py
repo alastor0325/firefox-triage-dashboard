@@ -11,8 +11,21 @@ from __future__ import annotations
 
 import re
 
+import bleach
 import markdown as _markdown
 from markupsafe import Markup, escape
+
+# Tags/attrs the rendered-markdown subset may emit. Anything else (raw <script>,
+# <img onerror>, etc.) is escaped out by bleach. We sanitize the OUTPUT rather
+# than pre-escaping the INPUT, because pre-escaping double-escapes <, >, & inside
+# code spans (e.g. `graph->mTracks` rendering as `graph-&gt;mTracks`).
+_MD_TAGS = [
+    "p", "br", "strong", "em", "b", "i", "code", "pre",
+    "ul", "ol", "li", "a", "blockquote",
+    "h1", "h2", "h3", "h4", "h5", "h6", "hr",
+    "table", "thead", "tbody", "tr", "th", "td",
+]
+_MD_ATTRS = {"a": ["href", "title"]}
 
 
 # Matches a leading "User Agent: ... Firefox/NNN.0." sentence at the very
@@ -99,13 +112,16 @@ def render_markdown(text: str) -> Markup:
     """
     if not text:
         return Markup("")
-    safe_input = str(escape(text))
     html = _markdown.markdown(
-        safe_input,
+        text,
         extensions=["fenced_code", "sane_lists", "tables"],
         output_format="html",
     )
-    return Markup(html)
+    # Sanitize the rendered HTML: disallowed tags are escaped (strip=False), so
+    # raw <script>/<img onerror> become inert text, while markdown's own
+    # single-escaped entities inside <code> (e.g. &gt;) are preserved as-is.
+    clean = bleach.clean(html, tags=_MD_TAGS, attributes=_MD_ATTRS, strip=False)
+    return Markup(clean)
 
 
 _BOT_AUTHOR_TOKENS = (
