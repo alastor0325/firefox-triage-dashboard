@@ -184,11 +184,11 @@ def test_filter_drops_bot_authors() -> None:
     comments = [
         _c("release-mgmt-account-bot@mozilla.tld",
            "The severity field is not set for this bug. :jimm…"),
-        _c("padenot@mozilla.com", "this is 10-bit high h264, should work"),
+        _c("dev-b@example.com", "this is 10-bit high h264, should work"),
     ]
     out = desc.filter_key_comments(comments)
     assert len(out) == 1
-    assert out[0]["author"] == "padenot@mozilla.com"
+    assert out[0]["author"] == "dev-b@example.com"
 
 
 def test_filter_drops_bugbug_routing_messages() -> None:
@@ -196,10 +196,10 @@ def test_filter_drops_bugbug_routing_messages() -> None:
     comments = [
         _c("release-mgmt-account-bot@mozilla.tld",
            "Bugbug moved bug to Core::Audio/Video: Playback component."),
-        _c("padenot@mozilla.com", "actual diagnosis here"),
+        _c("dev-b@example.com", "actual diagnosis here"),
     ]
     out = desc.filter_key_comments(comments)
-    assert [c["author"] for c in out] == ["padenot@mozilla.com"]
+    assert [c["author"] for c in out] == ["dev-b@example.com"]
 
 
 def test_filter_drops_intermittent_bug_filer() -> None:

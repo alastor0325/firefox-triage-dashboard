@@ -267,8 +267,7 @@ terminal, gated by its `[y/N]` confirmation.
 
 ## Related projects
 
-- **[firefox-bug-investigation](https://github.com/alastor0325/firefox-bug-investigation)** — investigation files written by `/bug-start`; the dashboard reads them from the local investigation dir and serves them at `/investigation/<id>`
-- **[Claude-Skills](https://github.com/alastor0325/Claude-Skills)** — the `/triage` and `/bug-start` skills that drive the workflow
+- **[fx-bug-toolkit](https://github.com/alastor0325/fx-bug-toolkit)** — the Claude Code plugin behind the workflow: `/bug-start` writes the investigation files this dashboard reads (from `$FX_BUG_INVESTIGATION_DIR`), and the `/triage` skills are being folded in there too
 - **[bugzilla-cli](https://github.com/alastor0325/bugzilla-cli)** — the underlying tool for Bugzilla I/O, including the `[y/N]` apply prompt
 
 ---

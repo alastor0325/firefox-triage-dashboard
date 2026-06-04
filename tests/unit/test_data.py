@@ -248,7 +248,7 @@ def test_load_watch_dict_format(triage_dir: Path) -> None:
     payload = {
         "2039425": {
             "title": "WebCodecs crash",
-            "ni_targets": ["alwu@mozilla.com"],
+            "ni_targets": ["triager@example.com"],
             "added_at": "2026-05-21",
         }
     }
@@ -257,7 +257,7 @@ def test_load_watch_dict_format(triage_dir: Path) -> None:
     assert len(watch) == 1
     assert watch[0].bug_id == 2039425
     assert watch[0].title == "WebCodecs crash"
-    assert watch[0].ni_targets == ["alwu@mozilla.com"]
+    assert watch[0].ni_targets == ["triager@example.com"]
 
 
 def test_load_watch_uses_ni_set_date_for_added_at(triage_dir: Path) -> None:
@@ -268,7 +268,7 @@ def test_load_watch_uses_ni_set_date_for_added_at(triage_dir: Path) -> None:
     payload = {
         "2043087": {
             "title": "stale candidate",
-            "ni_targets": ["alwu@mozilla.com"],
+            "ni_targets": ["triager@example.com"],
             "ni_set_date": "2026-05-01T12:00:00Z",
         }
     }
@@ -375,10 +375,10 @@ def test_draft_from_pending_regressed_by_add_defaults_empty() -> None:
 
 def test_draft_from_pending_parses_status_and_assignee() -> None:
     draft = data.draft_from_pending(
-        {"bug_id": 1, "status": "ASSIGNED", "assigned_to": "alwu@mozilla.com"}
+        {"bug_id": 1, "status": "ASSIGNED", "assigned_to": "triager@example.com"}
     )
     assert draft.status == "ASSIGNED"
-    assert draft.assigned_to == "alwu@mozilla.com"
+    assert draft.assigned_to == "triager@example.com"
 
 
 def test_draft_from_pending_status_and_assignee_default_none() -> None:
@@ -419,7 +419,7 @@ def test_draft_with_full_bug_context(triage_dir: Path) -> None:
             "description_excerpt": "When playing HEVC content via DASH-LL...",
             "platform": "Windows 10 x64",
             "firefox_version": "150.0",
-            "reporter_email": "ryan.mccartney@bbc.co.uk",
+            "reporter_email": "reporter@example.com",
             "reporter_name": "Ryan McCartney",
             "last_activity": "2026-05-22T14:08:00Z",
             "inventory_present": ["platform / version", "three test URLs"],
@@ -429,7 +429,7 @@ def test_draft_with_full_bug_context(triage_dir: Path) -> None:
                 {"bug_id": 2012108, "label": "follow-up fix"},
             ],
             "recent_comments": [
-                {"author": "jya@mozilla.com", "ts": "2026-05-22T14:08:00Z",
+                {"author": "dev-a@example.com", "ts": "2026-05-22T14:08:00Z",
                  "text": "Looking at HEVCChangeMonitor path."},
             ],
             "attachments": [

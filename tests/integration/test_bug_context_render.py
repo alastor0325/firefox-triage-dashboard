@@ -138,14 +138,14 @@ def test_key_comments_in_expandable(triage_dir: Path) -> None:
         triage_dir, 1,
         bug_context={
             "recent_comments": [
-                {"author": "jya@mozilla.com", "ts": "2026-05-22T14:08:00Z",
+                {"author": "dev-a@example.com", "ts": "2026-05-22T14:08:00Z",
                  "text": "Looking at the HEVCChangeMonitor path."},
             ],
         },
     )
     body = client.get("/").text
     assert "key comment" in body.lower()
-    assert "jya@mozilla.com" in body
+    assert "dev-a@example.com" in body
     assert "Looking at the HEVCChangeMonitor path" in body
 
 

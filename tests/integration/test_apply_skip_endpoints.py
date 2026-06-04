@@ -35,7 +35,7 @@ def test_apply_json_response_for_curl(triage_dir: Path) -> None:
         triage_dir, 2039425,
         severity="S3", priority="P3",
         blocks_add=[1746557],
-        ni_targets=["alwu@mozilla.com"],
+        ni_targets=["triager@example.com"],
     )
     body = client.post("/draft/2039425/apply").json()
     assert body["action"] == "apply"

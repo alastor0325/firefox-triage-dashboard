@@ -86,8 +86,8 @@ def test_card_head_has_no_ni_badge_even_with_ni_targets(
 ) -> None:
     """The card-head NI badge duplicated the footer's `+ni …` text.
     The footer is the canonical place — the card-head badge is gone."""
-    write_draft(triage_dir, 1, ni_targets=["alwu@mozilla.com"])
+    write_draft(triage_dir, 1, ni_targets=["triager@example.com"])
     body = client.get("/").text
     assert 'class="badge-ni"' not in body
     # The "Will apply" footer must still surface the needinfo target.
-    assert "+ni alwu@mozilla.com" in body or "alwu@mozilla.com" in body
+    assert "+ni triager@example.com" in body or "triager@example.com" in body

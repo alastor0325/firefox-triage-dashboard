@@ -44,8 +44,8 @@ def test_mock_apply_actions_equal_planner_output() -> None:
         "bug_id": 2039425,
         "severity": "S3", "priority": "P3",
         "blocks_add": [1746557],
-        "ni_targets": ["alwu@mozilla.com"],
-        "cc_add": ["alwu@mozilla.com"],
+        "ni_targets": ["triager@example.com"],
+        "cc_add": ["triager@example.com"],
         "comment": "root cause analysis",
     }
     r = backend.MockBackend().apply(2039425, pending)

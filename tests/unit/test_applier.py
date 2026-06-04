@@ -49,8 +49,8 @@ def test_plan_includes_ni_per_target() -> None:
 
 
 def test_plan_includes_cc_add() -> None:
-    plan = applier.plan_apply(_pending(cc_add=["alwu@mozilla.com"]))
-    assert any(a.kind == "cc" and "alwu" in a.description for a in plan)
+    plan = applier.plan_apply(_pending(cc_add=["triager@example.com"]))
+    assert any(a.kind == "cc" and "triager" in a.description for a in plan)
 
 
 def test_plan_includes_blocks_add() -> None:

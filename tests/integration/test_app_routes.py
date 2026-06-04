@@ -351,7 +351,7 @@ def test_watching_tab_renders_watch_list(
     (triage_dir / "ni-watch.json").write_text(
         json.dumps([
             {"bug_id": 12345, "title": "Tracked bug",
-             "ni_targets": ["alwu@mozilla.com"], "added_at": "2026-05-28"}
+             "ni_targets": ["triager@example.com"], "added_at": "2026-05-28"}
         ])
     )
     body = client.get("/?tab=watching").text
@@ -1363,7 +1363,7 @@ def test_watching_stalled_badge_when_added_15_days_ago(
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
     _write_watch(triage_dir, [{
         "bug_id": 12345, "title": "Old bug",
-        "ni_targets": ["alwu@mozilla.com"], "added_at": fifteen_days_ago,
+        "ni_targets": ["triager@example.com"], "added_at": fifteen_days_ago,
     }])
     body = client.get("/?tab=watching").text
     item = _watch_item_for(body, 12345)
@@ -1380,7 +1380,7 @@ def test_watching_no_stalled_badge_when_added_1_day_ago(
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
     _write_watch(triage_dir, [{
         "bug_id": 12345, "title": "Fresh bug",
-        "ni_targets": ["alwu@mozilla.com"], "added_at": one_day_ago,
+        "ni_targets": ["triager@example.com"], "added_at": one_day_ago,
     }])
     body = client.get("/?tab=watching").text
     item = _watch_item_for(body, 12345)
@@ -1392,7 +1392,7 @@ def test_watching_no_stalled_badge_when_added_at_missing(
 ) -> None:
     _write_watch(triage_dir, [{
         "bug_id": 12345, "title": "No timestamp",
-        "ni_targets": ["alwu@mozilla.com"], "added_at": "",
+        "ni_targets": ["triager@example.com"], "added_at": "",
     }])
     body = client.get("/?tab=watching").text
     item = _watch_item_for(body, 12345)
@@ -1421,11 +1421,11 @@ def test_will_apply_diff_omits_regressed_by_when_empty(triage_dir: Path) -> None
 def test_will_apply_diff_shows_assignee_and_status(triage_dir: Path) -> None:
     write_draft(
         triage_dir, 1, severity="S2", priority="P2",
-        status="ASSIGNED", assigned_to="alwu@mozilla.com",
+        status="ASSIGNED", assigned_to="triager@example.com",
     )
     body = client.get("/?tab=triaged&bug=1").text
     assert "assign to" in body
-    assert "alwu@mozilla.com" in body
+    assert "triager@example.com" in body
     assert "ASSIGNED" in body
 
 
