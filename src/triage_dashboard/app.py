@@ -505,7 +505,7 @@ def _apply_toggle_response(
     revert). `result` is None on a revert (no backend plan is computed).
     """
     if request.headers.get("HX-Request") == "true":
-        return templates.TemplateResponse(
+        resp = templates.TemplateResponse(
             request=request,
             name="_apply_toggle.html",
             context={
@@ -517,6 +517,13 @@ def _apply_toggle_response(
                 "is_live": os.environ.get(backend.LIVE_ENV_VAR) == "1",
             },
         )
+        # Tell the page the queued state flipped, so it can sync the card's
+        # green treatment + the "✓ Applied" tag (card-head + rail row) by
+        # toggling one class each — the button swap alone can't reach them.
+        resp.headers["HX-Trigger"] = json.dumps(
+            {"applied-changed": {"bugId": bug_id, "queued": queued}}
+        )
+        return resp
     if result is not None:
         return JSONResponse({
             "action": "apply",

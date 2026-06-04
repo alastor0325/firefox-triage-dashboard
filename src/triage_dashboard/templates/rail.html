@@ -34,7 +34,7 @@
   <ol>
     {% for d in active_bucket %}
       <li>
-        <a class="rail-item{% if active_draft and d.bug_id == active_draft.bug_id %} is-active{% endif %}"
+        <a class="rail-item{% if active_draft and d.bug_id == active_draft.bug_id %} is-active{% endif %}{% if d.bug_id in (queued_apply_ids or []) %} is-applied{% endif %}"
            data-bug-id="{{ d.bug_id }}"
            href="?{{ nav_base }}&bug={{ d.bug_id }}"
            hx-get="?{{ nav_base }}&bug={{ d.bug_id }}"
@@ -52,7 +52,9 @@
             {# Action-driving tags. 'New' is recomputed every render from
                bug_context.filed, so it drops once the bug ages past a week. #}
             <span class="rail-tag-group">
-              {% if d.bug_id in (queued_apply_ids or []) %}<span class="rail-tag rail-tag--applied" title="Apply queued this round">✓ Applied</span>{% endif %}
+              {# Always rendered; shown only when the row carries .is-applied, so
+                 the apply toggle can sync it by flipping that one class. #}
+              <span class="rail-tag rail-tag--applied" title="Apply queued this round">✓ Applied</span>
               {% if is_new_this_week(d) %}<span class="rail-tag rail-tag--new">New</span>{% endif %}
               {% if is_emergency(d) %}<span class="rail-tag rail-tag--emergency">emergency</span>{% endif %}
               {% if is_regression(d) %}<span class="rail-tag rail-tag--regression">regression</span>{% endif %}

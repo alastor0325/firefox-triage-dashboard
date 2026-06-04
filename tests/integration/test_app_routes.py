@@ -1508,24 +1508,46 @@ def test_applywrap_css_grows_to_right_align_the_button() -> None:
 # ─── queued-to-apply card + rail treatment ───────────────────────────
 
 def test_queued_card_and_rail_get_applied_treatment(triage_dir: Path) -> None:
-    """A bug whose apply is queued this round gets the green card treatment
-    (card--queued + ✓ Applied badge) and a rail tag."""
+    """A queued apply gets the green treatment, carried by ONE class each:
+    .card--queued on the focused card, .is-applied on its rail row (these gate
+    the badge/tag visibility via CSS)."""
     from triage_dashboard import claude_queue
     write_draft(triage_dir, 700800, severity="S3", priority="P3")
     write_draft(triage_dir, 700801, severity="S3", priority="P3")  # not queued
     claude_queue.append_apply(triage_dir, bug_id=700800)
     body = client.get("/?tab=triaged&bug=700800").text
-    assert "card--queued" in body          # focused card styled
-    assert "badge-applied" in body         # ✓ Applied pill in card-head
-    assert "rail-tag--applied" in body     # rail row tagged
+    import re
+    assert 'class="card card--queued"' in body                       # focused card styled
+    assert re.search(r'class="rail-item[^"]*is-applied', body)        # rail row marked
+    # badge + tag elements are always present (shown via the class above)
+    assert "badge-applied" in body and "rail-tag--applied" in body
 
 
-def test_unqueued_card_has_no_applied_treatment(triage_dir: Path) -> None:
+def test_unqueued_card_has_no_applied_class(triage_dir: Path) -> None:
+    """No queued apply → neither the card nor any rail row carries the queued
+    class (the badge/tag stay in the DOM but CSS-hidden). Match the real element
+    class attrs — the class names also appear in base.html's JS, so a bare
+    substring check would false-positive."""
+    import re
     write_draft(triage_dir, 700802, severity="S3", priority="P3")
     body = client.get("/?tab=triaged&bug=700802").text
-    assert "card--queued" not in body
-    assert "badge-applied" not in body
-    assert "rail-tag--applied" not in body
+    assert 'class="card card--queued"' not in body
+    assert not re.search(r'class="rail-item[^"]*is-applied', body)
+
+
+def test_apply_toggle_emits_applied_changed_trigger(triage_dir: Path) -> None:
+    """The apply endpoint fires HX-Trigger 'applied-changed' with the new
+    queued state, so the page can sync the card style + tags live (the button
+    swap alone can't reach them)."""
+    import json
+    write_draft(triage_dir, 700810, severity="S3", priority="P3")
+    r = client.post("/draft/700810/apply", headers={"HX-Request": "true"})
+    assert r.status_code == 200
+    assert json.loads(r.headers["HX-Trigger"])["applied-changed"] == {
+        "bugId": 700810, "queued": True,
+    }
+    r2 = client.post("/draft/700810/apply", headers={"HX-Request": "true"})  # revert
+    assert json.loads(r2.headers["HX-Trigger"])["applied-changed"]["queued"] is False
 
 
 # ─── investigation page scroll (long reports must not crop) ──────────

@@ -37,6 +37,20 @@
       e.stopPropagation();
     }
   }, true);
+
+  // When an apply is queued/un-queued (HX-Trigger from /draft/<id>/apply), sync
+  // the "queued this round" treatment that the button swap can't reach: the
+  // focused card's green style + ✓ Applied badge, and the rail row's tag. Each
+  // is gated by a single class, so we just flip it; CSS does the rest.
+  document.body.addEventListener('applied-changed', (e) => {
+    const d = (e && e.detail) || {};
+    if (d.bugId == null) return;
+    const queued = !!d.queued;
+    const card = document.getElementById('card-' + d.bugId);
+    if (card) card.classList.toggle('card--queued', queued);
+    document.querySelectorAll('.rail-item[data-bug-id="' + d.bugId + '"]')
+      .forEach((el) => el.classList.toggle('is-applied', queued));
+  });
 </script>
 <script>
   function autosize(el) {
