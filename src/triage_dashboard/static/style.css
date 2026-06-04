@@ -1977,20 +1977,38 @@ code, kbd {
   color: var(--ink-2);
 }
 
-/* In-app full-bleed reading overlay (htmx swaps the fragment into
-   #investigation-overlay; empty host stays hidden). */
+/* In-app investigation reading overlay: a large centered modal over a dimmed,
+   click-to-dismiss backdrop (htmx swaps the fragment into #investigation-overlay;
+   empty host stays hidden). Sized for comfortable reading, not full-bleed — a
+   full-bleed opaque layer reads as "a new page". */
 #investigation-overlay:empty { display: none; }
-.inv-overlay {
+.inv-backdrop {
   position: fixed;
   inset: 0;
   z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vh 4vw;
+  background: rgba(9, 9, 11, 0.6);
+  cursor: zoom-out;                 /* clicking the backdrop closes */
+  animation: inv-backdrop-in 0.15s ease-out;
+}
+@keyframes inv-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+.inv-overlay {
+  width: min(1100px, 100%);
+  height: min(90vh, 100%);
   background: var(--bg);
+  border-radius: 10px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: inv-overlay-in 0.13s ease-out;
+  cursor: default;                  /* clicks inside the panel don't close */
+  animation: inv-overlay-in 0.15s ease-out;
 }
 @keyframes inv-overlay-in {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(8px) scale(0.99); }
   to   { opacity: 1; transform: none; }
 }
 .inv-overlay-bar {

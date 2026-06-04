@@ -892,10 +892,25 @@ def test_investigation_route_htmx_returns_overlay_fragment(
     resp = client.get("/investigation/2042320", headers={"HX-Request": "true"})
     assert resp.status_code == 200
     body = resp.text
-    assert 'class="inv-overlay"' in body          # the overlay fragment
+    assert 'class="inv-backdrop"' in body         # dim, click-to-dismiss backdrop
+    assert 'class="inv-overlay"' in body          # the windowed panel
+    assert "closeInvestigation()" in body         # backdrop/✕ dismiss
     assert "inv-overlay-close" in body            # close affordance
     assert "<!doctype" not in body.lower()        # NOT a full page
     assert "<h1>Root cause</h1>" in body          # body still rendered
+
+
+def test_investigation_overlay_is_windowed_modal_css() -> None:
+    """The overlay must be a centered window over a dimmed backdrop — not a
+    full-bleed opaque layer (which reads as 'a new page')."""
+    import re
+    from triage_dashboard.app import STATIC_DIR
+    css = (STATIC_DIR / "style.css").read_text(encoding="utf-8")
+    assert re.search(r"\.inv-backdrop\s*\{[^}]*background:\s*rgba", css), \
+        ".inv-backdrop must dim the page with a translucent background"
+    m = re.search(r"\.inv-overlay\s*\{([^}]*)\}", css)
+    assert m and "width:" in m.group(1) and "inset: 0" not in m.group(1), \
+        ".inv-overlay must be a sized window, not inset:0 full-bleed"
 
 
 def test_investigation_route_direct_get_is_full_page(

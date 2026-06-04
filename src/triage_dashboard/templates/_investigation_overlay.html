@@ -1,20 +1,23 @@
-{# htmx fragment: full-bleed in-app reading overlay for an investigation.
-   Returned for HX-Request GETs of /investigation/<id>; swapped into
-   #investigation-overlay. Close (✕ / Esc) calls history.back(), which
-   htmx restores to the dashboard snapshot (overlay cleared). #}
-<div class="inv-overlay" role="dialog" aria-modal="true"
-     aria-label="Bug {{ bug_id }} investigation">
-  <div class="inv-overlay-bar">
-    <button class="inv-overlay-close" type="button"
-            onclick="closeInvestigation()" aria-label="Close investigation">✕</button>
-    <span class="inv-overlay-title">Bug <strong>{{ bug_id }}</strong> · Investigation</span>
-    <a class="investigation-bz"
-       href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ bug_id }}"
-       target="_blank" rel="noopener">Open in Bugzilla&nbsp;↗</a>
-  </div>
-  <div class="inv-overlay-scroll">
-    <div class="investigation-main">
-      {% include "_investigation_content.html" %}
+{# htmx fragment: in-app reading overlay for an investigation, shown as a large
+   centered window over a dimmed backdrop (like the image lightbox, sized for
+   reading). Returned for HX-Request GETs of /investigation/<id>; swapped into
+   #investigation-overlay. Click the backdrop (outside the panel), the ✕, or Esc
+   to close — history.back() restores the dashboard snapshot (overlay cleared). #}
+<div class="inv-backdrop" onclick="if (event.target === this) closeInvestigation()">
+  <div class="inv-overlay" role="dialog" aria-modal="true"
+       aria-label="Bug {{ bug_id }} investigation">
+    <div class="inv-overlay-bar">
+      <button class="inv-overlay-close" type="button"
+              onclick="closeInvestigation()" aria-label="Close investigation">✕</button>
+      <span class="inv-overlay-title">Bug <strong>{{ bug_id }}</strong> · Investigation</span>
+      <a class="investigation-bz"
+         href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ bug_id }}"
+         target="_blank" rel="noopener">Open in Bugzilla&nbsp;↗</a>
+    </div>
+    <div class="inv-overlay-scroll">
+      <div class="investigation-main">
+        {% include "_investigation_content.html" %}
+      </div>
     </div>
   </div>
 </div>
