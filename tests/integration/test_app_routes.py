@@ -1433,3 +1433,50 @@ def test_will_apply_diff_omits_assignee_when_absent(triage_dir: Path) -> None:
     write_draft(triage_dir, 1, severity="S2", priority="P2")
     body = client.get("/?tab=triaged&bug=1").text
     assert "assign to" not in body
+
+
+# ─── triage-owner CC/NI toggles ──────────────────────────────────────
+
+def test_owner_toggles_render_unchecked_by_default(triage_dir: Path, monkeypatch) -> None:
+    """A fresh draft (owner not in cc_add/ni_targets) renders both toggles
+    unchecked — the owner opts in, default off."""
+    monkeypatch.setenv("TRIAGE_OWNER", "owner@example.com")
+    write_draft(triage_dir, 700700, severity="S3", priority="P3")
+    body = client.get("/?tab=triaged&bug=700700").text
+    assert 'class="owner-toggles"' in body
+    assert "CC me" in body and "NI me" in body
+    assert "checked" not in body.split('class="owner-toggles"')[1].split("</div>")[0]
+
+
+def test_owner_toggle_cc_flips_membership_and_diff(triage_dir: Path, monkeypatch) -> None:
+    """POSTing the CC toggle adds the owner to cc_add (and the will-apply diff),
+    a second POST removes it."""
+    monkeypatch.setenv("TRIAGE_OWNER", "owner@example.com")
+    write_draft(triage_dir, 700700, severity="S3")
+    # toggle ON
+    r = client.post("/draft/700700/owner/cc")
+    assert r.status_code == 200
+    assert "owner@example.com" in r.text          # diff now shows +cc owner
+    assert "checked" in r.text                     # cc checkbox checked
+    import json
+    pend = json.loads((triage_dir / "pending" / "bug-700700.json").read_text())
+    assert pend["cc_add"] == ["owner@example.com"]
+    # toggle OFF
+    r2 = client.post("/draft/700700/owner/cc")
+    pend2 = json.loads((triage_dir / "pending" / "bug-700700.json").read_text())
+    assert pend2["cc_add"] == []
+
+
+def test_owner_toggle_ni_preserves_reporter(triage_dir: Path, monkeypatch) -> None:
+    monkeypatch.setenv("TRIAGE_OWNER", "owner@example.com")
+    write_draft(triage_dir, 700701, ni_targets=["reporter@example.com"])
+    client.post("/draft/700701/owner/ni")
+    import json
+    pend = json.loads((triage_dir / "pending" / "bug-700701.json").read_text())
+    assert pend["ni_targets"] == ["reporter@example.com", "owner@example.com"]
+
+
+def test_owner_toggle_unknown_field_404(triage_dir: Path, monkeypatch) -> None:
+    monkeypatch.setenv("TRIAGE_OWNER", "owner@example.com")
+    write_draft(triage_dir, 700702)
+    assert client.post("/draft/700702/owner/bogus").status_code == 404

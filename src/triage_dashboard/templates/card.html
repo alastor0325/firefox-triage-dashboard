@@ -73,8 +73,8 @@
   {% endif %}
 
   <div class="card-foot">
-    <div class="diff">
-{% include "_applied_diff.html" %}
+    <div id="applywrap-{{ draft.bug_id }}">
+{% include "_apply_wrap.html" %}
     </div>
     <div class="actions">
       {% include "_apply_button.html" %}

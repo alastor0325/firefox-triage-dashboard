@@ -1990,3 +1990,33 @@ code, kbd {
 /* No back-link inside the overlay (the ✕ replaces it), so the column needs
    its own top padding. */
 .inv-overlay-scroll .investigation-main { padding-top: 1.75rem; }
+
+/* ───── TRIAGE-OWNER CC/NI TOGGLES (per draft, in the will-apply wrap) ─────
+   Two opt-in checkboxes — default off — controlling whether $TRIAGE_OWNER is
+   CC'd / needinfo'd when the draft is applied. */
+.owner-toggles {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--ink-3);
+}
+.owner-toggles-label {
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+.owner-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  user-select: none;
+}
+.owner-toggle input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
+.owner-toggle:hover { color: var(--ink); }

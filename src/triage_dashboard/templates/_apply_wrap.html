@@ -1,0 +1,7 @@
+{# The Will-apply diff plus the triage-owner CC/NI toggles, wrapped together so
+   the owner-toggle endpoint can re-render both at once (the diff's +cc/+ni lines
+   must stay in sync with the checkboxes). Lives inside #applywrap-<id>. #}
+<div class="diff">
+{% include "_applied_diff.html" %}
+</div>
+{% include "_owner_toggles.html" %}

@@ -665,6 +665,45 @@ def investigation_dir_from_env() -> Path:
     return DEFAULT_INVESTIGATION_DIR
 
 
+def triage_owner() -> str:
+    """The triage owner's Bugzilla email from $TRIAGE_OWNER (empty if unset).
+    This is the address the per-draft 'CC me' / 'NI me' checkboxes toggle on."""
+    return (os.environ.get("TRIAGE_OWNER") or "").strip()
+
+
+def toggle_in_list(items: list[str], value: str, on: bool) -> list[str]:
+    """Pure: return `items` with `value` present iff `on` (de-duplicated,
+    order otherwise preserved). Empty `value` is a no-op."""
+    out = [x for x in items if x != value]
+    if on and value:
+        out.append(value)
+    return out
+
+
+def set_owner_membership(
+    triage_dir: Path, bug_id: int, field: str, on: bool
+) -> bool:
+    """Add/remove the triage owner from a pending draft's `cc_add` or
+    `ni_targets` list and persist it. Returns False (no-op) when the owner
+    isn't configured, the field is unknown, or the pending file is missing.
+    Read-modify-write around the pure `toggle_in_list`."""
+    if field not in ("cc_add", "ni_targets"):
+        return False
+    owner = triage_owner()
+    if not owner:
+        return False
+    path = triage_dir / "pending" / f"bug-{bug_id}.json"
+    if not path.is_file():
+        return False
+    try:
+        d = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    d[field] = toggle_in_list(list(d.get(field) or []), owner, on)
+    path.write_text(json.dumps(d, indent=2, ensure_ascii=False), encoding="utf-8")
+    return True
+
+
 def strip_frontmatter(text: str) -> str:
     """Return the markdown body after a leading `---`-fenced YAML
     frontmatter block. Returns the text unchanged when it has no

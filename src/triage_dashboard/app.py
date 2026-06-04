@@ -37,6 +37,7 @@ templates.env.globals["is_new_this_week"] = data.is_new_this_week
 templates.env.globals["is_taken"] = data.is_taken
 templates.env.globals["assignee_display"] = data.assignee_display
 templates.env.filters["version_only"] = data.version_only
+templates.env.globals["triage_owner"] = data.triage_owner
 
 # Cache-bust /static/style.css with the file's mtime captured at import
 # time. Browsers refetch when the URL changes; on the server, restarting
@@ -569,6 +570,30 @@ def apply_draft(request: Request, bug_id: int):
         claude_queue.append_apply(triage_dir, bug_id=bug_id)
     return _apply_toggle_response(
         request, bug_id=bug_id, pending=pending, queued=result.ok, result=result
+    )
+
+
+@app.post("/draft/{bug_id}/owner/{field}", response_class=HTMLResponse)
+def toggle_owner(request: Request, bug_id: int, field: str) -> HTMLResponse:
+    """Toggle whether the triage owner ($TRIAGE_OWNER) is CC'd / needinfo'd on
+    this draft. `field` is 'cc' or 'ni'. Flips the owner's membership in the
+    pending draft's cc_add / ni_targets list (default off), then re-renders the
+    will-apply wrap (diff + toggles) so both reflect the new state.
+    """
+    key = {"cc": "cc_add", "ni": "ni_targets"}.get(field)
+    if key is None:
+        raise HTTPException(status_code=404, detail="unknown owner field")
+    pending = _load_pending_or_404(bug_id)
+    owner = data.triage_owner()
+    currently_on = owner in (pending.get(key) or [])
+    data.set_owner_membership(
+        data.triage_dir_from_env(), bug_id, key, not currently_on
+    )
+    pending = _load_pending_or_404(bug_id)  # reload post-write
+    return templates.TemplateResponse(
+        request=request,
+        name="_apply_wrap.html",
+        context={"draft": data.draft_from_pending(pending)},
     )
 
 
