@@ -1,8 +1,13 @@
 {# The Apply action button, rendered as a reversible toggle. Expects
    `draft` and `apply_queued` (bool). When already queued it shows
    "Applied" and a second click reverts (un-queues) the apply. Targets
-   itself (outerHTML) so the endpoint can swap it between states. #}
-{% if apply_queued %}
+   itself (outerHTML) so the endpoint can swap it between states.
+   In read-only mode (no API key) there is no apply action — a disabled
+   "Read-only" pill stands in its place. #}
+{% if not reply_mode() %}
+<span class="btn btn-readonly" aria-disabled="true"
+      title="Read-only — no API key. Run `bugzilla-cli setup` (write mode) to enable apply.">Read-only</span>
+{% elif apply_queued %}
 <button class="btn btn-applied"
         hx-post="/draft/{{ draft.bug_id }}/apply"
         hx-target="this"

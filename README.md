@@ -10,6 +10,21 @@ Every Bugzilla write is gated behind your approval and a final
 `bugzilla-cli apply` confirmation at the terminal. Nothing posts to
 Bugzilla automatically.
 
+### Read-only vs reply mode
+
+The dashboard detects whether a Bugzilla **API key** is configured — the same
+signal `bugzilla-cli` uses (`$BUGZILLA_BOT_API_KEY`, or
+`~/.config/triage/secrets`):
+
+- **Reply mode** (key present) — full flow: Apply / skip per card and the
+  Process-queue drain that writes via `bugzilla-cli apply`.
+- **Read-only** (no key) — the dashboard shows a **"read-only · drafts only"**
+  badge, replaces each card's Apply with a disabled **Read-only** pill, and the
+  Process-queue drain prompt is told to **skip the apply (write) step**. You
+  still get the full AI drafts to review; nothing can be written back until you
+  enable reply mode (`bugzilla-cli setup`). Detection is live — configure a key
+  and reload to switch to reply mode.
+
 ---
 
 ## The triage loop, end to end

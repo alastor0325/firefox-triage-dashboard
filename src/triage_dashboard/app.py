@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import applier, backend, claude_queue, data, descriptions, watch as watch_mod
+from .reply_mode import detect_reply_mode
 
 PKG_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = PKG_DIR / "templates"
@@ -29,6 +30,9 @@ templates.env.filters["render_markdown"] = descriptions.render_markdown
 templates.env.filters["filter_key_comments"] = descriptions.filter_key_comments
 templates.env.filters["level_class"] = data.level_class
 templates.env.filters["attachment_meta"] = data.attachment_meta
+# Live, per-render check: are we reply-capable (API key present) or read-only?
+# Templates call `reply_mode()` to gate apply/write affordances.
+templates.env.globals["reply_mode"] = detect_reply_mode
 templates.env.filters["split_see_also"] = data.split_see_also
 templates.env.filters["parse_affected_file"] = data.parse_affected_file
 templates.env.globals["is_regression"] = data.is_regression
@@ -596,6 +600,12 @@ def apply_draft(request: Request, bug_id: int):
     """
     pending = _load_pending_or_404(bug_id)
     triage_dir = data.triage_dir_from_env()
+    if not detect_reply_mode():
+        # Read-only (no API key): never queue a write. Re-render the button in
+        # its read-only state without touching the queue.
+        return _apply_toggle_response(
+            request, bug_id=bug_id, pending=pending, queued=False, result=None
+        )
     if claude_queue.is_apply_queued(triage_dir, bug_id):
         claude_queue.remove_apply(triage_dir, bug_id)
         return _apply_toggle_response(
@@ -773,7 +783,9 @@ def queue_prepare() -> dict:
     Claude reads `claude-queue.jsonl` itself rather than the prompt
     embedding the queue contents. Nothing is written to disk.
     """
-    return claude_queue.prepare_queue_drain(data.triage_dir_from_env())
+    return claude_queue.prepare_queue_drain(
+        data.triage_dir_from_env(), reply_mode=detect_reply_mode()
+    )
 
 
 @app.post("/draft/{bug_id}/refine")

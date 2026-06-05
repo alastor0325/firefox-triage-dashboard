@@ -45,12 +45,17 @@ def reply_capable(env_key: str | None, secrets_text: str | None) -> bool:
     return secrets_has_key(secrets_text)
 
 
-def detect_reply_mode(secrets_path: Path = SECRETS_PATH) -> bool:
-    """Read the environment + secrets file and decide reply (True) vs read-only."""
+def detect_reply_mode(secrets_path: Path | None = None) -> bool:
+    """Read the environment + secrets file and decide reply (True) vs read-only.
+
+    `secrets_path` defaults to the module-level `SECRETS_PATH` *at call time*
+    (read lazily, not bound as a default) so tests can monkeypatch it.
+    """
+    path = secrets_path if secrets_path is not None else SECRETS_PATH
     secrets_text: str | None = None
     try:
-        if secrets_path.is_file():
-            secrets_text = secrets_path.read_text(encoding="utf-8")
+        if path.is_file():
+            secrets_text = path.read_text(encoding="utf-8")
     except OSError:
         secrets_text = None
     return reply_capable(os.environ.get(_KEY_VAR), secrets_text)

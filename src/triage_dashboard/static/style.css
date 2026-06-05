@@ -2166,3 +2166,26 @@ code, kbd {
    sync style + tag by flipping just that class (base.html `applied-changed`). */
 .card:not(.card--queued) .badge-applied { display: none; }
 .rail-item:not(.is-applied) .rail-tag--applied { display: none; }
+
+/* Read-only mode (no Bugzilla API key) — drafts only, no apply/write actions. */
+.badge-readonly {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid var(--amber);
+  border-radius: 999px;
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.btn-readonly {
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-2);
+  color: var(--muted, #71717a);
+  cursor: default;
+}
