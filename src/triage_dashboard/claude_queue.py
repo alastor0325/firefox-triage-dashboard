@@ -137,6 +137,15 @@ Procedure:
 Begin.
 """
 
+READONLY_DRAIN_BANNER = """\
+⚠ READ-ONLY MODE — no Bugzilla API key is configured. Do NOT run any
+`bugzilla-cli apply` or other Bugzilla write. SKIP step 4 (apply) entirely and
+leave any `apply` queue entries in place (they run once reply mode is
+configured). Process only the refine and bug-start steps, and when truncating
+the queue (step 6) preserve any `apply` lines.
+
+"""
+
 
 def append_refine(
     triage_dir: Path,
@@ -424,7 +433,7 @@ def remove_apply(triage_dir: Path, bug_id: int) -> bool:
 _EMPTY = {"count": 0, "prompt": None, "bugs_affected": 0}
 
 
-def prepare_queue_drain(triage_dir: Path) -> dict[str, Any]:
+def prepare_queue_drain(triage_dir: Path, reply_mode: bool = True) -> dict[str, Any]:
     """Build the short clipboard prompt for draining the queue.
 
     Returns `{count, prompt, bugs_affected}`. `count` covers every
@@ -432,6 +441,10 @@ def prepare_queue_drain(triage_dir: Path) -> dict[str, Any]:
     everything the drainer will touch. `bugs_affected` is the number
     of distinct `bug_id`s across all those actions. When the queue is
     missing or has no drainable entries, returns the empty shape.
+
+    When `reply_mode` is False (no API key — read-only triage), the prompt is
+    prefixed with a banner instructing the drainer to skip the apply (write)
+    step and leave any `apply` entries queued.
     """
     queue_path = triage_dir / QUEUE_FILE
     if not queue_path.is_file():
@@ -445,6 +458,8 @@ def prepare_queue_drain(triage_dir: Path) -> dict[str, Any]:
         queue_path=str(queue_path),
         pending_dir=str(triage_dir / "pending"),
     )
+    if not reply_mode:
+        prompt = READONLY_DRAIN_BANNER + prompt
     return {
         "count": len(drainables),
         "prompt": prompt,

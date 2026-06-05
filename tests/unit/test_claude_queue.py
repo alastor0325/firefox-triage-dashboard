@@ -664,3 +664,25 @@ def test_apply_bug_ids_empty() -> None:
 def test_apply_bug_ids_skips_malformed() -> None:
     rows = [{"action": "apply"}, {"action": "apply", "bug_id": "x"}]
     assert claude_queue.apply_bug_ids(rows) == set()
+
+
+def test_prepare_queue_drain_reply_mode_has_no_readonly_banner(triage_dir: Path) -> None:
+    claude_queue.append_refine(triage_dir, bug_id=1, feedback="x")
+    result = claude_queue.prepare_queue_drain(triage_dir)  # default reply_mode=True
+    assert result["count"] >= 1
+    assert "READ-ONLY MODE" not in result["prompt"]
+    assert "bugzilla-cli apply" in result["prompt"]  # full prompt incl. the apply step
+
+
+def test_prepare_queue_drain_readonly_prepends_no_write_banner(triage_dir: Path) -> None:
+    claude_queue.append_refine(triage_dir, bug_id=1, feedback="x")
+    result = claude_queue.prepare_queue_drain(triage_dir, reply_mode=False)
+    assert result["prompt"].startswith("⚠ READ-ONLY MODE")
+    assert "Do NOT run any" in result["prompt"]
+    assert "Drain the Claude queue." in result["prompt"]  # base procedure follows the banner
+
+
+def test_prepare_queue_drain_empty_queue_has_no_banner(triage_dir: Path) -> None:
+    result = claude_queue.prepare_queue_drain(triage_dir, reply_mode=False)
+    assert result["count"] == 0
+    assert result["prompt"] is None
