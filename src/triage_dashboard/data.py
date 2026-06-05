@@ -445,6 +445,9 @@ class Draft:
     bug_reporter: str | None = None
     # Bugzilla `regressed_by` relation: the change(s) that caused this regression
     regressed_by_add: list[int] = field(default_factory=list)
+    # Bugzilla `see_also` relation: related bug IDs to add (apply writes them via
+    # bugzilla-cli set-fields --see-also-add)
+    see_also_add: list[int] = field(default_factory=list)
     # Bugzilla `status` (e.g. ASSIGNED) and `assigned_to` (assignee email) writes
     status: str | None = None
     assigned_to: str | None = None
@@ -479,6 +482,7 @@ def draft_from_pending(data: dict) -> Draft:
         severity=data.get("severity"),
         blocks_add=list(data.get("blocks_add") or []),
         regressed_by_add=list(data.get("regressed_by_add") or []),
+        see_also_add=list(data.get("see_also_add") or []),
         status=data.get("status"),
         assigned_to=data.get("assigned_to"),
         cc_add=list(data.get("cc_add") or []),

@@ -91,6 +91,18 @@ def test_plan_no_assign_without_assignee() -> None:
     assert "assign" not in kinds(applier.plan_apply(_pending()))
 
 
+def test_plan_includes_see_also() -> None:
+    plan = applier.plan_apply(_pending(see_also_add=[1837553, 1501982]))
+    sa = [a for a in plan if a.kind == "see-also"]
+    assert len(sa) == 2
+    assert "1837553" in sa[0].description
+    assert "1501982" in sa[1].description
+
+
+def test_plan_no_see_also_without_field() -> None:
+    assert "see-also" not in kinds(applier.plan_apply(_pending()))
+
+
 def test_plan_watch_add_when_ni_targets() -> None:
     """Per the /triage skill, non-empty ni_targets implies a watch-add."""
     plan = applier.plan_apply(_pending(ni_targets=["x@y.com"]))

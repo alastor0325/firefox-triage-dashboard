@@ -1729,6 +1729,16 @@ def test_field_override_no_plan_actions_when_not_queued(triage_dir: Path) -> Non
     assert "DRY RUN" not in r.text
 
 
+def test_will_apply_shows_see_also(triage_dir: Path) -> None:
+    """The will-apply diff renders see_also_add as linked '+see also bug N' refs."""
+    write_draft(triage_dir, 770050, severity="S3", priority="P3",
+                see_also_add=[1837553, 1501982])
+    body = client.get("/?tab=triaged&bug=770050").text
+    assert "see also" in body.lower()
+    assert "show_bug.cgi?id=1837553" in body
+    assert "show_bug.cgi?id=1501982" in body
+
+
 def test_owner_toggle_refreshes_dry_run_plan_when_queued(
     triage_dir: Path, monkeypatch,
 ) -> None:
