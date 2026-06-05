@@ -9,6 +9,28 @@ from typing import Any
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _default_reply_mode(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Default every test to **reply mode** and isolate from the real
+    `~/.config/triage/secrets`.
+
+    The dashboard reads a Bugzilla API key (env or secrets file) to decide
+    reply vs read-only; without this, tests would inherit whatever key the
+    machine happens to have, making apply/owner-affordance assertions
+    machine-dependent. Reply mode is the historical default (full affordances),
+    so existing tests keep passing everywhere. Read-only tests override by
+    deleting the env var.
+    """
+    from triage_dashboard import reply_mode
+
+    monkeypatch.setenv("BUGZILLA_BOT_API_KEY", "test-key")
+    monkeypatch.setattr(
+        reply_mode, "SECRETS_PATH", tmp_path_factory.mktemp("nosecrets") / "secrets"
+    )
+
+
 @pytest.fixture
 def triage_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Create an empty triage data directory and point $TRIAGE_DIR at it.

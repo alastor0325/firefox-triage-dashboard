@@ -1,8 +1,10 @@
 {# The Will-apply diff plus the triage-owner CC/NI toggles, wrapped together so
    the owner-toggle endpoint can re-render both at once (the diff's +cc/+ni lines
-   must stay in sync with the checkboxes). Lives inside #applywrap-<id>. #}
+   must stay in sync with the checkboxes). Lives inside #applywrap-<id>.
+   Read-only mode (no API key): the diff is non-editable and the owner
+   CC/NI/Assign toggles are dropped — nothing here writes to Bugzilla. #}
 <div class="diff">
-{% set editable = True %}
+{% set editable = reply_mode() %}
 {% include "_applied_diff.html" %}
 </div>
-{% include "_owner_toggles.html" %}
+{% if reply_mode() %}{% include "_owner_toggles.html" %}{% endif %}

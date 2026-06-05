@@ -630,6 +630,8 @@ def toggle_owner(request: Request, bug_id: int, field: str) -> HTMLResponse:
     will-apply wrap (diff + toggles) and, if an apply is queued, the dry-run
     plan too (each of cc/ni/assign is a planned action).
     """
+    if not detect_reply_mode():
+        raise HTTPException(status_code=403, detail="read-only mode: writes disabled")
     list_key = {"cc": "cc_add", "ni": "ni_targets"}.get(field)
     if list_key is None and field != "assign":
         raise HTTPException(status_code=404, detail="unknown owner field")
@@ -667,6 +669,8 @@ def set_field(
     refreshes the wrap, so suppress the watcher to avoid a whole-tab SSE
     refresh. Re-renders the will-apply wrap so the diff reflects the override.
     """
+    if not detect_reply_mode():
+        raise HTTPException(status_code=403, detail="read-only mode: writes disabled")
     if not data.level_options(field):
         raise HTTPException(status_code=404, detail="unknown field")
     triage_dir = data.triage_dir_from_env()

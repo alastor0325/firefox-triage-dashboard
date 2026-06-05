@@ -15,7 +15,7 @@
         <span>move to <span class="pill pill-reassign">{{ draft.product or 'Core' }} :: {{ draft.component or '?' }}</span></span>
       {% endif %}
       {% if draft.status %}<span class="pill pill-status">{{ draft.status }}</span>{% endif %}
-      {% if draft.assigned_to %}
+      {% if reply_mode() and draft.assigned_to %}
         <span class="sep">·</span>
         <span>assign to <span class="pill pill-assign">{{ draft.assigned_to }}</span></span>
       {% endif %}
@@ -37,11 +37,11 @@
           {% for b in draft.see_also_add %}<a class="meta" href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ b }}" target="_blank" rel="noopener">bug {{ b }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
         </span>
       {% endif %}
-      {% if draft.ni_targets %}
+      {% if reply_mode() and draft.ni_targets %}
         <span class="sep">·</span>
         <span><span class="plus">+</span>ni {{ draft.ni_targets|join(', ') }}</span>
       {% endif %}
-      {% if draft.cc_add %}
+      {% if reply_mode() and draft.cc_add %}
         <span class="sep">·</span>
         <span><span class="plus">+</span>cc {{ draft.cc_add|join(', ') }}</span>
       {% endif %}

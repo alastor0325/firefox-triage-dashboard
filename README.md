@@ -19,11 +19,13 @@ signal `bugzilla-cli` uses (`$BUGZILLA_BOT_API_KEY`, or
 - **Reply mode** (key present) — full flow: Apply / skip per card and the
   Process-queue drain that writes via `bugzilla-cli apply`.
 - **Read-only** (no key) — the dashboard shows a **"read-only · drafts only"**
-  badge, replaces each card's Apply with a disabled **Read-only** pill, and the
-  Process-queue drain prompt is told to **skip the apply (write) step**. You
-  still get the full AI drafts to review; nothing can be written back until you
-  enable reply mode (`bugzilla-cli setup`). Detection is live — configure a key
-  and reload to switch to reply mode.
+  badge and drops every write affordance: each card's Apply becomes a disabled
+  **Read-only** pill, the owner **CC me / NI me / Assign me** toggles are hidden,
+  the will-apply diff is non-editable and omits the cc / ni / assign rows, and the
+  Process-queue drain prompt is told to **skip the apply (write) step**. You still
+  see the full AI draft — analysis, proposed comment, and the proposed
+  severity/priority/resolution — just nothing that writes back. Detection is live:
+  configure a key (`bugzilla-cli setup`) and reload to switch to reply mode.
 
 ---
 
