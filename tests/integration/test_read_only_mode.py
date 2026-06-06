@@ -59,6 +59,8 @@ def test_read_only_hides_owner_cc_ni_assign(
     assert "assignee@example.com" not in body  # assign-to row hidden
     # The triage decision (proposed S/P) is still shown read-only.
     assert "S3" in body and "P2" in body
+    # The will-apply diff is relabelled "Proposed" (nothing applies in read-only).
+    assert "diff--proposed" in body
 
 
 def test_reply_mode_shows_apply_and_owner_affordances(
@@ -73,6 +75,7 @@ def test_reply_mode_shows_apply_and_owner_affordances(
     assert "reporter@example.com" in body
     assert "cc-me@example.com" in body
     assert "assignee@example.com" in body
+    assert "diff--proposed" not in body  # reply mode keeps the "Will apply" label
 
 
 def test_write_routes_are_blocked_in_read_only(

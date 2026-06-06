@@ -856,6 +856,8 @@ code, kbd {
   margin-right: 0.45rem;
   font-weight: 600;
 }
+/* Read-only mode: nothing applies, so the diff is a *proposal*, not a plan. */
+.diff--proposed::before { content: 'Proposed'; }
 .diff .sep { color: var(--ink-5); }
 .diff .pill {
   font-family: var(--font-mono);
