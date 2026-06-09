@@ -41,6 +41,7 @@ templates.env.globals["is_stalled"] = data.is_stalled
 templates.env.globals["is_new_this_week"] = data.is_new_this_week
 templates.env.globals["is_taken"] = data.is_taken
 templates.env.globals["assignee_display"] = data.assignee_display
+templates.env.globals["redundant_needinfos"] = data.redundant_needinfos
 templates.env.filters["version_only"] = data.version_only
 templates.env.globals["triage_owner"] = data.triage_owner
 templates.env.globals["level_options"] = data.level_options

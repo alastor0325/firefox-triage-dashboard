@@ -231,3 +231,57 @@ def test_card_without_bug_context_has_no_byline_or_more_sections(
     assert "see-also-pill" not in body
     assert "Bug description" not in body
     assert "Attachments" not in body
+
+
+# ─── pending needinfo (already-set NI flags) ─────────────────────────
+
+def test_pending_needinfo_rendered_when_present(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        bug_context={
+            "pending_needinfos": [
+                {"requestee": "karlt@mozbugz.karlt.net",
+                 "setter": "reporter@x.com", "since": "2026-06-05"},
+            ],
+        },
+    )
+    body = client.get("/").text
+    assert "Pending NI" in body
+    assert "karlt@mozbugz.karlt.net" in body
+    assert "2026-06-05" in body
+
+
+def test_pending_needinfo_absent_when_empty(triage_dir: Path) -> None:
+    write_draft(triage_dir, 1, bug_context={"reporter_name": "X"})
+    body = client.get("/").text
+    assert "Pending NI" not in body
+
+
+def test_redundant_ni_warning_when_draft_rerequests_pending(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        ni_targets=["karlt@mozbugz.karlt.net"],
+        bug_context={
+            "pending_needinfos": [
+                {"requestee": "karlt@mozbugz.karlt.net",
+                 "setter": "reporter@x.com", "since": "2026-06-05"},
+            ],
+        },
+    )
+    body = client.get("/").text
+    assert "already has a pending needinfo" in body
+
+
+def test_no_redundant_warning_when_ni_targets_distinct(triage_dir: Path) -> None:
+    write_draft(
+        triage_dir, 1,
+        ni_targets=["fresh@y.com"],
+        bug_context={
+            "pending_needinfos": [
+                {"requestee": "karlt@mozbugz.karlt.net",
+                 "setter": "reporter@x.com", "since": "2026-06-05"},
+            ],
+        },
+    )
+    body = client.get("/").text
+    assert "already has a pending needinfo" not in body

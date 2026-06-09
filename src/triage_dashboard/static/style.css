@@ -593,6 +593,45 @@ code, kbd {
 .ver-chip--taken { background: var(--violet-soft); border-color: #ddd6fe; }
 .ver-chip--taken .ver-chip-key { color: var(--violet); }
 
+/* ── Pending needinfo block ──
+   bug_context.pending_needinfos: needinfo flags already outstanding on the
+   bug at draft time (set by anyone). Shown so a draft doesn't re-request an
+   NI that's already pending. A chip turns red (--redundant) when the draft's
+   ni_targets re-requests that same requestee — a visible no-op warning. */
+.card-needinfo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+.needinfo-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-4);
+}
+.needinfo-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+}
+.needinfo-since { font-size: 0.7rem; color: var(--ink-4); }
+.needinfo-chip--redundant {
+  background: var(--amber-soft);
+  border-color: #fde68a;
+  color: var(--red);
+}
+.needinfo-warn { font-size: 0.7rem; font-weight: 600; color: var(--red); }
+
 /* ── Regression tag block ──
    Entries from bug_context.see_also whose label matches `\bregress`
    (regressor / regressed by / regression …) are pulled out of the

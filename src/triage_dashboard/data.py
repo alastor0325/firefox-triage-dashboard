@@ -252,6 +252,13 @@ class BugContext:
     # Awaiting tab into a §-tab on re-triage (e.g. "Reporter attached a
     # media log → re-triaged §1b"). Empty for the common case.
     change_note: str = ""
+    # Needinfo flags ALREADY pending on the bug at draft time (set by
+    # anyone — the reporter, another dev, an earlier triage). Distinct from
+    # the draft's `ni_targets`, which are the NIs *this* draft will request.
+    # Each entry: {"requestee": email, "setter": email, "since": "YYYY-MM-DD"}.
+    # Surfaced on the card so a draft doesn't re-request an NI that's already
+    # outstanding (BMO collapses a duplicate request into a no-op).
+    pending_needinfos: list[dict] = field(default_factory=list)
 
     @property
     def is_crash(self) -> bool:
@@ -296,7 +303,30 @@ def _parse_bug_context(raw: Any) -> BugContext | None:
         assigned_to=str(raw.get("assigned_to") or ""),
         assigned_to_name=str(raw.get("assigned_to_name") or ""),
         change_note=str(raw.get("change_note") or ""),
+        pending_needinfos=[
+            e for e in (raw.get("pending_needinfos") or []) if isinstance(e, dict)
+        ],
     )
+
+
+def redundant_needinfos(draft: "Draft") -> list[str]:
+    """The draft's `ni_targets` that are ALREADY pending on the bug.
+
+    Re-requesting a needinfo that's already outstanding is a no-op on BMO
+    (it collapses into the existing flag), so surfacing the overlap lets the
+    triager drop the redundant request before applying. Matching is
+    case-insensitive on the requestee email. Returns [] when there's no
+    bug_context. Preserves the original `ni_targets` spelling in the output."""
+    ctx = getattr(draft, "bug_context", None)
+    if ctx is None:
+        return []
+    pending = {
+        str(p.get("requestee") or "").strip().lower()
+        for p in ctx.pending_needinfos
+        if isinstance(p, dict)
+    }
+    pending.discard("")
+    return [t for t in (draft.ni_targets or []) if str(t).strip().lower() in pending]
 
 
 _EMERGENCY_KEYWORDS = frozenset({"sec-critical", "sec-high", "topcrash"})

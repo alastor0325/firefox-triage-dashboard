@@ -1311,3 +1311,72 @@ def test_is_stalled_defaults_now_to_current_utc() -> None:
         datetime.now(timezone.utc) - timedelta(days=60)
     ).strftime("%Y-%m-%dT%H:%M:%SZ")
     assert data.is_stalled(_watch_entry(sixty_days_ago)) is True
+
+
+# ─── pending_needinfos + redundant_needinfos ─────────────────────────
+
+def _make_draft(ni_targets, bug_context):
+    return data.Draft(
+        bug_id=1, title="t", comment="", ni_targets=list(ni_targets),
+        priority=None, severity=None, blocks_add=[], cc_add=[],
+        resolution=None, keywords_add=[], product=None, component=None,
+        created_at="2026-01-01T00:00:00Z", section="§1a",
+        bug_context=bug_context,
+    )
+
+
+def _draft_with_ni(ni_targets, pending_needinfos):
+    return _make_draft(
+        ni_targets,
+        data.BugContext(pending_needinfos=list(pending_needinfos)),
+    )
+
+
+def test_parse_bug_context_reads_pending_needinfos() -> None:
+    ctx = data._parse_bug_context({
+        "pending_needinfos": [
+            {"requestee": "a@b.com", "setter": "r@x.com", "since": "2026-06-05"},
+        ],
+    })
+    assert ctx is not None
+    assert ctx.pending_needinfos == [
+        {"requestee": "a@b.com", "setter": "r@x.com", "since": "2026-06-05"},
+    ]
+
+
+def test_parse_bug_context_defaults_pending_needinfos_empty() -> None:
+    ctx = data._parse_bug_context({})
+    assert ctx is not None
+    assert ctx.pending_needinfos == []
+
+
+def test_parse_bug_context_skips_non_dict_pending_needinfos() -> None:
+    ctx = data._parse_bug_context({"pending_needinfos": ["nope", {"requestee": "a@b.com"}]})
+    assert ctx is not None
+    assert ctx.pending_needinfos == [{"requestee": "a@b.com"}]
+
+
+def test_redundant_needinfos_flags_overlap() -> None:
+    draft = _draft_with_ni(
+        ["karlt@x.net", "new@y.com"],
+        [{"requestee": "karlt@x.net", "setter": "r@z.com", "since": "2026-06-05"}],
+    )
+    assert data.redundant_needinfos(draft) == ["karlt@x.net"]
+
+
+def test_redundant_needinfos_is_case_insensitive() -> None:
+    draft = _draft_with_ni(
+        ["Karlt@X.Net"],
+        [{"requestee": "karlt@x.net"}],
+    )
+    assert data.redundant_needinfos(draft) == ["Karlt@X.Net"]
+
+
+def test_redundant_needinfos_empty_when_no_overlap() -> None:
+    draft = _draft_with_ni(["new@y.com"], [{"requestee": "karlt@x.net"}])
+    assert data.redundant_needinfos(draft) == []
+
+
+def test_redundant_needinfos_empty_without_bug_context() -> None:
+    draft = _make_draft(["a@b.com"], None)
+    assert data.redundant_needinfos(draft) == []
