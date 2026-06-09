@@ -835,6 +835,23 @@ def set_draft_field(triage_dir: Path, bug_id: int, field: str, value: str) -> bo
     return _modify_pending(triage_dir, bug_id, lambda d: d.update({field: value}))
 
 
+def level_change_feedback(field: str, old: str | None, new: str) -> str:
+    """Refine-queue feedback for a Will-apply S/P override, so a queued Claude
+    refine rewrites the comment's rationale to match the new level. The field
+    itself is already persisted by `set_draft_field`; without this the apply
+    would set the new level while the posted comment still argues the old one.
+    Pure — backs the set_field route's auto-refine enqueue. `field` is
+    'severity' or 'priority'."""
+    old_disp = old.upper() if old else "unset"
+    return (
+        f"The Will-apply {field} was changed from {old_disp} to {new} in the "
+        f"dashboard. Rewrite the comment so its rationale — and any {field} level "
+        f"stated in the text — reflects {new}, keeping the rest of the draft "
+        f"intact. The {field} field is already set to {new}; do not change it, "
+        f"only make the comment consistent with it."
+    )
+
+
 def strip_frontmatter(text: str) -> str:
     """Return the markdown body after a leading `---`-fenced YAML
     frontmatter block. Returns the text unchanged when it has no

@@ -220,7 +220,10 @@ While reading a card, watch for these:
   shows the draft's deltas. In that footer the **severity / priority
   are editable dropdowns**: they default to the AI's proposed level,
   and selecting a different one overrides what will actually be applied
-  this round.
+  this round. Changing the level also **auto-queues a refine** so the
+  next queue drain rewrites the comment's rationale to match — keeping
+  the posted comment in sync with the level you're applying (otherwise
+  apply would set the new level while the comment still argued the old).
 
 - **Pending feedback** — refines you've queued for this specific bug
   via the composer. ✕ on any row to remove it before draining.

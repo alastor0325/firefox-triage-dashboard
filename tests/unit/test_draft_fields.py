@@ -78,3 +78,30 @@ def test_set_draft_field_unknown_field_is_noop(tmp_path) -> None:
 def test_set_draft_field_missing_file(tmp_path) -> None:
     (tmp_path / "pending").mkdir()
     assert data.set_draft_field(tmp_path, 999, "severity", "S1") is False
+
+
+# ─── level_change_feedback (pure) ────────────────────────────────────
+# Backs the set_field route's auto-refine enqueue: when a Will-apply S/P
+# override changes the level, this message tells Claude to rewrite the comment
+# so its rationale matches — keeping the posted prose in sync with the field.
+
+def test_level_change_feedback_mentions_old_and_new() -> None:
+    msg = data.level_change_feedback("severity", "S3", "S2")
+    assert "S3" in msg and "S2" in msg
+    assert "severity" in msg.lower()
+
+
+def test_level_change_feedback_unset_old() -> None:
+    # A §1a draft has no proposed level; the message must still read cleanly.
+    msg = data.level_change_feedback("priority", None, "P1")
+    assert "unset" in msg.lower()
+    assert "P1" in msg
+
+
+def test_level_change_feedback_instructs_comment_only() -> None:
+    # Must tell Claude NOT to re-touch the field (already set to the user's
+    # chosen level) and only fix the comment — otherwise the refine could
+    # re-override the human's choice.
+    msg = data.level_change_feedback("severity", "S1", "S4")
+    assert "do not change" in msg.lower()
+    assert "comment" in msg.lower()
