@@ -1729,6 +1729,56 @@ def test_field_override_no_plan_actions_when_not_queued(triage_dir: Path) -> Non
     assert "DRY RUN" not in r.text
 
 
+def test_field_override_queues_refine_when_level_changes(triage_dir: Path) -> None:
+    """Changing the Will-apply level must queue a Claude refine so the comment's
+    rationale is rewritten to match — otherwise apply posts a comment arguing the
+    old level while setting the new one."""
+    from triage_dashboard import claude_queue
+    write_draft(triage_dir, 770020, severity="S3", priority="P3")
+    r = client.post("/draft/770020/field/severity",
+                    data={"value": "S1"}, headers={"HX-Request": "true"})
+    assert r.status_code == 200
+    fb = claude_queue.pending_feedback_for(triage_dir, 770020)
+    assert len(fb) == 1
+    assert "S3" in fb[0]["feedback"] and "S1" in fb[0]["feedback"]
+
+
+def test_field_override_no_refine_when_level_unchanged(triage_dir: Path) -> None:
+    """Selecting the value the draft already has is a no-op — no refine queued."""
+    from triage_dashboard import claude_queue
+    write_draft(triage_dir, 770021, severity="S2", priority="P3")
+    r = client.post("/draft/770021/field/severity",
+                    data={"value": "S2"}, headers={"HX-Request": "true"})
+    assert r.status_code == 200
+    assert claude_queue.pending_feedback_for(triage_dir, 770021) == []
+
+
+def test_field_override_queues_refine_for_priority_too(triage_dir: Path) -> None:
+    """The refine-on-change path is not severity-only — priority overrides queue
+    a refine the same way."""
+    from triage_dashboard import claude_queue
+    write_draft(triage_dir, 770022, severity="S3", priority="P3")
+    r = client.post("/draft/770022/field/priority",
+                    data={"value": "P1"}, headers={"HX-Request": "true"})
+    assert r.status_code == 200
+    fb = claude_queue.pending_feedback_for(triage_dir, 770022)
+    assert len(fb) == 1
+    assert "P3" in fb[0]["feedback"] and "P1" in fb[0]["feedback"]
+
+
+def test_field_override_queues_refine_when_level_was_unset(triage_dir: Path) -> None:
+    """A §1a draft with no proposed severity: setting one is a real change, so a
+    refine is queued (and reads as 'unset → S2')."""
+    from triage_dashboard import claude_queue
+    write_draft(triage_dir, 770023, severity=None, priority=None)
+    r = client.post("/draft/770023/field/severity",
+                    data={"value": "S2"}, headers={"HX-Request": "true"})
+    assert r.status_code == 200
+    fb = claude_queue.pending_feedback_for(triage_dir, 770023)
+    assert len(fb) == 1
+    assert "unset" in fb[0]["feedback"].lower() and "S2" in fb[0]["feedback"]
+
+
 def test_will_apply_shows_see_also(triage_dir: Path) -> None:
     """The will-apply diff renders see_also_add as linked '+see also bug N' refs."""
     write_draft(triage_dir, 770050, severity="S3", priority="P3",

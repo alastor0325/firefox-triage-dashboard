@@ -674,11 +674,24 @@ def set_field(
     if not data.level_options(field):
         raise HTTPException(status_code=404, detail="unknown field")
     triage_dir = data.triage_dir_from_env()
-    _load_pending_or_404(bug_id)
+    pending_before = _load_pending_or_404(bug_id)
+    old_value = pending_before.get(field)
     broker.suppress_path(triage_dir / "pending" / f"bug-{bug_id}.json")
     if not data.set_draft_field(triage_dir, bug_id, field, value):
         raise HTTPException(status_code=400, detail="invalid value")
     pending = _load_pending_or_404(bug_id)  # reload post-write
+    new_value = pending.get(field)
+    # When the override actually changes the level, queue a Claude refine so the
+    # comment's rationale is rewritten to match the new level. Otherwise apply
+    # would set the new level while the posted comment still argues the old one
+    # (the field tracks the dropdown, but the AI's prose doesn't). The queue
+    # write is left un-suppressed so its queue-changed SSE bumps the topbar queue
+    # count; the card's "revising" indicator appears on the next full refresh.
+    if (old_value or "").upper() != (new_value or "").upper():
+        claude_queue.append_refine(
+            triage_dir, bug_id=bug_id,
+            feedback=data.level_change_feedback(field, old_value, new_value),
+        )
     queued, result = _queued_apply_plan(triage_dir, bug_id, pending)
     return templates.TemplateResponse(
         request=request,
