@@ -132,6 +132,13 @@ test, a media log with the `media` preset enabled, etc.
 reporter. Adds the bug to a local watch list so we notice when the
 reporter replies.
 
+When a bug already has needinfo flags outstanding at draft time (set by
+anyone — the reporter, another dev, an earlier triage), the card shows a
+**Pending NI** row listing who's already on the hook and since when. If the
+draft's own NI targets re-request someone already pending, that chip turns
+red — a heads-up that the request is a no-op (BMO collapses a duplicate
+needinfo into the existing flag) so you can drop it before applying.
+
 ### Close / Reassign (§1c)
 
 The bug shouldn't live in A/V triage queue any longer:

@@ -29,6 +29,24 @@
     </p>
     {% endif %}
 
+    {# Needinfo flags already pending on the bug at draft time. Scoped to the
+       card (draft is defined); the `and` short-circuits before touching
+       ctx.pending_needinfos in the watching view, where draft isn't in scope. #}
+    {% if draft is defined and ctx.pending_needinfos %}
+    {% set _redundant = redundant_needinfos(draft) | map('lower') | list %}
+    <div class="card-needinfo">
+      <span class="needinfo-label">Pending NI</span>
+      {% for ni in ctx.pending_needinfos %}
+        {% set _dupe = (ni.requestee | string | lower) in _redundant %}
+        <span class="needinfo-chip{% if _dupe %} needinfo-chip--redundant{% endif %}"
+              {% if _dupe %}title="This draft re-requests a needinfo that is already outstanding — BMO collapses it to a no-op"{% endif %}>
+          {{ ni.requestee }}{% if ni.since %} <span class="needinfo-since">since {{ (ni.since | string)[:10] }}</span>{% endif %}
+          {% if _dupe %}<span class="needinfo-warn">⚠ already has a pending needinfo</span>{% endif %}
+        </span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     {% if ctx.inventory_present or ctx.inventory_missing %}
     <ul class="inventory">
       {% for it in ctx.inventory_present %}<li class="present">{{ it }}</li>{% endfor %}

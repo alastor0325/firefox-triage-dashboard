@@ -142,3 +142,29 @@ def test_minimal_entry_without_archive_or_investigation(
     item = _watch_item(client.get("/?tab=watching").text, 99999)
     assert "watch-report" not in item
     assert "Bare bug" in item
+
+
+def test_pending_needinfo_block_skipped_in_watching_view(
+    triage_dir: Path, tmp_path: Path, monkeypatch,
+) -> None:
+    """The watching view includes _bug_report.html without `draft` in scope.
+    The `draft is defined` guard must short-circuit so a report carrying
+    pending_needinfos renders cleanly (200, no Pending NI block / no crash)."""
+    inv_dir = tmp_path / "inv"
+    inv_dir.mkdir()
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
+    _write_watch(triage_dir, {"bug_id": 12345, "title": "Tracked bug"})
+    write_applied_draft(
+        triage_dir, 12345,
+        bug_context={
+            "platform": "Windows 11 x64",
+            "pending_needinfos": [
+                {"requestee": "karlt@x.net", "setter": "r@y.com", "since": "2026-06-05"},
+            ],
+        },
+    )
+    resp = client.get("/?tab=watching")
+    assert resp.status_code == 200
+    item = _watch_item(resp.text, 12345)
+    assert "Windows 11 x64" in item   # report did render
+    assert "Pending NI" not in item   # but the draft-only NI block did not
