@@ -64,5 +64,13 @@
             {% if not queue_rows %}disabled{% endif %}>
       Copy prompt → paste into Claude
     </button>
+    <!-- Shown + wired by fxhub-integration only when framed by fx-dev-hub. -->
+    <button type="button"
+            class="btn-run-claude fxhub-run"
+            onclick="runDrainInClaude(this)"
+            style="display:none"
+            {% if not queue_rows %}disabled{% endif %}>
+      Run in Claude
+    </button>
   </div>
 </div>

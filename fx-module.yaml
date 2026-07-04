@@ -1,0 +1,19 @@
+# fx-dev-hub module manifest. Lets the Hub frame the triage dashboard and (when
+# the user grants it) drive Claude with the queue-drain prompt. The dashboard
+# still runs standalone exactly as before — the Hub's Claude integration is
+# feature-detected in the browser and never replaces the existing copy-prompt or
+# built-in queue flows.
+name: Triage Dashboard
+type: web
+provides: triage
+start: "triage-dashboard --port {port}"
+health: "/"
+port: arg
+# augment: the Hub proxies the dashboard and injects window.createFxHub so its
+# page can drive Claude. Capabilities are confirmed by the user at install:
+#   agent         — run Claude on the queue-drain prompt
+#   agent-write   — let Claude apply the triage actions (edit files)
+#   agent-results — show Claude's answer back in the page
+augment: true
+capabilities: [agent, agent-write, agent-results]
+context: [bug, component]

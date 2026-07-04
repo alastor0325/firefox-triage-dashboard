@@ -315,6 +315,61 @@
     }
   }
 
+  // fx-dev-hub integration: when framed by the Hub, `window.createFxHub` is
+  // injected. Reveal + wire the "Run in Claude" button (drains the same queue
+  // prompt through the Hub's Claude and shows the result). Standalone, the
+  // global is absent and the button stays hidden — the copy flow is unchanged.
+  let __fxhub = null;
+  if (window.createFxHub) {
+    window.createFxHub().then((hub) => { __fxhub = hub; revealClaudeButtons(); }).catch(() => {});
+  }
+  function revealClaudeButtons() {
+    if (!__fxhub) return;
+    document.querySelectorAll('.fxhub-run').forEach((b) => { b.style.display = ''; });
+  }
+  document.addEventListener('htmx:afterSettle', revealClaudeButtons);
+
+  function fxhubPanel() {
+    let p = document.getElementById('fxhub-panel');
+    if (!p) {
+      p = document.createElement('div');
+      p.id = 'fxhub-panel';
+      p.style.cssText =
+        'position:fixed;right:16px;bottom:16px;width:440px;max-height:60vh;overflow:auto;' +
+        'background:#fff;color:#15141a;border:1px solid #d7d7db;border-radius:8px;' +
+        'box-shadow:0 6px 24px rgba(0,0,0,.18);padding:12px 14px;font:13px/1.5 system-ui;' +
+        'white-space:pre-wrap;z-index:9999;';
+      document.body.appendChild(p);
+    }
+    return p;
+  }
+  async function runDrainInClaude(btn) {
+    if (!__fxhub || !btn || btn.disabled) return;
+    const original = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Preparing…';
+    const p = fxhubPanel();
+    try {
+      const r = await fetch('/queue/prepare', { method: 'POST' });
+      const data = await r.json();
+      if (!r.ok || !data.prompt) {
+        p.textContent = 'Nothing to drain.';
+        btn.textContent = original; btn.disabled = false; return;
+      }
+      p.textContent = 'Running the triage queue in Claude…';
+      const job = __fxhub.runAgent(data.prompt);
+      let gotResult = false;
+      job.addEventListener('result', (e) => { gotResult = true; p.textContent = e.detail; });
+      job.addEventListener('error', (e) => { p.textContent = 'Claude run failed: ' + (e.error ? e.error.message : 'unknown'); });
+      job.addEventListener('status', () => {
+        if (job.status === 'done' && !gotResult) p.textContent = 'Done.';
+        if (job.status === 'done' || job.status === 'error') { btn.textContent = original; btn.disabled = false; }
+      });
+    } catch (e) {
+      p.textContent = 'Failed to prepare the queue.';
+      btn.textContent = original; btn.disabled = false;
+    }
+  }
+
   // Close the Process queue dropdown when clicking outside it.
   document.addEventListener('click', (e) => {
     const dropdown = document.getElementById('process-queue-dropdown');
