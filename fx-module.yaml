@@ -6,7 +6,10 @@
 name: Triage Dashboard
 type: web
 provides: triage
-start: "triage-dashboard --port {port}"
+# launch.sh resolves the fx-bug-toolkit venv at runtime and runs the dashboard
+# with the browser suppressed — so the Hub can start it from its minimal PATH
+# (the `triage-dashboard` console script lives in the venv, not on that PATH).
+start: "bash launch.sh --port {port}"
 health: "/"
 port: arg
 # augment: the Hub proxies the dashboard and injects window.createFxHub so its
