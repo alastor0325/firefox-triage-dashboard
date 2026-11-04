@@ -95,3 +95,19 @@ def request_problem(
         return "cross-origin request"
     return None
 
+
+def bind_warning(host: str) -> str | None:
+    """A warning when `--host` isn't loopback: the dashboard has no login, and
+    scripts on other machines send no Origin, so the checks above don't stop
+    them."""
+    name = host.strip("[]").lower()  # a bind address, not a Host header
+    if name == "localhost":
+        return None
+    try:
+        if ipaddress.ip_address(name).is_loopback:
+            return None
+    except ValueError:
+        pass
+    return (f"Warning: --host {host} lets other machines reach the dashboard, which "
+            "has no login; anyone who can connect can edit drafts and queue work. "
+            "Open it by IP address or localhost; other names are refused.")

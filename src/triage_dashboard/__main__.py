@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import threading
 import time
 import webbrowser
 
 import uvicorn
+
+from .request_guard import bind_warning
 
 
 def main() -> None:
@@ -25,6 +28,10 @@ def main() -> None:
         help="Restart on file change (dev mode).",
     )
     args = parser.parse_args()
+
+    warning = bind_warning(args.host)
+    if warning:
+        print(warning, file=sys.stderr)
 
     url = f"http://{args.host}:{args.port}/"
     if not args.no_browser:

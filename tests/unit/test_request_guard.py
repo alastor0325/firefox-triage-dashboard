@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from triage_dashboard.request_guard import host_allowed, host_name, request_problem
+from triage_dashboard.request_guard import bind_warning, host_allowed, host_name, request_problem
 
 
 class Headers(dict):
@@ -90,3 +90,14 @@ def test_post_other_origin_refused(origin: str) -> None:
 def test_post_without_browser_headers_passes() -> None:
     """curl and scripts send neither header."""
     assert request_problem("POST", Headers(host="127.0.0.1:9001")) is None
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "127.0.0.2", "localhost", "::1"])
+def test_loopback_bind_no_warning(host: str) -> None:
+    assert bind_warning(host) is None
+
+
+@pytest.mark.parametrize("host", ["0.0.0.0", "::", "192.168.1.5", "example.test"])
+def test_other_bind_warns(host: str) -> None:
+    assert host in bind_warning(host)
+
