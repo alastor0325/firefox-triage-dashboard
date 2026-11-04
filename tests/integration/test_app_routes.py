@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import write_draft
@@ -1664,6 +1665,17 @@ def test_non_image_attachment_stays_a_link_with_type_chip(triage_dir: Path) -> N
     # the trigger class also appears in base.html's JS, so match the element
     assert 'class="attach-name attach-img-trigger"' not in body
     assert 'href="https://bmo.test/attachment.cgi?id=2"' in body
+
+
+@pytest.mark.parametrize("name", ["shot.png", "log.txt"])
+def test_non_web_attachment_url_is_not_linked(triage_dir: Path, name: str) -> None:
+    write_draft(
+        triage_dir, 660003, severity="S3", priority="P3",
+        **_attach_ctx({"name": name, "url": "javascript:alert(1)"}),
+    )
+    body = client.get("/?tab=triaged&bug=660003").text
+    assert name in body
+    assert "javascript:alert" not in body
 
 
 def test_lightbox_element_present_in_shell() -> None:
