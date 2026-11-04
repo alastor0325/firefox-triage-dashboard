@@ -12,16 +12,18 @@ from pathlib import Path
 from urllib.parse import quote_plus
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import applier, backend, claude_queue, data, descriptions, watch as watch_mod
+from . import applier, backend, claude_queue, data, descriptions, request_guard, watch as watch_mod
 from .reply_mode import detect_reply_mode
 
 PKG_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = PKG_DIR / "templates"
 STATIC_DIR = PKG_DIR / "static"
+# Host names accepted besides IP literals; tests add TestClient's "testserver".
+ALLOWED_HOSTS = request_guard.HOST_NAMES
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.filters["parse_description"] = descriptions.parse_description
@@ -86,6 +88,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Triage Dashboard", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.middleware("http")
+async def refuse_other_sites(request, call_next):
+    """Refuse DNS-rebound and cross-site state-changing requests."""
+    problem = request_guard.request_problem(request.method, request.headers, ALLOWED_HOSTS)
+    if problem:
+        return PlainTextResponse(f"Forbidden: {problem}", status_code=403)
+    return await call_next(request)
 
 
 @app.middleware("http")

@@ -31,6 +31,14 @@ def _default_reply_mode(
     )
 
 
+@pytest.fixture(autouse=True)
+def _allow_testclient_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    """TestClient sends `Host: testserver`; let it past the Host check."""
+    from triage_dashboard import app, request_guard
+
+    monkeypatch.setattr(app, "ALLOWED_HOSTS", request_guard.HOST_NAMES | {"testserver"})
+
+
 @pytest.fixture
 def triage_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Create an empty triage data directory and point $TRIAGE_DIR at it.
