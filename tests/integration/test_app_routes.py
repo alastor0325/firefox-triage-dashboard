@@ -1894,3 +1894,18 @@ def test_no_inline_script_in_any_template() -> None:
         found = _INLINE_SCRIPT.search(path.read_text(encoding="utf-8"))
         assert found is None, f"{path.name}: {found.group(0)}"
 
+
+def test_history_restore_gets_full_page(triage_dir: Path) -> None:
+    """htmx swaps a cache-miss restore into body, so it must get the page."""
+    write_draft(triage_dir, 1)
+    partial = client.get("/", headers={"HX-Request": "true"}).text
+    restore = client.get("/", headers={"HX-Request": "true", "HX-History-Restore-Request": "true"}).text
+    assert 'id="img-lightbox"' not in partial
+    assert 'id="img-lightbox"' in restore
+    assert 'id="investigation-overlay"' in restore
+
+
+def test_investigation_history_restore_gets_full_page(triage_dir: Path) -> None:
+    restore = client.get("/investigation/1", headers={"HX-Request": "true", "HX-History-Restore-Request": "true"})
+    assert "<!doctype" in restore.text.lower()
+

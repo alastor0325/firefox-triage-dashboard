@@ -289,6 +289,12 @@ def _compute_is_stale(
     return inv_dt < act_dt
 
 
+def is_partial_request(headers) -> bool:
+    """An htmx swap of the content area, not a history restore of the page."""
+    return (headers.get("HX-Request") == "true"
+            and headers.get("HX-History-Restore-Request") != "true")
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(
     request: Request, tab: str | None = None, bug: int | None = None,
@@ -363,9 +369,9 @@ def index(
         for slug, marker, _ in TABS
     }
     # htmx tab clicks request just the content body, not the whole page,
-    # so the topbar/tabs/scroll position stay stable.
-    is_htmx = request.headers.get("HX-Request") == "true"
-    template_name = "_content.html" if is_htmx else "index.html"
+    # so the topbar/tabs/scroll position stay stable. A history restore that
+    # missed htmx's cache swaps the response into body, so it needs the page.
+    template_name = "_content.html" if is_partial_request(request.headers) else "index.html"
     return templates.TemplateResponse(
         request=request,
         name=template_name,
@@ -415,8 +421,7 @@ def investigation_page(request: Request, bug_id: int) -> HTMLResponse:
     # overlay fragment to swap into the dashboard in-place; a direct GET
     # (refresh, bookmark, new tab) gets the full standalone page. Either way
     # the URL is /investigation/<id> and stays valid.
-    is_htmx = request.headers.get("HX-Request") == "true"
-    name = "_investigation_overlay.html" if is_htmx else "investigation.html"
+    name = "_investigation_overlay.html" if is_partial_request(request.headers) else "investigation.html"
     return templates.TemplateResponse(
         request=request,
         name=name,
