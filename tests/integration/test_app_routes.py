@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -52,8 +53,15 @@ def test_brand_title_links_to_repo(triage_dir: Path) -> None:
 
 
 def test_full_page_includes_htmx_script(triage_dir: Path) -> None:
-    """htmx must be loaded on the full page so tab clicks can do partial swaps."""
-    assert "htmx.org" in client.get("/").text
+    """htmx must be loaded on the full page so tab clicks can do partial swaps.
+    It's served locally, not from a CDN, so no third party can change it."""
+    body = client.get("/").text
+    src = re.search(r'<script src="(/static/htmx-[\d.]+\.min\.js)"></script>', body)
+    assert src is not None
+    assert "unpkg.com" not in body
+    response = client.get(src.group(1))
+    assert response.status_code == 200
+    assert "htmx" in response.text
 
 
 def test_full_page_links_favicon(triage_dir: Path) -> None:
