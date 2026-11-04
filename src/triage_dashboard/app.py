@@ -49,7 +49,7 @@ templates.env.filters["version_only"] = data.version_only
 templates.env.globals["triage_owner"] = data.triage_owner
 templates.env.globals["level_options"] = data.level_options
 
-# Cache-bust /static/style.css with the file's mtime captured at import
+# Cache-bust /static/style.css and app.js with each file's mtime captured at import
 # time. Browsers refetch when the URL changes; on the server, restarting
 # (which is how the rest of the app picks up changes anyway) is what
 # refreshes this value.
@@ -59,6 +59,11 @@ try:
 except OSError:
     CSS_VERSION = "0"
 templates.env.globals["css_version"] = CSS_VERSION
+try:
+    JS_VERSION = str(int((STATIC_DIR / "app.js").stat().st_mtime))
+except OSError:
+    JS_VERSION = "0"
+templates.env.globals["js_version"] = JS_VERSION
 
 # Module-level broker so tests can `broker.emit(...)` to drive the SSE endpoint
 # without going through the actual filesystem watcher.
@@ -93,11 +98,15 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 @app.middleware("http")
 async def refuse_other_sites(request, call_next):
-    """Refuse DNS-rebound and cross-site state-changing requests."""
+    """Refuse DNS-rebound and cross-site state-changing requests, and send
+    the security headers on every response."""
     problem = request_guard.request_problem(request.method, request.headers, ALLOWED_HOSTS)
     if problem:
-        return PlainTextResponse(f"Forbidden: {problem}", status_code=403)
-    return await call_next(request)
+        response = PlainTextResponse(f"Forbidden: {problem}", status_code=403)
+    else:
+        response = await call_next(request)
+    response.headers.update(request_guard.SECURITY_HEADERS)
+    return response
 
 
 @app.middleware("http")

@@ -18,6 +18,33 @@ import ipaddress
 from collections.abc import Mapping, Set
 from urllib.parse import urlsplit
 
+# Defense in depth for every response. Only the dashboard's own script files
+# run (no inline script or eval, so injected markup can't run code), fetches
+# stay on this origin, no other site may frame the dashboard (a framed page's
+# clicks would be same-origin and pass the checks below), and cross-origin
+# navigations carry no Referer. Inline styles stay allowed for htmx's
+# indicator styles and the templates' style attributes.
+CSP = "; ".join((
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src https://fonts.gstatic.com",
+    "img-src 'self' data: http: https:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+))
+SECURITY_HEADERS = {
+    "Content-Security-Policy": CSP,
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "same-origin",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
+}
+
 HOST_NAMES = frozenset({"localhost"})
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 SAME_SITE_FETCH = frozenset({"same-origin", "none"})
@@ -67,3 +94,4 @@ def request_problem(
     if urlsplit(origin).netloc.lower() != host.lower():
         return "cross-origin request"
     return None
+
