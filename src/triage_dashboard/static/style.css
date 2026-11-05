@@ -778,6 +778,7 @@ code, kbd {
 .md-body pre code { background: transparent; padding: 0; }
 .md-body strong { color: var(--ink); font-weight: 600; }
 .md-body a { color: var(--accent); }
+.md-body a code { color: inherit; }
 .md-body a:hover { text-decoration: underline; }
 .description-body .desc-section {
   display: grid;
