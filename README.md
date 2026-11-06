@@ -288,6 +288,11 @@ default the fx-bug-toolkit plugin uses, so both see the same files).
 Pending drafts live in `~/firefox-triage/pending/`. These directories are
 created by the `/triage` and `/bug-start` skills, not by the dashboard.
 
+The dashboard has no login, so it only answers requests addressed to
+`localhost` or an IP address (not a DNS name, which defeats DNS rebinding),
+and refuses state-changing requests from other sites. Open it at
+`http://127.0.0.1:<port>/` or `http://localhost:<port>/`.
+
 The dashboard ships with a mock Bugzilla backend by default —
 clicking Apply shows what *would* happen but doesn't actually post.
 Real writes go through `bugzilla-cli apply` in a separate Claude

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from triage_dashboard import descriptions as desc
 
 
@@ -260,3 +262,26 @@ def test_filter_drops_empty_text() -> None:
     out = desc.filter_key_comments(comments)
     assert len(out) == 1
     assert out[0]["text"] == "real text"
+
+
+# ─── web_url ─────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("url", ["https://bmo.test/a?id=1", "http://x.test/", " HTTPS://x.test/ "])
+def test_web_url_keeps_http_urls(url: str) -> None:
+    assert desc.web_url(url) == url.strip()
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["javascript:alert(1)", " JavaScript:alert(1)", "data:text/html,x", "vbscript:x",
+     "//evil.test/", "/draft/1/apply", "", None, "https"],
+)
+def test_web_url_drops_other_urls(url) -> None:
+    assert desc.web_url(url) == ""
+
+
+def test_render_markdown_drops_javascript_links() -> None:
+    html = str(desc.render_markdown("[x](javascript:alert(1))"))
+    assert "javascript:" not in html
+

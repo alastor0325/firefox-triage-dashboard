@@ -60,7 +60,7 @@
     <button type="button"
             class="btn-copy-prompt"
             id="btn-copy-prompt"
-            onclick="copyDrainPrompt(this)"
+            data-action="copy-drain-prompt"
             {% if not queue_rows %}disabled{% endif %}>
       Copy prompt → paste into Claude
     </button>

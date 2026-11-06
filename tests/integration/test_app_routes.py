@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import write_draft
@@ -11,6 +13,12 @@ from triage_dashboard.app import app
 
 
 client = TestClient(app)
+
+
+def _page_with_script(path: str = "/") -> str:
+    """The page plus /static/app.js, where its behavior lives (the CSP
+    forbids inline script)."""
+    return client.get(path).text + client.get("/static/app.js").text
 
 
 # ─── full-page rendering ────────────────────────────────────────────
@@ -52,8 +60,15 @@ def test_brand_title_links_to_repo(triage_dir: Path) -> None:
 
 
 def test_full_page_includes_htmx_script(triage_dir: Path) -> None:
-    """htmx must be loaded on the full page so tab clicks can do partial swaps."""
-    assert "htmx.org" in client.get("/").text
+    """htmx must be loaded on the full page so tab clicks can do partial swaps.
+    It's served locally, not from a CDN, so no third party can change it."""
+    body = client.get("/").text
+    src = re.search(r'<script src="(/static/htmx-[\d.]+\.min\.js)"></script>', body)
+    assert src is not None
+    assert "unpkg.com" not in body
+    response = client.get(src.group(1))
+    assert response.status_code == 200
+    assert "htmx" in response.text
 
 
 def test_full_page_links_favicon(triage_dir: Path) -> None:
@@ -92,7 +107,7 @@ def test_left_right_arrow_keys_switch_topbar_tabs(triage_dir: Path) -> None:
     existing typing-gate (input/textarea/select active) suppresses
     the handler so the cursor still moves normally inside the
     composer or the rail search."""
-    body = client.get("/").text
+    body = _page_with_script()
     # The keydown switch arms for ArrowLeft and ArrowRight must be
     # present in the keyboard handler block.
     assert "'ArrowLeft'" in body or "case 'ArrowLeft'" in body
@@ -129,7 +144,7 @@ def test_keyboard_shortcut_letters_present_in_handler(triage_dir: Path) -> None:
     shortcuts. The keydown handler in base.html must actually wire
     each one — otherwise the user-facing docs in the title attribute
     diverge from real behavior."""
-    body = client.get("/").text
+    body = _page_with_script()
     # Each documented shortcut appears as a `case 'X':` arm in the JS.
     assert "case 'j':" in body
     assert "case 'k':" in body
@@ -181,7 +196,7 @@ def test_css_version_is_stable_across_requests(triage_dir: Path) -> None:
 
 def test_full_page_opens_sse_event_source(triage_dir: Path) -> None:
     """The page wires a browser EventSource('/events') for live updates."""
-    body = client.get("/").text
+    body = _page_with_script()
     assert "new EventSource('/events')" in body
     # And subscribes to the four event types the backend emits.
     assert "draft-changed" in body
@@ -192,7 +207,7 @@ def test_full_page_opens_sse_event_source(triage_dir: Path) -> None:
 
 def test_topbar_has_process_queue_dropdown(triage_dir: Path) -> None:
     """The Process queue control is a <details> dropdown in the topbar."""
-    body = client.get("/").text
+    body = _page_with_script()
     # The <details> wrapper and the <summary> button that triggers it.
     assert 'id="process-queue-dropdown"' in body
     assert 'id="btn-process-queue"' in body
@@ -202,6 +217,7 @@ def test_topbar_has_process_queue_dropdown(triage_dir: Path) -> None:
     # that calls /queue/prepare now — auto-copy on toggle is gone).
     assert "/queue/prepare" in body
     assert "copyDrainPrompt" in body
+    assert 'data-action="copy-drain-prompt"' in client.get("/queue/dropdown").text
 
 
 def test_queue_tab_is_removed_from_topbar(triage_dir: Path) -> None:
@@ -894,7 +910,7 @@ def test_investigation_route_htmx_returns_overlay_fragment(
     body = resp.text
     assert 'class="inv-backdrop"' in body         # dim, click-to-dismiss backdrop
     assert 'class="inv-overlay"' in body          # the windowed panel
-    assert "closeInvestigation()" in body         # backdrop/✕ dismiss
+    assert 'data-action="close-investigation"' in body  # ✕ dismiss (app.js)
     assert "inv-overlay-close" in body            # close affordance
     assert "<!doctype" not in body.lower()        # NOT a full page
     assert "<h1>Root cause</h1>" in body          # body still rendered
@@ -1658,6 +1674,17 @@ def test_non_image_attachment_stays_a_link_with_type_chip(triage_dir: Path) -> N
     assert 'href="https://bmo.test/attachment.cgi?id=2"' in body
 
 
+@pytest.mark.parametrize("name", ["shot.png", "log.txt"])
+def test_non_web_attachment_url_is_not_linked(triage_dir: Path, name: str) -> None:
+    write_draft(
+        triage_dir, 660003, severity="S3", priority="P3",
+        **_attach_ctx({"name": name, "url": "javascript:alert(1)"}),
+    )
+    body = client.get("/?tab=triaged&bug=660003").text
+    assert name in body
+    assert "javascript:alert" not in body
+
+
 def test_lightbox_element_present_in_shell() -> None:
     body = client.get("/").text
     assert 'id="img-lightbox"' in body
@@ -1815,3 +1842,70 @@ def test_watch_applied_diff_stays_readonly_pill() -> None:
     assert "pill pill-sev" in readonly and "<select" not in readonly
     editable = tmpl.render(draft=draft, editable=True)
     assert "field/severity" in editable and "<select" in editable
+
+
+# ─── no inline script (the CSP forbids it) ───────────────────────────
+
+_INLINE_SCRIPT = re.compile(r"<script(?![^>]*\ssrc=)[^>]*>|\son[a-z]+\s*=|\shx-on[:-]", re.I)
+
+
+def test_no_inline_script_or_handlers(triage_dir: Path, tmp_path: Path, monkeypatch) -> None:
+    write_draft(triage_dir, 880001, severity="S3", priority="P3",
+                bug_context={"attachments": [{"name": "a.png", "url": "https://x.test/a.png"}]})
+    write_draft(triage_dir, 880002, ni_targets=["x"])
+    inv_dir = tmp_path / "inv"
+    inv_dir.mkdir()
+    (inv_dir / "bug-880001-investigation.md").write_text("---\nbug_id: 880001\n---\n# x\n", encoding="utf-8")
+    monkeypatch.setenv("FX_BUG_INVESTIGATION_DIR", str(inv_dir))
+    pages = [client.get(path).text for path in (
+        "/", "/?tab=triaged&bug=880001", "/?tab=needs-info", "/?tab=watching", "/queue/dropdown",
+        "/investigation/880001")]
+    pages.append(client.get("/investigation/880001", headers={"HX-Request": "true"}).text)
+    for body in pages:
+        assert _INLINE_SCRIPT.search(body) is None, _INLINE_SCRIPT.search(body).group(0)
+
+
+def test_app_script_served_as_javascript(triage_dir: Path) -> None:
+    body = client.get("/").text
+    assert '<script src="/static/app.js?v=' in body
+    response = client.get("/static/app.js")
+    assert response.status_code == 200
+    assert "javascript" in response.headers["content-type"]
+
+
+def test_htmx_eval_and_script_tags_disabled(triage_dir: Path) -> None:
+    """hx-on and trigger filters would need eval, which the CSP forbids; and a
+    history restore re-inserts body, which must not run app.js a second time."""
+    body = client.get("/").text
+    assert '<meta name="htmx-config" content=\'{"allowEval": false, "allowScriptTags": false}\'>' in body
+
+
+def test_app_script_versioned_by_its_own_mtime(triage_dir: Path) -> None:
+    from triage_dashboard import app as app_module
+
+    assert f'/static/app.js?v={app_module.JS_VERSION}"' in client.get("/").text
+
+
+def test_no_inline_script_in_any_template() -> None:
+    """Covers fragments only POSTs return, which the page test doesn't fetch."""
+    from triage_dashboard.app import TEMPLATES_DIR
+
+    for path in TEMPLATES_DIR.glob("*.html"):
+        found = _INLINE_SCRIPT.search(path.read_text(encoding="utf-8"))
+        assert found is None, f"{path.name}: {found.group(0)}"
+
+
+def test_history_restore_gets_full_page(triage_dir: Path) -> None:
+    """htmx swaps a cache-miss restore into body, so it must get the page."""
+    write_draft(triage_dir, 1)
+    partial = client.get("/", headers={"HX-Request": "true"}).text
+    restore = client.get("/", headers={"HX-Request": "true", "HX-History-Restore-Request": "true"}).text
+    assert 'id="img-lightbox"' not in partial
+    assert 'id="img-lightbox"' in restore
+    assert 'id="investigation-overlay"' in restore
+
+
+def test_investigation_history_restore_gets_full_page(triage_dir: Path) -> None:
+    restore = client.get("/investigation/1", headers={"HX-Request": "true", "HX-History-Restore-Request": "true"})
+    assert "<!doctype" in restore.text.lower()
+

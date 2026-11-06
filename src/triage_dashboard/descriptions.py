@@ -181,3 +181,14 @@ def linkify(text: str) -> Markup:
         )
 
     return Markup(_URL_RE.sub(_repl, escaped))
+
+
+def web_url(url: object) -> str:
+    """`url` if it's an http(s) URL, else "".
+
+    Draft URLs come from an AI that read untrusted bug content, so a
+    `javascript:` or `data:` URL in one must not become a live link.
+    """
+    text = str(url or "").strip()
+    scheme = text.split(":", 1)[0].lower() if ":" in text else ""
+    return text if scheme in ("http", "https") else ""

@@ -12,20 +12,23 @@ from pathlib import Path
 from urllib.parse import quote_plus
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import applier, backend, claude_queue, data, descriptions, watch as watch_mod
+from . import applier, backend, claude_queue, data, descriptions, request_guard, watch as watch_mod
 from .reply_mode import detect_reply_mode
 
 PKG_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = PKG_DIR / "templates"
 STATIC_DIR = PKG_DIR / "static"
+# Host names accepted besides IP literals; tests add TestClient's "testserver".
+ALLOWED_HOSTS = request_guard.HOST_NAMES
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.filters["parse_description"] = descriptions.parse_description
 templates.env.filters["linkify"] = descriptions.linkify
+templates.env.filters["web_url"] = descriptions.web_url
 templates.env.filters["render_markdown"] = descriptions.render_markdown
 templates.env.filters["filter_key_comments"] = descriptions.filter_key_comments
 templates.env.filters["level_class"] = data.level_class
@@ -46,7 +49,7 @@ templates.env.filters["version_only"] = data.version_only
 templates.env.globals["triage_owner"] = data.triage_owner
 templates.env.globals["level_options"] = data.level_options
 
-# Cache-bust /static/style.css with the file's mtime captured at import
+# Cache-bust /static/style.css and app.js with each file's mtime captured at import
 # time. Browsers refetch when the URL changes; on the server, restarting
 # (which is how the rest of the app picks up changes anyway) is what
 # refreshes this value.
@@ -56,6 +59,11 @@ try:
 except OSError:
     CSS_VERSION = "0"
 templates.env.globals["css_version"] = CSS_VERSION
+try:
+    JS_VERSION = str(int((STATIC_DIR / "app.js").stat().st_mtime))
+except OSError:
+    JS_VERSION = "0"
+templates.env.globals["js_version"] = JS_VERSION
 
 # Module-level broker so tests can `broker.emit(...)` to drive the SSE endpoint
 # without going through the actual filesystem watcher.
@@ -86,6 +94,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Triage Dashboard", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.middleware("http")
+async def refuse_other_sites(request, call_next):
+    """Refuse DNS-rebound and cross-site state-changing requests, and send
+    the security headers on every response."""
+    problem = request_guard.request_problem(request.method, request.headers, ALLOWED_HOSTS)
+    if problem:
+        response = PlainTextResponse(f"Forbidden: {problem}", status_code=403)
+    else:
+        response = await call_next(request)
+    response.headers.update(request_guard.SECURITY_HEADERS)
+    return response
 
 
 @app.middleware("http")
@@ -268,6 +289,12 @@ def _compute_is_stale(
     return inv_dt < act_dt
 
 
+def is_partial_request(headers) -> bool:
+    """An htmx swap of the content area, not a history restore of the page."""
+    return (headers.get("HX-Request") == "true"
+            and headers.get("HX-History-Restore-Request") != "true")
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(
     request: Request, tab: str | None = None, bug: int | None = None,
@@ -342,9 +369,9 @@ def index(
         for slug, marker, _ in TABS
     }
     # htmx tab clicks request just the content body, not the whole page,
-    # so the topbar/tabs/scroll position stay stable.
-    is_htmx = request.headers.get("HX-Request") == "true"
-    template_name = "_content.html" if is_htmx else "index.html"
+    # so the topbar/tabs/scroll position stay stable. A history restore that
+    # missed htmx's cache swaps the response into body, so it needs the page.
+    template_name = "_content.html" if is_partial_request(request.headers) else "index.html"
     return templates.TemplateResponse(
         request=request,
         name=template_name,
@@ -394,8 +421,7 @@ def investigation_page(request: Request, bug_id: int) -> HTMLResponse:
     # overlay fragment to swap into the dashboard in-place; a direct GET
     # (refresh, bookmark, new tab) gets the full standalone page. Either way
     # the URL is /investigation/<id> and stays valid.
-    is_htmx = request.headers.get("HX-Request") == "true"
-    name = "_investigation_overlay.html" if is_htmx else "investigation.html"
+    name = "_investigation_overlay.html" if is_partial_request(request.headers) else "investigation.html"
     return templates.TemplateResponse(
         request=request,
         name=name,
