@@ -502,3 +502,16 @@ def test_tab_label_matches_rail_head_title(triage_dir: Path) -> None:
             f"tab={slug}: tab strip says {tab_label!r}, rail head says "
             f"{rail_title!r} — TAB_INFO drift"
         )
+
+
+def test_code_in_markdown_link_inherits_link_color() -> None:
+    """`[`Foo::Bar`](url)` in a draft renders as <a><code>; .md-body code sets
+    its own color, so the link must override it or the code looks unlinked."""
+    import re
+    css = (
+        Path(__file__).resolve().parent.parent.parent
+        / "src" / "triage_dashboard" / "static" / "style.css"
+    ).read_text()
+    m = re.search(r'\.md-body a code\s*\{[^}]*\}', css)
+    assert m is not None, "no .md-body a code rule found"
+    assert "color: inherit" in m.group(0)
