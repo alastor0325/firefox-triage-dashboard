@@ -192,3 +192,15 @@ def web_url(url: object) -> str:
     text = str(url or "").strip()
     scheme = text.split(":", 1)[0].lower() if ":" in text else ""
     return text if scheme in ("http", "https") else ""
+
+
+def see_also_link(entry: object) -> tuple[str, str]:
+    """(href, label) for a `see_also_add` entry: a bug ID or a URL.
+
+    A bug ID links to BMO as "bug N"; a URL (e.g. a spec issue) is its own
+    label and links only if it's http(s), so href may be "".
+    """
+    text = str(entry if entry is not None else "").strip()
+    if text.isascii() and text.isdigit():
+        return f"https://bugzilla.mozilla.org/show_bug.cgi?id={text}", f"bug {text}"
+    return web_url(text), text

@@ -99,6 +99,13 @@ def test_plan_includes_see_also() -> None:
     assert "1501982" in sa[1].description
 
 
+def test_plan_see_also_url() -> None:
+    url = "https://github.com/whatwg/html/issues/1234"
+    plan = applier.plan_apply(_pending(see_also_add=[url]))
+    sa = [a for a in plan if a.kind == "see-also"]
+    assert [a.description for a in sa] == [f"see also → {url}"]
+
+
 def test_plan_no_see_also_without_field() -> None:
     assert "see-also" not in kinds(applier.plan_apply(_pending()))
 

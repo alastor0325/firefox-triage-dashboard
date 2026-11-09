@@ -285,3 +285,18 @@ def test_render_markdown_drops_javascript_links() -> None:
     html = str(desc.render_markdown("[x](javascript:alert(1))"))
     assert "javascript:" not in html
 
+
+
+def test_see_also_link_bug_id() -> None:
+    for entry in (1837553, "1837553", " 1837553 "):
+        assert desc.see_also_link(entry) == (
+            "https://bugzilla.mozilla.org/show_bug.cgi?id=1837553", "bug 1837553")
+
+
+def test_see_also_link_url() -> None:
+    url = "https://github.com/whatwg/dom/issues/42"
+    assert desc.see_also_link(url) == (url, url)
+
+
+def test_see_also_link_non_web_url_not_linked() -> None:
+    assert desc.see_also_link("javascript:alert(1)") == ("", "javascript:alert(1)")
