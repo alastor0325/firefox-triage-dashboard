@@ -1816,6 +1816,17 @@ def test_will_apply_shows_see_also(triage_dir: Path) -> None:
     assert "show_bug.cgi?id=1501982" in body
 
 
+def test_will_apply_shows_see_also_urls(triage_dir: Path) -> None:
+    """A spec issue URL in see_also_add renders as its own link; a non-web
+    URL is shown but not linked."""
+    write_draft(triage_dir, 770051, severity="S3", priority="P3",
+                see_also_add=["https://github.com/whatwg/html/issues/1234", "javascript:alert(1)"])
+    body = client.get("/?tab=triaged&bug=770051").text
+    assert 'href="https://github.com/whatwg/html/issues/1234"' in body
+    assert 'href="javascript:' not in body
+    assert "javascript:alert(1)" in body
+
+
 def test_owner_toggle_refreshes_dry_run_plan_when_queued(
     triage_dir: Path, monkeypatch,
 ) -> None:

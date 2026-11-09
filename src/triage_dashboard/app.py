@@ -29,6 +29,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 templates.env.filters["parse_description"] = descriptions.parse_description
 templates.env.filters["linkify"] = descriptions.linkify
 templates.env.filters["web_url"] = descriptions.web_url
+templates.env.filters["see_also_link"] = descriptions.see_also_link
 templates.env.filters["render_markdown"] = descriptions.render_markdown
 templates.env.filters["filter_key_comments"] = descriptions.filter_key_comments
 templates.env.filters["level_class"] = data.level_class

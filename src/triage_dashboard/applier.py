@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .descriptions import see_also_link
+
 
 @dataclass(frozen=True)
 class PlannedAction:
@@ -67,7 +69,7 @@ def plan_apply(pending: dict) -> list[PlannedAction]:
     for sa in pending.get("see_also_add") or []:
         out.append(PlannedAction(
             kind="see-also",
-            description=f"see also → bug {sa}",
+            description=f"see also → {see_also_link(sa)[1]}",
         ))
     for cc in pending.get("cc_add") or []:
         out.append(PlannedAction(

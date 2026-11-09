@@ -34,7 +34,7 @@
       {% if draft.see_also_add %}
         <span class="sep">·</span>
         <span><span class="plus">+</span>see also
-          {% for b in draft.see_also_add %}<a class="meta" href="https://bugzilla.mozilla.org/show_bug.cgi?id={{ b }}" target="_blank" rel="noopener">bug {{ b }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+          {% for b in draft.see_also_add %}{% set href, label = b | see_also_link %}{% if href %}<a class="meta" href="{{ href }}" target="_blank" rel="noopener">{{ label }}</a>{% else %}{{ label }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}
         </span>
       {% endif %}
       {% if reply_mode() and draft.ni_targets %}

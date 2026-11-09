@@ -475,9 +475,9 @@ class Draft:
     bug_reporter: str | None = None
     # Bugzilla `regressed_by` relation: the change(s) that caused this regression
     regressed_by_add: list[int] = field(default_factory=list)
-    # Bugzilla `see_also` relation: related bug IDs to add (apply writes them via
-    # bugzilla-cli set-fields --see-also-add)
-    see_also_add: list[int] = field(default_factory=list)
+    # Bugzilla `see_also` relation: related bug IDs or URLs (e.g. a spec issue
+    # for `spec-needed`) to add; apply writes them via bugzilla-cli
+    see_also_add: list[int | str] = field(default_factory=list)
     # Bugzilla `status` (e.g. ASSIGNED) and `assigned_to` (assignee email) writes
     status: str | None = None
     assigned_to: str | None = None
